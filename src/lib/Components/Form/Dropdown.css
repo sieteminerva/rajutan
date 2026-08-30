@@ -1,0 +1,176 @@
+/* ==========================================================================
+   1. STRUKTUR UTAMA & LABEL (Identik dengan Select Anda)
+   ========================================================================== */
+.field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 0.25em;
+  color: var(--primary-text-color);
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   2. INPUT DATALIST (Meniru Persis Sifat Select & Textarea Anda)
+   ========================================================================== */
+.field input[list].dropdown {
+  font-family: inherit;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  /* Tinggi & senter teks identik dengan select / input teks (+ 2px spasi kanan arrow) */
+  height: var(--input-height, 2.2rem);
+  min-height: var(--input-height, 2.2rem);
+  max-height: var(--input-height, 2.2rem);
+  line-height: calc(var(--input-height, 2.2rem) - 2px);
+  padding: 0 2.5em 0 1em; /* padding kanan untuk arrow/spinner */
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--input-border-radius) !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: 200ms;
+  background-color: var(--primary-background-color);
+  color: var(--primary-text-color);
+}
+
+/* State Hover, Focus, Active pada Input Datalist */
+.field input[list].dropdown:hover,
+.field input[list].dropdown:focus,
+.field input[list].dropdown:active,
+.field input[list].dropdown:focus-visible {
+  border: 1px solid var(--primary-border-color);
+  background-color: var(--gsheets-accent-color);
+  outline: none;
+}
+
+/* Placeholder Styling */
+.field input[list].dropdown::placeholder {
+  color: var(--placeholder-color);
+}
+
+/* ==========================================================================
+   3. KUSTOMISASI ARROW BAWAAN DATALIST (Menggantikan ::picker-icon)
+   ========================================================================== */
+/* 
+   Karena datalist menggunakan Shadow DOM webkit untuk arrownya, 
+   kita sesuaikan posisinya agar mirip transform select Anda 
+*/
+.field input[list].dropdown::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 1em;
+  top: 50%;
+  transform: scale(95%) translateY(-15%);
+  cursor: pointer;
+  color: var(--primary-border-color);
+  transition:
+    transform 200ms,
+    opacity 200ms;
+  opacity: 0.7;
+}
+
+.field input[list].dropdown:focus::-webkit-calendar-picker-indicator,
+.field input[list].dropdown::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   4. SPINNER / LOADING INTEGRATION
+   ========================================================================== */
+/* Elemen Spinner bawaan framework Anda */
+.field span.spinner {
+  display: block;
+  position: absolute;
+  right: 1em;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 99;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Saat memanggil API / Debounce: Sembunyikan panah asli, munculkan spinner */
+.field input[list].dropdown.loading::-webkit-calendar-picker-indicator {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.field input[list].dropdown.loading ~ span.spinner {
+  visibility: visible;
+  content: var(--spinner-content); /* Menggunakan aset variabel Anda */
+}
+
+/* ==========================================================================
+   5. ERROR & VALIDATION STATES
+   ========================================================================== */
+.field input[list].dropdown.error {
+  background-color: #fff6f6;
+  border: 1px solid #fd5b5b;
+  color: #ff93ae;
+}
+
+.field input[list].dropdown.error::placeholder {
+  color: #ff93ae;
+}
+
+.field:has(> input[list].dropdown.error) label {
+  color: #ff114d;
+}
+
+/* Container untuk menampung tag-tag badge */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px; /* Memberi jarak ke input box dibawahnya */
+}
+
+/* Style Badge / Tag individual */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--primary-light-color, #e0e1e2);
+  color: var(--primary-text-color, rgba(0, 0, 0, 0.6));
+  font-size: 0.85rem;
+  padding: 0.3em 0.7em;
+  border-radius: var(--input-border-radius, 4px);
+  font-weight: 500;
+  animation: fadeInTag 150ms ease-in-out;
+}
+
+/* Tombol hapus (X) di dalam badge */
+.remove-tag-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  margin-left: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1rem;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.5;
+  transition: opacity 150ms;
+}
+
+.remove-tag-btn:hover {
+  opacity: 1;
+  color: #fd5b5b; /* Berubah merah saat mau dihapus */
+}
+
+@keyframes fadeInTag {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

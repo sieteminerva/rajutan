@@ -1,0 +1,454 @@
+:root {
+  --allowed-color: rgba(21, 179, 60, 0.658);
+  --unallowed-color: rgba(220, 20, 60, 0.486);
+  --warning-color: rgba(236, 186, 20, 0.753);
+  --editing-color: rgba(33, 133, 208, 0.854);
+}
+
+.file {
+  &:is(.hidden) {
+    visibility: hidden;
+    border-top: none;
+  }
+
+  & .allowed i {
+    color: var(--allowed-color);
+  }
+
+  & .message.allowed {
+    color: var(--allowed-color);
+  }
+
+  & .label.allowed {
+    color: var(--input-text-color);
+    background-color: var(--allowed-color);
+  }
+
+  & .unallowed i {
+    color: var(--unallowed-color);
+  }
+
+  & .message.unallowed {
+    color: var(--unallowed-color);
+  }
+
+  & .label.unallowed {
+    color: var(--input-text-color);
+    background-color: var(--unallowed-color);
+  }
+
+  & .warning i {
+    color: var(--warning-color);
+  }
+
+  & .item {
+    &:is(.info):hover,
+    &:is(.info):hover .message {
+      /* background-color: color-mix(in srgb, var(--input-primary-color) 80%, rgb(245, 244, 244, 0.8)); */
+      color: color-mix(in srgb, var(--input-accent-color) 35%, rgb(7, 7, 7));
+    }
+    &:is(.info):hover i.icon {
+      background: color-mix(in srgb, var(--input-primary-color) 100%, black 50%);
+    }
+    &:has(.unallowed) .filesize {
+      background-color: var(--unallowed-color) !important;
+    }
+
+    &:has(.warning) .label.filesize {
+      background-color: var(--warning-color) !important;
+    }
+
+    & .thumbnail.image {
+      width: 35px;
+      height: 35px;
+      overflow: hidden;
+      border-width: 2px;
+      border-style: solid;
+      border-color: var(--input-border-color);
+      border-radius: 5px;
+      overflow: hidden;
+      &.unallowed {
+        border-color: var(--unallowed-color);
+        background: var(--unallowed-color);
+      }
+      img {
+        display: block;
+        height: 100%;
+        width: 100%;
+        position: relative;
+        object-fit: cover;
+      }
+
+      & i {
+        display: block;
+        font-size: 2em;
+        line-height: 1.15em;
+        text-align: center;
+        position: relative;
+        object-fit: cover;
+        margin-top: 1px;
+        color: var(--unallowed-color);
+      }
+
+      &:has(> i) {
+        border: none;
+      }
+      &:has(.allowed) .thumbnail.image {
+        border-color: var(--input-border-color);
+      }
+
+      &:has(.unallowed) .thumbnail.image {
+        border-color: var(--unallowed-color);
+      }
+
+      &:has(.warning) .thumbnail.image {
+        border-color: var(--warning-color);
+      }
+    }
+  }
+
+  & .message.group {
+    cursor: pointer;
+  }
+}
+
+.close.button i {
+  position: relative;
+  /* color: rgb(255, 72, 72); */
+  width: 16px;
+  height: 16px;
+  margin: 4px;
+  color: var(--unallowed-color);
+}
+
+/* ================= State ================= */
+
+/* =========================================== */
+.file:is(.list):not(.hidden) {
+  border: 1px solid var(--input-border-color);
+  border-top: none;
+  color: var(--input-text-color);
+  border-radius: 0 0 var(--input-border-radius, 0.55em) var(--input-border-radius, 0.55em);
+  margin-bottom: 1em;
+  visibility: visible;
+  overflow: hidden;
+
+  & .item {
+    display: flex;
+    align-items: center;
+    padding-bottom: 0.25em;
+    padding-top: 0.25em;
+    padding-right: 0.75em;
+    padding-left: 0.75em;
+    border-bottom: 1px solid var(--input-border-color);
+    &.info {
+      justify-content: space-between;
+      background: var(--input-background-color);
+      & .message:not(.allowed, .unallowed, .warning) {
+        color: var(--input-primary-color);
+      }
+    }
+    &:last-child {
+      border-bottom: none;
+    }
+    &:last-child:hover {
+      background-color: color-mix(in srgb, var(--input-accent-color) 80%, rgb(245, 244, 244, 0.8));
+      border-radius: 0 0 var(--input-border-radius, 0.55em) var(--input-border-radius, 0.55em);
+    }
+
+    &:last-child:hover i.icon {
+      background: color-mix(in srgb, var(--input-accent-color) 100%, white 70%);
+    }
+
+    & .content {
+      flex-grow: 1;
+      margin-left: 0.75em;
+      & .filename {
+        font-size: 1rem;
+        font-weight: 500;
+        font-style: normal;
+        color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+        & i.icon {
+          margin-right: 0.25em;
+        }
+      }
+      & .message {
+        margin-bottom: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        font-style: italic;
+        &.warning {
+          color: var(--warning-color);
+        }
+      }
+    }
+
+    &:has(.info) .message {
+      font-size: 0.9rem;
+    }
+
+    & .label {
+      margin-right: 1em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background-color: var(--input-accent-color);
+      color: var(--input-text-color);
+      &.warning {
+        color: var(--input-text-color);
+        background-color: var(--warning-color);
+      }
+    }
+
+    & .close.button {
+      display: flex;
+      background: transparent;
+      cursor: pointer;
+      transition: 100ms;
+      border: 1px solid var(--input-border-color);
+      padding: 0;
+      border-radius: 5px;
+      width: 30px;
+      height: 30px;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      &:hover {
+        transform: scale(0.95);
+        border: 1px solid var(--unallowed-color);
+      }
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+  }
+}
+
+/* =========================================== */
+
+.file:is(.thumbnails):not(.hidden) {
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--input-border-color);
+  border-top: none;
+  color: var(--primary-color);
+  margin-bottom: 1em;
+  visibility: visible;
+  border-radius: 0 0 var(--input-border-radius, 0.55em) var(--input-border-radius, 0.55em);
+  & .item {
+    &:hover .label.filesize,
+    &:hover .close.button {
+      visibility: visible;
+    }
+
+    &:not(.info) {
+      position: relative;
+      flex-wrap: wrap;
+      max-width: fit-content;
+      margin: 0.5em;
+      overflow: hidden;
+    }
+
+    & .thumbnail.image {
+      width: calc(100vmax / 13);
+      height: calc(100vmax / 13);
+      min-width: 40px;
+      min-height: 40px;
+      max-width: 60px;
+      max-height: 60px;
+      overflow: hidden;
+    }
+    & .label.filesize {
+      display: block;
+      position: absolute;
+      bottom: 0;
+      background-color: var(--input-primary-color);
+      color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+      padding: 1px 2px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      width: 100%;
+      height: fit-content;
+      display: block;
+      text-align: center;
+      visibility: hidden;
+      transition: 100ms;
+      border-radius: 0 0 0.4em 0.4em;
+    }
+
+    & .close.button {
+      display: block;
+      position: absolute;
+      top: 0;
+      right: 0;
+      transition: 100ms;
+      background-color: var(--unallowed-color);
+      visibility: hidden;
+      cursor: pointer;
+      padding: 0 1px;
+      border-radius: 0 0.25rem 0 0;
+      & i.icon {
+        color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+        padding: 2px;
+      }
+    }
+
+    &.info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--input-background-color);
+      padding: 0.25em 1em;
+      border-bottom: var(--input-border-color);
+      & .message:not(.allowed, .unallowed, .warning) {
+        color: var(--input-primary-color);
+      }
+    }
+  }
+
+  & .row:not(.details) {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid var(--input-border-color);
+    justify-content: safe start;
+    padding: 0.25em;
+    column-gap: auto;
+  }
+
+  & .row:is(.details) {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    flex-wrap: wrap;
+    padding: 0.5em;
+    color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+    & .title {
+      font-weight: 700;
+      padding: 2px 0.5em;
+      margin-bottom: 0.25em;
+      background: color-mix(in srgb, var(--input-accent-color) 100%, white 70%);
+    }
+    & .message {
+      display: flex;
+      width: 100%;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      padding: 0 0.5em;
+      margin-bottom: 0.2rem;
+      & .info {
+        text-align: right;
+        color: var(--input-text-color);
+      }
+      & .filename {
+        text-align: left;
+        margin-left: 0.25em;
+        & i.icon {
+          margin-right: 0.25em;
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 320px) {
+  .file.thumbnails .item.info {
+    justify-content: start;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.field {
+  &:has(input[type="file"]) .message p {
+    margin-top: 0 !important;
+  }
+
+  /* Drag n Drop style */
+  &.dragover {
+    &:not(:has(.file.hidden)) > input[type="file"] {
+      border-radius: var(--input-border-radius, 0.55em) var(--input-border-radius, 0.55em) 0 0;
+    }
+    & input[type="file"],
+    &:has(> .file.hidden) > input {
+      border-radius: var(--input-border-radius, 0.55em);
+      border-color: var(--input-border-color);
+      border-style: double;
+      border-width: 1px;
+      box-shadow: 2px 2px 5px -3px rgba(59, 61, 71, 1) inset !important;
+      transition: 100ms;
+      color: transparent !important;
+    }
+    & input[type="file"]::file-selector-button {
+      visibility: hidden;
+      opacity: 0;
+      transition: all 30ms;
+      align-self: center;
+      color: var(--input-accent-color);
+    }
+    & input[type="file"]::after,
+    &:has(> .file) > input[type="file"]::after {
+      /* content: url("data:image/svg+xml,%3Csvg version='1.2' baseProfile='tiny' xmlns='http://www.w3.org/2000/svg' width='210' height='33.3' xml:space='preserve'%3E%3Cpath fill='currentColor' d='M17.6 1.9c4.2 0 7.9 1.7 10.6 4.4s4.4 6.5 4.4 10.6-1.7 7.9-4.4 10.6-6.5 4.4-10.6 4.4S9.7 30.2 7 27.5 2.6 21 2.6 16.9 4.2 9 6.9 6.3s6.5-4.4 10.7-4.4zm0 21.5c-.8 0-1.5-.7-1.5-1.5v-3.5h-3.5c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5h3.5v-3.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5v3.5h3.5c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5h-3.5v3.5c0 .8-.7 1.5-1.5 1.5zm9.2-15.7c-2.4-2.4-5.6-3.8-9.2-3.8s-6.9 1.5-9.2 3.8-3.8 5.6-3.8 9.2 1.5 6.9 3.8 9.2 5.6 3.8 9.2 3.8 6.9-1.5 9.2-3.8 3.8-5.6 3.8-9.2-1.5-6.8-3.8-9.2z'/%3E%3Cg fill='currentColor'%3E%3Cpath d='M43 12.2h1.9c.7 0 1.2.1 1.7.2.5.2.9.4 1.3.8s.6.8.8 1.5c.2.6.3 1.4.3 2.2 0 .9-.1 1.6-.3 2.2-.2.6-.5 1.1-.8 1.5s-.8.6-1.3.8c-.5.2-1.1.2-1.7.2H43v-9.4zm1.3 1.2v7.1h.6c.5 0 .8-.1 1.2-.2.3-.1.6-.3.9-.6.2-.3.4-.6.6-1.1.1-.5.2-1 .2-1.7s-.1-1.2-.2-1.7-.3-.8-.6-1.1c-.3-.3-.5-.5-.9-.6-.3-.1-.7-.2-1.2-.2h-.6zM56.4 16.8h-1.2c0-.6-.1-1-.4-1.3-.3-.3-.7-.4-1.2-.4-.3 0-.6 0-.8.1s-.5.1-.6.2l-.2.1v6.2h-1.2v-6.9s.1 0 .1-.1c.1 0 .2-.1.4-.2s.4-.2.6-.2c.2-.1.5-.1.8-.2.3-.1.6-.1 1-.1.9 0 1.6.2 2.1.6.4.5.6 1.2.6 2.2zM57.9 19.7c-.1-.5-.2-1.1-.2-1.8s.1-1.3.2-1.8.4-.9.6-1.2c.3-.3.6-.5 1-.6s.8-.2 1.3-.2 1 .1 1.3.2.7.3 1 .6c.3.3.5.7.6 1.2.1.5.2 1.1.2 1.8s-.1 1.3-.2 1.8-.4.9-.6 1.2c-.3.3-.6.5-1 .6-.4.1-.8.2-1.3.2s-1-.1-1.3-.2c-.4-.1-.7-.4-1-.6s-.4-.7-.6-1.2zm4.4-3.9c-.3-.4-.8-.6-1.4-.6-.6 0-1.1.2-1.4.6-.3.4-.5 1.1-.5 2.1s.2 1.7.5 2.1c.3.4.8.6 1.4.6.6 0 1.1-.2 1.4-.6.3-.4.5-1.1.5-2.1s-.1-1.7-.5-2.1zM67.5 14.1h.9c.9 0 1.6.2 2.1.7.5.5.8 1.2.8 2 0 .9-.3 1.6-.9 2.1s-1.4.8-2.4.8h-1.2v3.8h-1.2V16c0-.7.1-1.2.4-1.5.3-.2.8-.4 1.5-.4zm0 1.2c-.2 0-.4.1-.5.2-.1.1-.2.3-.2.5v2.6H68c.6 0 1.1-.2 1.5-.5.4-.3.5-.7.5-1.3 0-.5-.2-.9-.5-1.2-.3-.3-.7-.4-1.2-.4h-.8zM80.6 14.1h1.2v3.4c0 .3.1.6.4.8.3.2.7.3 1.1.3H85v-4.5h1.2v6.6c0 1-.3 1.7-.9 2.2-.6.4-1.5.6-2.6.6H82c-.2 0-.4 0-.5-.1h-.2v-1.1h1.4c.7 0 1.3-.1 1.7-.4.4-.2.6-.7.6-1.2v-1h-1.6c-.9 0-1.6-.2-2.1-.6-.5-.4-.8-1-.8-1.7v-3.3zM88 19.7c-.1-.5-.2-1.1-.2-1.8s.1-1.3.2-1.8.4-.9.6-1.2c.3-.3.6-.5 1-.6s.9-.3 1.4-.3c.5 0 1 .1 1.3.2s.7.3 1 .6c.3.3.5.7.6 1.2.1.5.2 1.1.2 1.8s-.1 1.3-.2 1.8-.4.9-.6 1.2c-.3.3-.6.5-1 .6-.4.1-.8.2-1.3.2s-1-.1-1.3-.2c-.4-.1-.7-.4-1-.6s-.5-.6-.7-1.1zm4.4-3.9c-.3-.4-.8-.6-1.4-.6-.6 0-1.1.2-1.4.6-.3.4-.5 1.1-.5 2.1s.2 1.7.5 2.1c.3.4.8.6 1.4.6.6 0 1.1-.2 1.4-.6.3-.4.5-1.1.5-2.1s-.2-1.7-.5-2.1zM95.7 14.1h1.2v4.8c0 .6.1 1 .4 1.3.3.3.7.4 1.2.4.3 0 .6 0 .8-.1.3-.1.5-.1.6-.2l.2-.1V14h1.2v7s-.1 0-.1.1c-.1 0-.2.1-.4.2s-.4.2-.6.2c-.2.1-.5.1-.8.2-.3.1-.6.1-1 .1-.9 0-1.6-.2-2.1-.6-.5-.4-.7-1.2-.7-2.2v-4.9zM109.1 16.8h-1.2c0-.6-.1-1-.4-1.3-.3-.3-.7-.4-1.2-.4-.3 0-.6 0-.8.1s-.5.1-.6.2l-.2.1v6.2h-1.2v-6.9s.1 0 .1-.1c.1 0 .2-.1.4-.2s.4-.2.6-.2c.2-.1.5-.1.8-.2.3-.1.6-.1 1-.1.9 0 1.6.2 2.1.6.3.5.6 1.2.6 2.2zM124.1 12.3v1.1h-1.5c-.6 0-1 .1-1.2.3-.2.2-.3.6-.3 1.2h3.1V16h-3.1v5.6h-1.2V16H118v-1.2h1.8c0-.5 0-.9.1-1.3.1-.3.2-.6.4-.8s.5-.4.8-.5c.4-.1.8-.1 1.4-.1h.8c.3 0 .4 0 .6.1l.2.1zM126 14.8h3.2v5.6h2.2v1.2h-5.6v-1.2h2.2V16h-2v-1.2zm1.2-3.3h2.2v1.4h-2.2v-1.4zM133.5 12.2h3.2v8.2h2.2v1.2h-5.6v-1.2h2.2v-7.1h-2v-1.1zM144 21.7c-1 0-1.8-.3-2.4-1-.6-.7-.9-1.6-.9-2.8 0-1.2.3-2.1.8-2.8.5-.7 1.2-1 2.1-1 .9 0 1.6.3 2.1.8s.8 1.2.8 2v.5c0 .4-.1.7-.3.9s-.5.3-1 .3H142v.4c0 .2.1.3.1.4 0 .1.1.3.2.4.1.2.2.3.4.4.1.1.3.2.5.3s.5.1.7.1h2v1.1H144zm1.3-4.4v-.5c0-.5-.2-.9-.5-1.2-.3-.3-.7-.4-1.2-.4-.2 0-.4 0-.6.1-.2.1-.3.2-.4.3-.1.1-.2.3-.3.4-.1.2-.1.3-.2.5 0 .2-.1.3-.1.4v.4h3.3zM152.2 11.1h1.4l-.1.1-.4.4c-.2.2-.4.4-.5.6s-.3.5-.6.9c-.2.4-.4.7-.5 1.1-.1.4-.3.9-.4 1.4-.1.6-.2 1.1-.2 1.7s0 1.2.1 1.7c.1.6.2 1 .4 1.4.2.4.3.8.5 1.1l.6.9c.2.2.4.4.5.6l.4.4.1.1h-1.4l-.1-.1-.4-.4c-.2-.2-.3-.4-.5-.6-.2-.2-.3-.5-.5-.9s-.4-.7-.5-1.1c-.1-.4-.3-.9-.4-1.4-.1-.6-.1-1.1-.1-1.7s0-1.2.1-1.7c.1-.6.2-1 .4-1.4.2-.4.3-.8.5-1.1l.6-.9c.2-.2.4-.4.5-.6s.3-.3.4-.4l.1-.1zM159.5 14.1h.8c.3 0 .4 0 .5.1h.2v1.1h-1.5c-.8 0-1.4.1-1.8.2-.4.2-.6.4-.6.8 0 .2.1.4.2.5.2.1.4.3.6.4.2.1.5.2.8.2l.9.3c.3.1.6.2.8.4.2.1.4.3.6.6s.2.5.2.9c0 .8-.3 1.4-1 1.7s-1.6.5-2.8.5h-.8c-.3 0-.4 0-.6-.1h-.2v-1.1h1.5c.8 0 1.4-.1 1.9-.2.4-.2.6-.4.6-.8 0-.2-.1-.4-.2-.5s-.3-.3-.5-.3c-.2-.1-.4-.2-.7-.2-.3-.1-.5-.1-.8-.2-.3-.1-.5-.1-.8-.2-.3-.1-.5-.2-.7-.4-.2-.1-.4-.3-.5-.6s-.2-.5-.2-.8c0-.8.3-1.4.9-1.7 1.2-.5 2.1-.6 3.2-.6zM165.1 11.1l.1.1.4.4c.2.2.3.4.5.6.2.2.3.5.5.9s.4.7.5 1.1.3.9.4 1.4c.1.6.1 1.1.1 1.7s0 1.2-.1 1.7c-.1.6-.2 1-.4 1.4-.2.4-.3.8-.5 1.1l-.6.9c-.2.2-.4.4-.5.6l-.4.4-.1.1h-1.4l.1-.1.4-.4c.2-.2.4-.4.5-.6.2-.2.3-.5.6-.9.2-.4.4-.7.5-1.1.1-.4.3-.9.4-1.4.1-.6.2-1.1.2-1.7s0-1.2-.1-1.7c-.1-.6-.2-1-.4-1.4-.2-.4-.3-.8-.5-1.1l-.6-.9c-.2-.2-.4-.4-.5-.6s-.3-.3-.4-.4l-.1-.1h1.4zM178.4 12.2h1.2v2.2c.5-.2 1-.3 1.6-.3.9 0 1.6.2 2.1.6.5.4.7 1.1.7 2.1v4.8h-1.2v-4.8c0-.6-.2-.9-.4-1.2-.3-.2-.6-.4-1.2-.4-.5 0-1.1.1-1.6.4v6h-1.2v-9.4zM189.1 21.7c-1 0-1.8-.3-2.4-1-.6-.7-.9-1.6-.9-2.8 0-1.2.3-2.1.8-2.8.5-.7 1.2-1 2.1-1 .9 0 1.6.3 2.1.8s.8 1.2.8 2v.5c0 .4-.1.7-.3.9s-.5.3-1 .3H187v.4c0 .2.1.3.1.4 0 .1.1.3.2.4.1.2.2.3.4.4.1.1.3.2.5.3s.5.1.7.1h2v1.1h-1.8zm1.3-4.4v-.5c0-.5-.2-.9-.5-1.2-.3-.3-.7-.4-1.2-.4-.2 0-.4 0-.6.1-.2.1-.3.2-.4.3-.1.1-.2.3-.3.4-.1.2-.1.3-.2.5 0 .2-.1.3-.1.4v.4h3.3zM199.3 16.8h-1.2c0-.6-.1-1-.4-1.3-.3-.3-.7-.4-1.2-.4-.3 0-.6 0-.8.1s-.5.1-.6.2l-.2.1v6.2h-1.2v-6.9s.1 0 .1-.1c.1 0 .2-.1.4-.2s.4-.2.6-.2c.2-.1.5-.1.8-.2.3-.1.6-.1 1-.1.9 0 1.6.2 2.1.6.4.5.6 1.2.6 2.2zM204.1 21.7c-1 0-1.8-.3-2.4-1-.6-.7-.9-1.6-.9-2.8 0-1.2.3-2.1.8-2.8.5-.7 1.2-1 2.1-1 .9 0 1.6.3 2.1.8s.8 1.2.8 2v.5c0 .4-.1.7-.3.9s-.5.3-1 .3H202v.4c0 .2.1.3.1.4 0 .1.1.3.2.4.1.2.2.3.4.4.1.1.3.2.5.3s.5.1.7.1h2v1.1h-1.8zm1.4-4.4v-.5c0-.5-.2-.9-.5-1.2-.3-.3-.7-.4-1.2-.4-.2 0-.4 0-.6.1-.2.1-.3.2-.4.3-.1.1-.2.3-.3.4-.1.2-.1.3-.2.5 0 .2-.1.3-.1.4v.4h3.3z'/%3E%3C/g%3E%3C/svg%3E%0A"); */
+      content: "📂 Drop your file(s) here to upload";
+      position: relative;
+      transform: scale(0.85);
+      left: 0.5em;
+      bottom: 1.4lh;
+      width: calc(100% - 1em);
+      line-height: 24px;
+      border-radius: var(--input-border-radius, 0.55em);
+      color: var(--input-primary-color);
+      display: block;
+      text-align: center;
+      font-size: 1.3rem;
+      font-weight: 500;
+      font-style: italic;
+      transition: all 30ms !important;
+    }
+  }
+
+  & input[type="file"] {
+    position: relative;
+    padding: 0 1em;
+    vertical-align: middle;
+  }
+  & input[type="file"]::file-selector-button {
+    /* line-height: 0.75rem; */
+    position: relative;
+    bottom: 2px;
+    min-height: calc(var(--input-icon-size) * 0.85);
+    padding: 0em 0.7em;
+    border-radius: var(--input-border-radius);
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: 30ms;
+    align-self: center;
+    outline: none;
+    color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+    border: 2px solid var(--input-accent-color);
+    background-color: color-mix(in srgb, var(--input-primary-color) 90%, rgb(245, 244, 244, 0.8));
+    box-shadow: 0 2px 3px 0 color-mix(in srgb, var(--input-accent-color) 30%, var(--input-primary-color) 45%);
+  }
+  & input[type="file"]::file-selector-button:hover {
+    color: color-mix(in srgb, var(--input-accent-color) 45%, black 30%);
+    background-color: color-mix(in srgb, var(--input-primary-color) 50%, var(--input-accent-color) 5%);
+  }
+  & input[type="file"]::file-selector-button:active {
+    transform: scale(0.95);
+  }
+}
+
+.form:not(.initial) .field:has(> .file:not(.hidden)) input {
+  border-color: var(--input-border-color);
+  border-width: 1px;
+  border-radius: var(--input-border-radius, 0.55em) var(--input-border-radius, 0.55em) 0 0;
+  cursor: pointer;
+}
+
+fieldset.inline-style .field:has(input[type="file"]),
+.field:has(input[type="file"]) {
+  display: block;
+  position: relative;
+}

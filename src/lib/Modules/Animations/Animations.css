@@ -1,0 +1,242 @@
+/* =========================================================================
+   1. UTILITIES / GLOBAL
+   ========================================================================= */
+
+[animation="fade-in"] {
+  font-family: inherit;
+  overflow: hidden;
+  /* white-space: nowrap; */
+  /* border-right: 2px solid currentColor; */
+  width: auto;
+  display: none;
+  max-width: 100%;
+}
+/* =========================================================================
+   2. MODULE: TYPEWRITER
+   ========================================================================= */
+[animation="typewriter"] {
+  font-family: inherit;
+  overflow: hidden;
+  /* white-space: nowrap; */
+  /* border-right: 2px solid currentColor; */
+  width: auto;
+  max-width: 100%;
+}
+
+/* Berikan kursor pada elemen teks yang sedang aktif diketik */
+.tw-writing::after {
+  content: "|";
+  display: inline-block;
+  margin-left: 3px;
+  color: darkgoldenrod;
+  animation: tw-blink 0.75s step-end infinite;
+  vertical-align: baseline;
+}
+
+@keyframes tw-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.stagger-reveal-item {
+  display: inline; /* Tetap inline murni agar alur paragraf menyatu alami */
+  color: currentColor; /* Teks langsung diwarnai normal agar PASTI muncul */
+
+  /* Membuat topeng gradasi: setengah solid hitam (terlihat), setengah transparan (sembunyi) */
+  -webkit-mask-image: linear-gradient(to right, #000 50%, transparent 50%);
+  mask-image: linear-gradient(to right, #000 50%, transparent 50%);
+
+  /* Perbesar ukuran topeng menjadi 200% agar bisa digeser keluar-masuk */
+  -webkit-mask-size: 200% 100%;
+  mask-size: 200% 100%;
+
+  /* Posisi Awal: Geser topeng ke 100% (bagian transparan menutupi teks sepenuhnya) */
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+
+  /* Daftarkan transisi pergerakan topeng masking */
+  transition:
+    mask-position var(--stagger-duration, 0.6s) cubic-bezier(0.25, 1, 0.5, 1),
+    -webkit-mask-position var(--stagger-duration, 0.6s) cubic-bezier(0.25, 1, 0.5, 1);
+
+  transition-delay: var(--stagger-delay, 0ms);
+  will-change:
+    mask-position,
+    -webkit-mask-position;
+}
+
+/* State Akhir: Geser mask-position kembali ke 0% (bagian solid hitam membuka teks) */
+.stagger-reveal-item.is-visible {
+  -webkit-mask-position: 0% 0;
+  mask-position: 0% 0;
+}
+
+/* =========================================================================
+   3. MODULE: LOADING PLACEHOLDER (Anti-FOUC Lazy-Load Shimmer)
+   Wrapper kunci milik Builder.isLoaded + AnimationService "loading-placeholder".
+   Selama class .anim-placeholder-active menempel:
+   - Teks/border dipaksa transparan (!important) → tidak ada konten "flashy",
+   - Gradasi shimmer berjalan sebagai penanda visual bahwa sesuatu sedang di-load,
+   - Media dalam elemen diredam agar gambar/video tidak bocor duluan.
+   Pelepasan dianimasikan lewat rule [data-anim-hold-opacity] yang memegang
+   transition SELAMA atribut cadangan masih ada (lihat LoadingPlaceholderBehaviour).
+   ========================================================================= */
+
+@keyframes animPlaceholderShimmer {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.anim-placeholder-active {
+  position: relative;
+  overflow: hidden;
+  cursor: progress;
+  pointer-events: none;
+  border-radius: var(--radius-component);
+
+  /* Skin gradasi bergoyang (shimmer) */
+  background-image: linear-gradient(
+    90deg,
+    var(--surface-bg, rgba(127, 127, 127, 0.12)) 25%,
+    var(--border-soft, rgba(127, 127, 127, 0.12)) 50%,
+    var(--gsheets-accent-color, rgba(127, 127, 127, 0.26)) 75%
+  );
+  /* background-image: var(--page-bg); */
+  background-size: 200% 100%;
+  animation: animPlaceholderShimmer 1.4s linear infinite;
+  /* filter: blur(1px); */
+  /* background-clip: padding-box; */
+  background-blend-mode: exclusion;
+
+  /* 🚫 KUNCI ANTI FOUC: isi teks & garis dibuat tembus total tanpa layout shift */
+  color: transparent !important;
+  border-color: transparent !important;
+  text-shadow: none !important;
+  box-shadow: none;
+}
+
+/* Media internal ikut tenggelam supaya shimmer yang tampil, bukan gambar mentah */
+.anim-placeholder-active img,
+.anim-placeholder-active video,
+.anim-placeholder-active svg,
+.anim-placeholder-active canvas,
+.anim-placeholder-active iframe {
+  opacity: 0.06;
+  filter: saturate(0);
+}
+
+/* --------------------------------------------------------------------
+   PINTU PELEPASAN MULUS (transition bridge)
+   Selama data-anim-hold-opacity masih menempel pada node, perubahan
+   color / border-color / opacity akan teranimasi otomatis. Behaviour JS
+   memicu perubahan dua-frame lalu membersihkan atribut setelah selesai.
+   -------------------------------------------------------------------- */
+[data-anim-hold-opacity] {
+  transition:
+    color 0.35s ease,
+    border-color 0.35s ease,
+    opacity 0.35s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-placeholder-active {
+    /* Hormati preferensi user: skin statis tanpa goyangan, tetap anti-FOUC */
+    animation: none;
+  }
+
+  [data-anim-hold-opacity] {
+    transition: none;
+  }
+}
+
+/* =========================================================================
+   4. MODULE: HYDRATION HOLD — data-hydrating + --is-loading (O(1), ROOT-ONLY)
+   Hold & release terjadi pada SATU elemen puncak per komponen lazy:
+   • HOLD    (Builder.create) : inline --is-loading: 1 + attr data-hydrating
+   • RELEASE (releaseHydration): inline --is-loading: 0 + hapus data-hydrating
+                                + pasang data-loaded="true"
+   Anak-anak TIDAK pernah disentuh Javascript: visual mereka digerakkan
+   selector keturunan [data-hydrating] (presence-attr — jauh lebih murah
+   dari [style*=...] substring yang di-match ulang per elemen tiap recalc),
+   dan state --is-loading mengalir lewat warisan custom property. Tanpa
+   forEach/querySelectorAll/observer ⇒ aman page-switching brutal.
+   ========================================================================= */
+
+@keyframes isHydratingShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+[data-hydrating] {
+  position: relative;
+  overflow: hidden;
+  cursor: progress;
+  pointer-events: none;
+
+  /* Skin gradasi bergoyang (shimmer) — hanya di elemen puncak, satu animasi */
+  background-image: linear-gradient(
+    90deg,
+    var(--surface-bg, rgba(127, 127, 127, 0.12)) 25%,
+    var(--border-soft, rgba(127, 127, 127, 0.12)) 50%,
+    var(--gsheets-accent-color, rgba(127, 127, 127, 0.26)) 75%
+  );
+
+  background-size: 200% 100%;
+  background-blend-mode: exclusion;
+  animation: isHydratingShimmer 0.8s linear infinite;
+
+  /* 🚫 KUNCI ANTI FOUC: isi teks & garis dipaksa tembus tanpa layout shift */
+  color: transparent !important;
+  border-color: transparent !important;
+  text-shadow: none !important;
+}
+
+/* Anak-anak MENGIKUTI elemen puncak lewat selector keturunan. `!important`
+   wajib agar CSS komponen semacam `.tbl td { color: #333 }` (spesifisitas
+   lebih tinggi) tidak bisa bocor selama masa tahan. Rule ini lenyap otomatis
+   begitu atribut data-hydrating dicabut — pelepasan tanpa sentuhan JS. */
+[data-hydrating] *,
+[data-hydrating] *::before,
+[data-hydrating] *::after {
+  color: transparent !important;
+  border-color: transparent !important;
+  text-shadow: none !important;
+}
+
+/* Media internal ikut tenggelam supaya skeleton yang tampil, bukan gambar mentah */
+[data-hydrating] img,
+[data-hydrating] video,
+[data-hydrating] svg,
+[data-hydrating] canvas,
+[data-hydrating] iframe {
+  opacity: 0.06;
+  filter: saturate(0);
+}
+
+/* 🔓 POINTER PELEPASAN PERMANEN (child-follows-root):
+   Begitu data-loaded="true" terpasang di elemen puncak, SELURUH keturunannya
+   dipaksa membaca --is-loading: 0. `!important` stylesheet mengalahkan
+   inline style biasa, sehingga marker "--is-loading: 1" sisa klon skeleton
+   atau lapisan lama di dalam subtree mati total — tak pernah lengket lagi. */
+[data-loaded="true"],
+[data-loaded="true"] *,
+[data-loaded="true"] *::before,
+[data-loaded="true"] *::after {
+  --is-loading: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-hydrating] {
+    /* Hormati preferensi user: skin statis tanpa goyangan, tetap anti-FOUC */
+    animation: none;
+  }
+}

@@ -1,0 +1,47 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Spacing Hierarchy Engine */
+  --masonry-columns: 3;
+  --padding-layout: 2rem; /* Applied to columns for layout gutters */
+  --margin-layout: 1rem; /* Applied between macro layout sections */
+
+  --padding-component: calc(var(--padding-layout) / 3); /* 1/3 of column padding */
+  --margin-component: 1rem; /* Applied between inline items/buttons */
+
+  --gap: var(--padding-layout); /* Sync layout gap with layout padding */
+  --radius-component: 0.5em;
+  --radius-image: 18px;
+
+  /* Theme: Light Modes */
+  --page-background: linear-gradient(135deg, #fff8f2 0%, #f7f1ff 45%, #eef6ff 100%);
+  --surface-background: rgba(255, 255, 255, 0.84);
+  --surface-strong: rgba(255, 255, 255, 0.95);
+  --surface-muted: rgba(255, 255, 255, 0.72);
+  --text-main: #2f243d;
+  --text-muted: #55486a;
+  --text-heading: #3c2554;
+  --border-soft: rgba(183, 164, 216, 0.35);
+  --shadow-soft: 0 18px 40px rgba(92, 63, 134, 0.12);
+  --accent: rgba(91, 63, 134, 0.95);
+  --accent-strong: rgba(143, 126, 174, 1);
+}
+
+:root[data-mode="dark"] {
+  /* Theme: Dark Modes */
+  --page-background: linear-gradient(135deg, #07111f 0%, #142641 45%, #1c2340 100%);
+  --surface-background: rgba(17, 24, 39, 0.88);
+  --surface-strong: rgba(24, 33, 54, 0.95);
+  --surface-muted: rgba(24, 33, 54, 0.8);
+  --text-main: #f5edff;
+  --text-muted: #c3b6dd;
+  --text-heading: #ffffff;
+  --border-soft: rgba(145, 126, 190, 0.28);
+  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.35);
+  --accent: #b498ff;
+  --accent-strong: #8d70ff;
+}
