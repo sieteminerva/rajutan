@@ -212,7 +212,7 @@ const formConfig = {
   id: "wizardo",
   multistep: true,
   selectors: {
-    "@form>group": { tagName: "fieldset", className: "inline-style" },
+    // "@form>group": { tagName: "fieldset", className: "inline-style" },
   },
   // submitButton: false,
 };
@@ -305,75 +305,75 @@ export const HomepageContent: iNodeContent =
         content: {
           "section#home": {
             content: {
-              ".row$1": {
-                content: {
-                  "h3.title": {
-                    attrs: { "animation": "fade-in" },
-                    content: "Rakit Website Modern dengan Bahasa Manusia"
-                  },
-                  ".description.natural": {
-                    attrs: { "animation": "typewriter", "data-tw-rewrite": "true", "animation-chain": "true" },
-                    content: `
-                      <span>
-                        Anda berada di tempat yang tepat jika saat ini mulai menyadari pentingnya website bagi eksistensi diri, merek dagang, maupun identitas usaha Anda. 
-                        Kehadiran website kini telah menjadi kebutuhan dasar dalam menghadapi persaingan bisnis di era digital. 
-                        Saat ini mungkin anda terbentur banyak rintangan dan telah melalui berbagai proses yang rumit bahkan sebelum website pertama anda berhasil diluncurkan.
-                      </span>
+              // ".row$1": {
+              //   content: {
+              //     "h3.title": {
+              //       attrs: { "animation": "fade-in" },
+              //       content: "Rakit Website Modern dengan Bahasa Manusia"
+              //     },
+              //     ".description.natural": {
+              //       attrs: { "animation": "typewriter", "data-tw-rewrite": "true", "animation-chain": "true" },
+              //       content: `
+              //         <span>
+              //           Anda berada di tempat yang tepat jika saat ini mulai menyadari pentingnya website bagi eksistensi diri, merek dagang, maupun identitas usaha Anda. 
+              //           Kehadiran website kini telah menjadi kebutuhan dasar dalam menghadapi persaingan bisnis di era digital. 
+              //           Saat ini mungkin anda terbentur banyak rintangan dan telah melalui berbagai proses yang rumit bahkan sebelum website pertama anda berhasil diluncurkan.
+              //         </span>
 
-                      <span>
-                      dan mungkin terbesit di benak anda sebuah pertanyaan:
-                      </span>
+              //         <span>
+              //         dan mungkin terbesit di benak anda sebuah pertanyaan:
+              //         </span>
 
-                      <blockquote>
+              //         <blockquote>
 
-                      "Ada ga ya cara dimana saya tinggal menjabarkan website seperti apa yang akan dibuat lalu secara otomatis website itu dibentuk sesuai deskripsi saya?"
+              //         "Ada ga ya cara dimana saya tinggal menjabarkan website seperti apa yang akan dibuat lalu secara otomatis website itu dibentuk sesuai deskripsi saya?"
 
-                      </blockquote>
+              //         </blockquote>
 
-                      <span>
-                        Jika anda salah satu orang tersebut mungkin keluhan serta keresahan itu yang terbisik sampai ke telinga kami, 
-                        dan mendorong hati kecil kami untuk merajut tautan ini.
-                      </span>`
-                  },
+              //         <span>
+              //           Jika anda salah satu orang tersebut mungkin keluhan serta keresahan itu yang terbisik sampai ke telinga kami, 
+              //           dan mendorong hati kecil kami untuk merajut tautan ini.
+              //         </span>`
+              //     },
 
-                  "h4.asking.question": {
-                    attrs: { "animation": "fade-in", "animation-chain": "true" },
-                    content: "Siap memulai pembangunan website impian anda?"
-                  },
-                  "button#start.button.small": {
-                    attrs: {
-                      "animation": "text-scramble",
-                      "animation-chain": "true",
-                    },
-                    content: "Mari Mulai",
-                    onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
-                      el.addEventListener("click", () => {
-                        console.log("start clicked")
-                        const form = builderFn("form", wizard)
-                        form?.addEventListener("formSubmit", (e: any) => {
-                          const detail = e.detail;
-                          console.log("AAA", e.detail)
-                          detail.complete(true, true)
-                        })
-                        el.parentElement?.replaceChildren(form)
-                      }, { once: true })
-                    }
-                  }
-                },
-              },
-              // ".row$2": {
+              //     "h4.asking.question": {
+              //       attrs: { "animation": "fade-in", "animation-chain": "true" },
+              //       content: "Siap memulai pembangunan website impian anda?"
+              //     },
+              //     "button#start.button.small": {
+              //       attrs: {
+              //         "animation": "text-scramble",
+              //         "animation-chain": "true",
+              //       },
+              //       content: "Mari Mulai",
+              //       onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
+              //         el.addEventListener("click", () => {
+              //           console.log("start clicked")
+              //           const form = builderFn("form", wizard)
+              //           form?.addEventListener("formSubmit", (e: any) => {
+              //             const detail = e.detail;
+              //             console.log("AAA", e.detail)
+              //             detail.complete(true, true)
+              //           })
+              //           el.parentElement?.replaceChildren(form)
+              //         }, { once: true })
+              //       }
+              //     }
+              //   },
+              // },
+              ".row$2": {
 
-              //   onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
-              //     const form = builderFn("form", wizard)
-              //     form?.addEventListener("formSubmit", (e: any) => {
-              //       const detail = e.detail;
-              //       console.log("AAA", e.detail)
-              //       detail.complete(true, true)
-              //     })
-              //     el.append(form)
-              //   }
+                onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
+                  const form = builderFn("form", wizard)
+                  form?.addEventListener("formSubmit", (e: any) => {
+                    const detail = e.detail;
+                    console.log("AAA", e.detail)
+                    detail.complete(true, true)
+                  })
+                  el.append(form)
+                }
 
-              // }
+              }
             }
           }
         }

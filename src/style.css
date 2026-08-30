@@ -14,9 +14,6 @@ main {
 }
 
 section#home {
-  & .form {
-    --input-background-color: transparent;
-  }
   display: flex;
   /* align-items: center; */
   min-height: 100vh;
@@ -24,6 +21,16 @@ section#home {
   flex-direction: column;
   justify-content: center;
   flex-wrap: wrap;
+
+  & .form {
+    --input-background-color: transparent;
+    & fieldset:is(.inline-style) {
+      --input-placeholder-color: var(--input-primary-color);
+      --input-label-color: rgba(255, 248, 215, 0.431);
+      --input-font-size: 1.6rem;
+      --input-label-size: 1.6rem;
+    }
+  }
 
   & > .row {
     height: 100%;

@@ -713,7 +713,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
         // 3. Jika file ada, lanjutkan proses pembuatan tabel seperti biasa
         const tableData = await FileUploader.parseCSVToTable(form.id);
 
-        if ((globalThis as any).TableBuilder && (globalThis as any).TableBuilder === "function") {
+        if (TableBuilder !== undefined && typeof TableBuilder === "function") {
           table = new TableBuilder({
             renderAsCard: false,
             autoFreezeAt: 1

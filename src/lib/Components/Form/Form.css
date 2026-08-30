@@ -58,273 +58,280 @@ textarea:focus-visible {
 /* ==========================================================================
    2. Input Wrapper & Display Layouts
    ========================================================================== */
-.native.form .field {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  margin-bottom: 1em;
-  text-align: left;
-}
+.native.form,
+.form {
+  & .field {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    margin-bottom: 1em;
+    text-align: left;
+    &:is([data-display="block"]) {
+      /* Inherits display: block and width: 100% from base */
+      margin-bottom: 1em;
+    }
+    &:is([data-display="inline"]) {
+      display: inline-grid;
+      width: auto;
+      margin-right: 1em;
+      margin-bottom: 0;
+      vertical-align: top;
+    }
+    /* --- Block Groups --- */
+    &.group:is([data-display="block"]) {
+      display: grid;
+      grid-template-columns: 1fr;
+      row-gap: 0.25em;
+      height: max-content;
+      & > label {
+        margin-bottom: 0;
+      }
+      & > input:not(:last-of-type) {
+        margin-bottom: 0.75em;
+      }
+    }
+    /* --- Inline Groups --- */
+    &.group:is([data-display="inline"]) {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.25em 1em;
+      width: 100%;
+      margin-right: 0;
+      & > label:nth-of-type(1),
+      & > input:nth-of-type(1),
+      & > span.spinner:nth-of-type(1) {
+        grid-column: 1;
+      }
+      & > label:nth-of-type(2),
+      & > input:nth-of-type(2),
+      & > span.spinner:nth-of-type(2) {
+        grid-column: 2;
+      }
 
-.native.form .field[data-display="block"] {
-  /* Inherits display: block and width: 100% from base */
-  margin-bottom: 1em;
-}
+      & > label {
+        grid-row: 1;
+      }
 
-.native.form .field[data-display="inline"] {
-  display: inline-grid;
-  width: auto;
-  margin-right: 1em;
-  margin-bottom: 0;
-  vertical-align: top;
-}
+      & > input,
+      & > span.spinner {
+        grid-row: 2;
+      }
+    }
+    /* 3. Labels & Base Form Controls */
+    & label {
+      display: block;
+      margin-bottom: 0.25em;
+      color: var(--input-label-color);
+      font-size: var(--input-label-size);
+      font-weight: 600;
+    }
 
-/* --- Block Groups --- */
-.native.form .field.group[data-display="block"] {
-  display: grid;
-  grid-template-columns: 1fr;
-  row-gap: 0.25em;
-  height: max-content;
-}
+    & input:not([type="checkbox"]),
+    & select:has(> option[selected]) {
+      color: var(--input-text-color);
+    }
 
-.native.form .field.group[data-display="block"] > label {
-  margin-bottom: 0;
-}
+    /* placeholder */
+    & input:not([type="checkbox"])::placeholder,
+    & textarea::placeholder,
+    & select:has(option[value=""]:checked),
+    & select:has(> option.placeholder:checked) {
+      color: var(--input-placeholder-color);
+    }
 
-.native.form .field.group[data-display="block"] > input:not(:last-of-type) {
-  margin-bottom: 0.75em;
-}
+    & select,
+    & ::picker(select) {
+      appearance: base-select;
+      cursor: pointer;
+    }
 
-/* --- Inline Groups --- */
-.native.form .field.group[data-display="inline"] {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.25em 1em;
-  width: 100%;
-  margin-right: 0;
-}
+    /* Shared Core Input Inputs styles */
+    & input:not([type="checkbox"]),
+    & select,
+    & textarea {
+      font-family: inherit;
+      box-sizing: border-box;
+      display: block;
+      width: 100%;
+      min-height: var(--input-min-height);
+      line-height: calc(var(--input-line-height) * 1.3);
+      padding: 0 1em;
+      font-size: var(--input-font-size);
+      border: 1px solid var(--input-primary-color);
+      border-radius: var(--input-border-radius);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      transition: 200ms;
+      background-color: var(--input-background-color);
+      color: var(--input-text-color);
+      max-height: var(--input-min-height);
+    }
 
-.native.form .field.group[data-display="inline"] > label:nth-of-type(1),
-.native.form .field.group[data-display="inline"] > input:nth-of-type(1),
-.native.form .field.group[data-display="inline"] > span.spinner:nth-of-type(1) {
-  grid-column: 1;
-}
+    & textarea {
+      field-sizing: content;
+      min-height: calc(var(--input-min-height) * 2.5);
+      resize: vertical;
+      white-space: normal;
+      max-height: unset;
+    }
 
-.native.form .field.group[data-display="inline"] > label:nth-of-type(2),
-.native.form .field.group[data-display="inline"] > input:nth-of-type(2),
-.native.form .field.group[data-display="inline"] > span.spinner:nth-of-type(2) {
-  grid-column: 2;
-}
+    /* --- Form Fields Base Interactive States --- */
+    & input:not([type="checkbox"]):hover,
+    & input:not([type="checkbox"]):focus,
+    & input:not([type="checkbox"]):active,
+    & input:not([type="checkbox"]):focus-visible,
+    & textarea:hover,
+    & textarea:focus,
+    & textarea:active,
+    & textarea:focus-visible,
+    & select:hover,
+    & select:active,
+    & select:focus-visible,
+    & select:open,
+    & select:open::picker(select),
+    &:has(select:active) select:open::picker(select),
+    &:has(select:focus) select:open::picker(select) {
+      border: 1px solid var(--input-primary-color);
+      /* background-blend-mode: normal; */
+    }
+    /* Open Select Special Rounding Layer Override */
+    & select:open,
+    &:has(select:open) select,
+    &:has(select:open) select:hover,
+    &:has(select:open) select:active {
+      transition: 200ms;
+      border-bottom: 1px solid var(--input-primary-color);
+    }
 
-.native.form .field.group[data-display="inline"] > label {
-  grid-row: 1;
-}
+    & select {
+      &::picker(select) {
+        scrollbar-width: thin;
+        scrollbar-color: var(--input-primary-color) color-mix(in srgb, grey 10%, var(--input-primary-color) 5%);
+        background-color: var(--input-background-color);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--input-primary-color);
+        /* scrollbar-gutter: stable; */
+        max-height: var(--input-picker-height, calc(3 * var(--input-min-height)));
+        top: anchor(bottom);
+        opacity: 0;
+        transform-origin: top;
+        transform: translateY(-4px) scaleY(0%);
+        transition: all 150ms ease;
+        transition-behavior: allow-discrete;
+        transition-delay: var(--dropdown-transition-delay);
+        border-radius: var(--input-border-radius);
+        white-space: nowrap;
+        overflow-x: hidden;
+        text-overflow: ellipsis;
+        max-height: calc((var(--input-min-height) * 4) + 10px);
+        outline: none;
+      }
+      &:is(:active):open::picker(select),
+      &:is(:focus):open::picker(select),
+      &::picker(select),
+      &:open::picker(select) {
+        border-top: none;
+      }
+      /* 5. Select Options & Elements Content Parts */
+      & option {
+        color: var(--input-text-color);
+        transition: all 100ms;
+        white-space: nowrap;
+        overflow-x: hidden;
+        text-overflow: ellipsis;
+        &::checkmark {
+          padding-right: 0.5em;
+        }
+        &:hover {
+          color: color-mix(in srgb, grey 30%, var(--input-text-color) 35%);
+          background-color: color-mix(in srgb, var(--input-primary-color) 10%, var(--input-accent-color) 5%);
+        }
+      }
+      & option,
+      &::part(selectedcontent) {
+        display: block;
+        outline: none;
+        line-height: var(--input-line-height);
+        padding: 0.3em 0.5em;
+        width: anchor-size(width);
+        border: none;
+      }
 
-.native.form .field.group[data-display="inline"] > input,
-.native.form .field.group[data-display="inline"] > span.spinner {
-  grid-row: 2;
-}
+      &::part(selectedcontent),
+      & option:checked {
+        color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+        background-color: color-mix(in srgb, var(--input-primary-color) 80%, rgb(245, 244, 244, 0.8));
+      }
 
-/* ==========================================================================
-   3. Labels & Base Form Controls
-   ========================================================================== */
-.native.form .field label {
-  display: block;
-  margin-bottom: 0.25em;
-  color: var(--input-label-color);
-  font-size: var(--input-label-size);
-  font-weight: 600;
-}
+      &:open::picker(select) {
+        opacity: 1;
+        transition-delay: var(--dropdown-transition-delay);
+        transform: translateY(0) scaleY(1);
+        outline: none;
+        border-radius: 0 0 var(--input-border-radius) var(--input-border-radius);
+        box-shadow: 0 2px 3px 0 color-mix(in srgb, var(--input-accent-color) 30%, var(--input-primary-color) 45%);
+        width: anchor-size(width);
+      }
 
-.native.form .field select,
-.native.form .field ::picker(select) {
-  appearance: base-select;
-  cursor: pointer;
-}
+      &:open {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+    }
 
-/* Shared Core Input Inputs styles */
-.native.form .field input:not([type="checkbox"]),
-.native.form .field select,
-.native.form .field textarea {
-  font-family: inherit;
-  box-sizing: border-box;
-  display: block;
-  width: 100%;
-  min-height: var(--input-min-height);
-  line-height: calc(var(--input-line-height) * 1.3);
-  padding: 0 1em;
-  font-size: var(--input-font-size);
-  border: 1px solid var(--input-primary-color);
-  border-radius: var(--input-border-radius);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-  transition: 200ms;
-  background-color: var(--input-background-color);
-  color: var(--input-text-color);
-}
+    /* 9. Validation Error States */
+    &:has(.error) {
+      & label {
+        color: #ff93ae;
+      }
+      & input,
+      & select,
+      & select:open::picker(select) {
+        border: 1px solid #ff114d;
+        color: #ff114d;
+        box-shadow: none;
+      }
+      & input::placeholder,
+      & select option {
+        border: none;
+        color: #ff114d;
+      }
+      & select option:first-child:checked,
+      & select option[value=""]:checked,
+      & select option.placeholder:checked {
+        border: 1px solid #ff114d;
+        color: #fff6f6;
+        background-color: #ff114d;
+      }
+      & select:open::picker(select) {
+        border: none;
+      }
+    }
+  }
 
-.native.form .field input:not([type="checkbox"]),
-.native.form .field select {
-  max-height: var(--input-min-height);
-}
-
-.native.form .field textarea {
-  field-sizing: content;
-  min-height: calc(var(--input-min-height) * 2.5);
-  resize: vertical;
-  white-space: normal;
-}
-
-/* --- Form Fields Base Interactive States --- */
-.native.form .field input:not([type="checkbox"]):hover,
-.native.form .field input:not([type="checkbox"]):focus,
-.native.form .field input:not([type="checkbox"]):active,
-.native.form .field input:not([type="checkbox"]):focus-visible,
-.native.form .field textarea:hover,
-.native.form .field textarea:focus,
-.native.form .field textarea:active,
-.native.form .field textarea:focus-visible,
-.native.form .field select:hover,
-.native.form .field select:active,
-.native.form .field select:focus-visible,
-.native.form .field select:open,
-.native.form .field select:open::picker(select),
-.native.form .field:has(select:active) select:open::picker(select),
-.native.form .field:has(select:focus) select:open::picker(select) {
-  border: 1px solid var(--input-primary-color);
-  background-blend-mode: normal;
-}
-
-/* Open Select Special Rounding Layer Override */
-.native.form .field select:open,
-.native.form .field:has(select:open) select,
-.native.form .field:has(select:open) select:hover,
-.native.form .field:has(select:open) select:active {
-  transition: 200ms;
-  border-bottom: 1px solid var(--input-primary-color);
-}
-
-/* ==========================================================================
-   4. Native Fieldset & Structural Legends
-   ========================================================================== */
-.native.form fieldset {
-  display: grid;
-  gap: 1em;
-  margin-bottom: 1em;
-  padding: 1.2em 1.5em 1.5em 1.5em;
-  border: 1px solid var(--input-primary-color);
-  border-radius: calc(var(--input-border-radius) / 2);
-  /* background-color: var(--primary-background-color); */
-}
-
-.native.form fieldset legend {
-  padding: 0 0.5em;
-  color: var(--input-label-color);
-  font-size: calc(var(--input-font-size) * 0.8);
-  font-weight: 700;
-}
-
-.native.form fieldset .field:last-child {
-  margin-bottom: 1em;
-}
-
-/* ==========================================================================
-   5. Select Options & Elements Content Parts
-   ========================================================================== */
-.native.form .field select option {
-  color: var(--input-text-color);
-  transition: all 100ms;
-  white-space: nowrap;
-  overflow-x: hidden;
-  text-overflow: ellipsis;
-}
-
-.native.form .field select option,
-.native.form .field select::part(selectedcontent) {
-  display: block;
-  outline: none;
-  line-height: var(--input-line-height);
-  padding: 0.3em 0.5em;
-  width: anchor-size(width);
-  border: none;
-}
-
-.native.form .field select option::checkmark {
-  padding-right: 0.5em;
-}
-
-.native.form .field select option:hover {
-  color: color-mix(in srgb, grey 30%, var(--input-text-color) 35%);
-  background-color: color-mix(in srgb, var(--input-primary-color) 10%, var(--input-accent-color) 5%);
-}
-
-.native.form .field select::part(selectedcontent),
-.native.form .field select option:checked {
-  color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
-  background-color: color-mix(in srgb, var(--input-primary-color) 80%, rgb(245, 244, 244, 0.8));
-}
-
-/* --- Placeholder Colors vs Active Content Colors --- */
-.native.form .field input:not([type="checkbox"])::placeholder,
-.native.form .field textarea::placeholder,
-.native.form .field select:has(option[value=""]:checked),
-.native.form .field select:has(> option.placeholder:checked) {
-  color: var(--input-placeholder-color);
-}
-
-.native.form .field input:not([type="checkbox"]),
-.native.form .field select:has(> option[selected]) {
-  color: var(--input-text-color);
-}
-
-/* ==========================================================================
-   6. Custom Picker Popovers [::picker(select)]
-   ========================================================================== */
-.native.form .field ::picker(select) {
-  scrollbar-width: thin;
-  scrollbar-color: var(--input-primary-color) color-mix(in srgb, grey 10%, var(--input-primary-color) 5%);
-  background-color: var(--input-background-color);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--input-primary-color);
-  /* scrollbar-gutter: stable; */
-  max-height: var(--input-picker-height, calc(3 * var(--input-min-height)));
-  top: anchor(bottom);
-  opacity: 0;
-  transform-origin: top;
-  transform: translateY(-4px) scaleY(0%);
-  transition: all 150ms ease;
-  transition-behavior: allow-discrete;
-  transition-delay: var(--dropdown-transition-delay);
-  border-radius: var(--input-border-radius);
-  white-space: nowrap;
-  overflow-x: hidden;
-  text-overflow: ellipsis;
-  max-height: calc((var(--input-min-height) * 4) + 10px);
-  outline: none;
-}
-
-.native.form .field select:open::picker(select) {
-  opacity: 1;
-  transition-delay: var(--dropdown-transition-delay);
-  transform: translateY(0) scaleY(1);
-  outline: none;
-  border-radius: 0 0 var(--input-border-radius) var(--input-border-radius);
-  box-shadow: 0 2px 3px 0 color-mix(in srgb, var(--input-accent-color) 30%, var(--input-primary-color) 45%);
-  width: anchor-size(width);
-}
-
-.native.form .field select:open {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-/* Unified Flattened Borders on Active Popovers */
-.native.form .field:has(select:active) select:open::picker(select),
-.native.form .field:has(select:focus) select:open::picker(select),
-.native.form .field ::picker(select),
-.native.form .field select:open::picker(select) {
-  border-top: none;
+  /* 4. Native Fieldset & Structural Legends */
+  & > fieldset {
+    display: grid;
+    gap: 1em;
+    margin-bottom: 1em;
+    padding: 1.2em 1.5em 1.5em 1.5em;
+    border: 1px solid var(--input-primary-color);
+    border-radius: var(--input-border-radius);
+    /* background-color: var(--primary-background-color); */
+    & legend {
+      padding: 0 0.5em;
+      color: var(--input-label-color);
+      font-size: calc(var(--input-font-size) * 0.8);
+      font-weight: 700;
+    }
+    & .field:last-child {
+      margin-bottom: 1em;
+    }
+    & .field {
+      width: 100%;
+    }
+  }
 }
 
 @starting-style {
@@ -335,214 +342,176 @@ textarea:focus-visible {
   }
 }
 
-/* ==========================================================================
-   7. Spinner Icons & Dynamic Indicators
-   ========================================================================== */
-.native.form .field select::picker-icon,
-.native.form .field select.loading::picker-icon,
-.native.form .field span.spinner {
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-mode: alpha;
-  background-color: var(--input-primary-color);
-  display: inherit;
-  box-sizing: border-box;
-  position: relative;
-  bottom: var(--input-min-height);
-  justify-self: right;
-  z-index: 99;
-}
+.native.form .field {
+  /* 7. Spinner Icons & Dynamic Indicators */
+  & select::picker-icon,
+  & select:is(.loading)::picker-icon,
+  & span.spinner {
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-mode: alpha;
+    background-color: var(--input-primary-color);
+    display: inherit;
+    box-sizing: border-box;
+    position: relative;
+    bottom: var(--input-min-height);
+    justify-self: right;
+    z-index: 99;
+  }
 
-.native.form .field select.loading::picker-icon,
-.native.form .field.loading > select::picker-icon,
-.native.form .field span.spinner {
-  mask-image: var(--spinner-content);
-  width: calc(var(--input-icon-size) * 0.8);
-  height: calc(var(--input-icon-size) * 0.8);
-}
+  & select:is(.loading)::picker-icon,
+  &.loading > select::picker-icon,
+  & span.spinner {
+    mask-image: var(--spinner-content);
+    width: calc(var(--input-icon-size) * 0.8);
+    height: calc(var(--input-icon-size) * 0.8);
+  }
 
-.native.form .field select:not(.loading)::picker-icon {
-  mask-image: var(--dropdown-arrow-content);
-  width: var(--input-icon-size);
-  height: var(--input-icon-size);
-  transition: rotate 200ms;
-  transform-origin: center center;
-  bottom: calc(var(--input-min-height) - 5px);
-}
+  & select::picker-icon {
+    mask-image: var(--dropdown-arrow-content);
+    width: var(--input-icon-size);
+    height: var(--input-icon-size);
+    transition: rotate 200ms;
+    transform-origin: center center;
+    bottom: calc(var(--input-min-height) - 5px);
+  }
 
-.native.form .field select:not(.loading):open::picker-icon {
-  rotate: 90deg;
-}
+  & select:open::picker-icon {
+    rotate: 90deg;
+  }
 
-.native.form .field select.loading::picker-icon,
-.native.form .field.loading > select::picker-icon {
-  bottom: calc(var(--input-min-height) - 8px);
-}
+  & select:is(.loading)::picker-icon,
+  &.loading > select::picker-icon {
+    bottom: calc(var(--input-min-height) - 8px);
+  }
 
-.native.form .field.loading:has(input:not([type="checkbox"])) {
-  position: relative;
-}
-.native.form .field.loading:has(input:not([type="checkbox"]))::before {
-  content: "";
-  mask-image: var(--spinner-content);
-  width: calc(var(--input-icon-size) * 0.85);
-  height: calc(var(--input-icon-size) * 0.85);
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-mode: alpha;
-  background-color: var(--input-primary-color);
-  position: absolute;
-  display: block;
-  visibility: hidden;
-  justify-self: right;
-  text-align: right;
-  z-index: 99;
-  right: 20px;
-  bottom: calc(var(--input-min-height) - 14px);
-}
+  &.loading:has(input:not([type="checkbox"])) {
+    position: relative;
+  }
+  &.loading:has(input:not([type="checkbox"]))::before {
+    content: "";
+    mask-image: var(--spinner-content);
+    width: calc(var(--input-icon-size) * 0.85);
+    height: calc(var(--input-icon-size) * 0.85);
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-mode: alpha;
+    background-color: var(--input-primary-color);
+    position: absolute;
+    display: block;
+    visibility: hidden;
+    justify-self: right;
+    text-align: right;
+    z-index: 99;
+    right: 20px;
+    bottom: calc(var(--input-min-height) - 14px);
+  }
 
-.native.form .field.loading:has(input:not([type="checkbox"]))::before {
-  visibility: visible;
-}
+  &.loading:has(input:not([type="checkbox"]))::before {
+    visibility: visible;
+  }
 
-.native.form .field input:not([type="checkbox"]) ~ span.spinner {
-  visibility: hidden;
-}
+  & input:not([type="checkbox"]) ~ span.spinner {
+    visibility: hidden;
+  }
 
-.native.form .field input:not([type="checkbox"]).loading ~ span.spinner {
-  visibility: visible;
+  & input:not([type="checkbox"]).loading ~ span.spinner {
+    visibility: visible;
+  }
 }
 
 /* ==========================================================================
    8. Toggle Switch Components
    ========================================================================== */
-.native.form .field.toggle-switch {
-  display: inline-grid;
-  align-items: center;
-  justify-content: start;
-  gap: 0.5em 0.75em;
-  width: max-content;
-  height: auto;
-}
+.native.form .field {
+  &.toggle-switch {
+    display: inline-grid;
+    align-items: center;
+    justify-content: start;
+    gap: 0.5em 0.75em;
+    width: max-content;
+    height: auto;
+    &:has(> label[data-position="top"]) {
+      grid-template-areas: "label" "control";
+    }
+    &:has(> label[data-position="left"]) {
+      grid-template-areas: "label control";
+    }
+    &:has(> label[data-position="right"]) {
+      grid-template-areas: "control label";
+    }
+    &:has(> label[data-position="bottom"]) {
+      grid-template-areas: "control" "label";
+    }
+    & > label {
+      grid-area: label;
+      margin-bottom: 0;
+      color: var(--input-text-color);
+      font-size: calc(var(--input-font-size) * 0.75);
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+    & > .control,
+    & > .control > input[type="checkbox"] {
+      width: 44px;
+      height: 26px;
+    }
+    & > .control {
+      position: relative;
+      grid-area: control;
+      display: inline-block;
 
-.native.form .field.toggle-switch:has(> label[data-position="top"]) {
-  grid-template-areas: "label" "control";
-}
-.native.form .field.toggle-switch:has(> label[data-position="left"]) {
-  grid-template-areas: "label control";
-}
-.native.form .field.toggle-switch:has(> label[data-position="right"]) {
-  grid-template-areas: "control label";
-}
-.native.form .field.toggle-switch:has(> label[data-position="bottom"]) {
-  grid-template-areas: "control" "label";
-}
-.native.form .field.toggle-switch > label {
-  grid-area: label;
-  margin-bottom: 0;
-  color: var(--input-text-color);
-  font-size: calc(var(--input-font-size) * 0.75);
-  font-weight: 600;
-  cursor: pointer;
-  user-select: none;
-}
-.native.form .field.toggle-switch > .control {
-  position: relative;
-  grid-area: control;
-  display: inline-block;
-}
+      & > input[type="checkbox"] {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        margin: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
 
-.native.form .field.toggle-switch > .control > input[type="checkbox"],
-.native.form .field.toggle-switch > .control > input[type="checkbox"],
-.native.form .field.toggle-switch > .control {
-  width: 44px;
-  height: 26px;
-}
+      & > .slider {
+        position: absolute;
+        inset: 0;
+        display: block;
+        background-color: rgb(208, 208, 214);
+        transition: 0.4s;
+        &:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: 0.4s;
+        }
+        &:is([data-shape="round"]) {
+          border-radius: 25px;
+        }
+        &:is([data-shape="square"]) {
+          border-radius: 4px;
+        }
+        &:is([data-shape="round"]):before {
+          border-radius: 50%;
+        }
+        &:is([data-shape="square"]):before {
+          border-radius: 2px;
+        }
+      }
 
-.native.form .field.toggle-switch > .control > input[type="checkbox"] {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-.native.form .field.toggle-switch > .control > .slider {
-  position: absolute;
-  inset: 0;
-  display: block;
-  background-color: rgb(208, 208, 214);
-  transition: 0.4s;
-}
-.native.form .field.toggle-switch > .control > .slider[data-shape="round"] {
-  border-radius: 25px;
-}
-.native.form .field.toggle-switch > .control > .slider[data-shape="square"] {
-  border-radius: 4px;
-}
-.native.form .field.toggle-switch > .control > .slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: 0.4s;
-}
-.native.form .field.toggle-switch > .control > .slider[data-shape="round"]:before {
-  border-radius: 50%;
-}
-.native.form .field.toggle-switch > .control > .slider[data-shape="square"]:before {
-  border-radius: 2px;
-}
-.native.form .field.toggle-switch > .control > input[type="checkbox"]:checked ~ .slider {
-  background-color: var(--primary-color);
-}
-.native.form .field.toggle-switch > .control > input[type="checkbox"]:focus-visible ~ .slider {
-  box-shadow: 0 0 1px #2196f3;
-}
-.native.form .field.toggle-switch > .control > input[type="checkbox"]:checked ~ .slider:before {
-  transform: translateX(18px);
-} /* ==========================================================================9. Validation Error States========================================================================== */
-.native.form .field input.error,
-.native.form .field select.error,
-.native.form .field:has(select.error:open) select:open::picker(select) {
-  /* background-color: #fff6f6; */
-  border: 1px solid #fd5b5b;
-}
-.native.form .field:has(select.error:open) select:open::picker(select) {
-  border-top: none;
-}
-.native.form .field input.error,
-.native.form .field select.error,
-.native.form .field:has(select.error:open) select:open::picker(select),
-.native.form .field input.error::placeholder,
-.native.form .native.form .field select.error:has(> option:first-child:checked),
-.native.form .field select.error:has(option[value=""]:checked),
-.native.form .field select.error:has(> option.placeholder:checked) {
-  color: #ff114d;
-}
-.native.form .field:has(> input.error) label,
-.native.form .field:has(> select.error) label {
-  color: #ff93ae;
-}
-
-.native.form fieldset {
-  border: 1px solid var(--input-primary-color);
-  border-radius: 16px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-.native.form fieldset .field {
-  width: 100%;
-}
-
-.native.form legend {
-  padding: 0 0.35rem;
-  color: var(--secondary-text-color);
-  font-weight: 700;
+      & > input[type="checkbox"]:checked ~ .slider {
+        background-color: var(--primary-color);
+      }
+      & > input[type="checkbox"]:focus-visible ~ .slider {
+        box-shadow: 0 0 1px #2196f3;
+      }
+      & > input[type="checkbox"]:checked ~ .slider:before {
+        transform: translateX(18px);
+      }
+    }
+  }
 }
 
 /* ============ 
@@ -566,44 +535,55 @@ textarea:focus-visible {
   border-radius: var(--input-border-radius);
   & .field {
     display: inline;
+    position: relative;
     margin-bottom: 0;
     margin-right: 8px;
     width: auto;
+    vertical-align: middle;
+    line-height: calc(var(--input-line-height) * 1.4);
+    align-content: center;
+    height: max-content;
     /* 2. Tata Letak Wrapper dan Label */
     & label {
       display: inline;
       font-weight: normal;
-      color: var(--primary-color);
+      color: var(--input-label-color);
       margin-right: 6px;
+      font-size: var(--input-label-size);
+      word-break: balance;
     }
-    & select,
+    & select:has(option[value=""]:checked),
     & input:not([type="radio"], [type="file"], [type="checkbox"])::placeholder,
     & textarea::placeholder {
-      color: color-mix(in srgb, grey 15%, var(--input-text-color) 15%);
+      color: var(--input-placeholder-color);
     }
 
     & input:not([type="radio"], [type="file"], [type="checkbox"]),
     & select,
     & textarea {
+      cursor: pointer;
       border-radius: unset;
       appearance: unset;
-      min-height: unset;
       width: auto;
+      min-width: min-content;
+      min-height: unset;
+      border: none;
       font-family: inherit;
       outline: none;
-      border: none;
+      background: transparent;
+      /* height: calc(var(--input-min-height) * 1.3); */
+      max-height: max-content;
       display: inline-block;
       field-sizing: content;
-      background: transparent;
-      font-size: 1.5rem;
+      font-size: var(--input-font-size);
       font-weight: 400;
-      padding: 0.25em;
-      /* margin: 0 4px; */
+      padding: 0 0.25em;
       transition: all 0.3s ease;
       vertical-align: middle;
-      min-width: min-content;
-      cursor: pointer;
-      height: var(--input-min-height);
+      border-bottom: 1px solid transparent;
+      position: relative;
+      bottom: 3.5px;
+      /* margin: 0 4px; */
     }
 
     & input:not([type="radio"], [type="file"], [type="checkbox"]):hover,
@@ -631,23 +611,23 @@ textarea:focus-visible {
       cursor: pointer;
       appearance: base-select;
       min-width: max-content;
+
       /* 5.1.1 Penggabungan Efek Fokus Bersama */
       &::picker-icon {
         display: none;
       }
       &:open::picker(select) {
         opacity: 1;
-        border-radius: unset;
+        border-radius: calc(var(--input-border-radius));
         transition-delay: var(--dropdown-transition-delay);
         transform: translateY(-50%) translateX(-25%) scaleY(1) scaleX(1);
-        scrollbar-width: thin;
         box-shadow: 0 2px 3px 0 var(--input-primary-color);
-        scrollbar-color: var(--primary-color) var(--default-text-color);
       }
       &:open,
       &:active,
       &:focus,
-      &:focus-visible {
+      &:focus-visible,
+      &.error {
         border: none;
         border-bottom: 1px solid transparent;
         background: none;
@@ -657,18 +637,16 @@ textarea:focus-visible {
 
       & option {
         transition: all 100ms;
-        color: #2c3e50;
-        &:hover,
-        &:focus {
-          color: var(--default-text-color);
-          background-color: var(--picker-background);
+        &:hover {
+          color: color-mix(in srgb, grey 30%, var(--input-text-color) 35%);
+          background-color: color-mix(in srgb, var(--input-primary-color) 10%, var(--input-accent-color) 5%);
         }
       }
 
       & option:checked,
       &::part(selectedcontent) {
-        background-color: rgba(184, 135, 11, 0.13);
-        color: rgba(122, 109, 72, 0.719);
+        color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+        background-color: color-mix(in srgb, var(--input-primary-color) 80%, rgb(245, 244, 244, 0.8));
       }
     }
 
@@ -683,31 +661,13 @@ textarea:focus-visible {
 
     /* 6. Fitur Customizable Dropdown (Picker) */
     & ::picker(select) {
-      appearance: base-select;
-      box-sizing: border-box;
       max-width: fit-content;
       min-width: min-content;
-      top: anchor(bottom);
-
-      border: 1px solid var(--input-primary-color);
-      white-space: nowrap;
-      overflow-x: hidden;
-      text-overflow: ellipsis;
-      opacity: 0;
-      transform-origin: top;
-      transform: translateY(-4px) translateX(-25%) scaleY(0%) scaleX(99.7%);
-      transition: all 150ms ease;
-      transition-behavior: allow-discrete;
-      transition-delay: var(--dropdown-transition-delay);
-      background-color: rgba(216, 216, 216, 0.911);
-      color: inherit;
-      /* height: 8lh; */
-      max-height: 10.5lh;
     }
 
     & textarea {
       min-height: unset;
-      resize: vertical;
+      resize: both;
       vertical-align: middle;
     }
   }
