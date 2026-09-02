@@ -1,27 +1,22 @@
-/* ==========================================================================
-   🏛️ VANILLA UI FRAMEWORK CORE - CORE EMBEDDED SPECIFICATION
-   Bebas jQuery, Bebas Bloatware, 100% Mengunci Transisi 120fps Premium
-   ========================================================================== */
-
 :root {
-  --ui-shadow-light: 0 1px 2px 0 rgba(34, 36, 38, 0.15);
-  --ui-shadow-modal: 0px 10px 30px rgba(0, 0, 0, 0.3);
-  --ui-border-radius: 4px;
-  --ui-font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --toast-shadow-light: 0 1px 2px 0 rgba(34, 36, 38, 0.15);
+  --toast-shadow-modal: 0px 10px 30px rgba(0, 0, 0, 0.3);
+  --toast-border-radius: 4px;
+  --toast-font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   /* Semantic UI Pure Colors Re-mapped */
-  --ui-info-bg: #f8ffff;
-  --ui-info-text: #276f86;
-  --ui-info-border: #a9d5de;
-  --ui-success-bg: #fcfff5;
-  --ui-success-text: #2b9b2d;
-  --ui-success-border: #a3c293;
-  --ui-error-bg: #fff6f6;
-  --ui-error-text: #9f3a38;
-  --ui-error-border: #e0b4b4;
-  --ui-warning-bg: #fffaf3;
-  --ui-warning-text: #573a08;
-  --ui-warning-border: #c9ba9b;
+  --toast-info-bg: #f8ffff;
+  --toast-info-text: #276f86;
+  --toast-info-border: #a9d5de;
+  --toast-success-bg: #fcfff5;
+  --toast-success-text: #2b9b2d;
+  --toast-success-border: #a3c293;
+  --toast-error-bg: #fff6f6;
+  --toast-error-text: #9f3a38;
+  --toast-error-border: #e0b4b4;
+  --toast-warning-bg: #fffaf3;
+  --toast-warning-text: #573a08;
+  --toast-warning-border: #c9ba9b;
 }
 
 /* ==========================================================================
@@ -42,9 +37,9 @@
     color 0.1s ease,
     background 0.1s ease,
     box-shadow 0.1s ease;
-  border-radius: var(--ui-border-radius);
-  box-shadow: var(--ui-shadow-light);
-  font-family: var(--ui-font-stack);
+  border-radius: var(--toast-border-radius);
+  box-shadow: var(--toast-shadow-light);
+  font-family: var(--toast-font-stack);
   font-size: 1rem;
   border: 1px solid rgba(34, 36, 38, 0.15);
   display: flex;
@@ -131,32 +126,32 @@
 
 /* Info Variant */
 .info.toast {
-  background-color: var(--ui-info-bg);
-  color: var(--ui-info-text);
-  border-color: var(--ui-info-border);
+  background-color: var(--toast-info-bg);
+  color: var(--toast-info-text);
+  border-color: var(--toast-info-border);
 }
 
 /* Success & Positive Variant */
 .success.toast,
 .positive.toast {
-  background-color: var(--ui-success-bg);
-  color: var(--ui-success-text);
-  border-color: var(--ui-success-border);
+  background-color: var(--toast-success-bg);
+  color: var(--toast-success-text);
+  border-color: var(--toast-success-border);
 }
 
 /* Error & Negative Variant */
 .error.toast,
 .negative.toast {
-  background-color: var(--ui-error-bg);
-  color: var(--ui-error-text);
-  border-color: var(--ui-error-border);
+  background-color: var(--toast-error-bg);
+  color: var(--toast-error-text);
+  border-color: var(--toast-error-border);
 }
 
 /* Warning Variant */
 .warning.toast {
-  background-color: var(--ui-warning-bg);
-  color: var(--ui-warning-text);
-  border-color: var(--ui-warning-border);
+  background-color: var(--toast-warning-bg);
+  color: var(--toast-warning-text);
+  border-color: var(--toast-warning-border);
 }
 
 /* ==========================================================================

@@ -3,7 +3,8 @@ import { Builder } from "../Base";
 import { MessageBuilder, type iMessageContent } from "../Message/Message";
 import { TableBuilder } from "../Table/Table";
 import { FileUploader } from "./FileUploader";
-import { type iCascadeEventDetail, type iCascadeState, FormCascadeHandler } from "./Handlers/Cascade";
+import { FormCascade, type FormCascadeHost, type iCascadeEventDetail, FormCascadeHandler } from "./Handlers/Cascade";
+import { FormMultistepHandler, type FormMultistepHost } from "./Handlers/Multistep";
 import { IdAddressBuilder } from "./IdAddress/id-address-builder";
 import { InputBuilder } from "./Input";
 
@@ -50,9 +51,13 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
 
   #inputs: any[] = [];
 
-  // 🌊 Satu-satunya state cascade: form aktif + proxy nilai reaktif + flag batching.
-  // Sisanya (placeholder & descriptor item tertahan) tetap hidup di Builder.#nodes.
-  #cascadeState: iCascadeState | null = null;
+  // 🌊 Engine kaskade: seluruh logika mount/unmount/gate hidup di Cascade.ts.
+  // Form hanya berperan sebagai host (renderGroup, buttons-set, config).
+  #cascade: FormCascade | null = null;
+
+  // 🪜 Engine multistep: langkah ditahan sebagai placeholder dan baru
+  // dilahirkan ke DOM saat tombol Next/Back menekannya (Multistep.ts).
+  #multistep: FormMultistepHandler | null = null;
 
   constructor(config: Partial<iFormConfig> = {}) {
     super();
@@ -110,14 +115,17 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
     }
     this.#inputs = Array.isArray(inputs) ? inputs : [inputs];
 
-    // 🌊 Reset satu-satunya saku state cascade (siklus hidup baru per prepare)
-    this.#cascadeState = null;
+    // 🌊 Reset engine kaskade (siklus hidup baru per prepare)
+    this.#cascade = null;
+    this.#multistep = null;
 
     // const wrapper = this.render("@container", inputs);
 
     const form = this.render("@form", inputs) as HTMLFormElement;
     const formId = form.id;
     const isCascading = this.config.cascading === true;
+    if (isCascading) this.#cascade = new FormCascade(this._buildCascadeHost());
+    if (this.config.multistep) this.#multistep = new FormMultistepHandler(this._buildMultistepHost());
 
     // Iterasi dan transformasikan setiap input secara murni
     for (const [index, input] of Object.entries(this.#inputs)) {
@@ -154,22 +162,21 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
         // 🌊 CASCADE: group pembawa .condition ditahan — placeholder <template>
         // ditanam di posisinya, dibangun sungguhan saat kondisinya terpenuhi
         if (isCascading && FormCascadeHandler.isCascadeItem(input)) {
-          this._handleCascade(form, "hold", { item: input, parent: form, path: String(index) });
+          this.#cascade?.hold(form, String(index));
+          continue;
+        }
+
+        // 🪜 MULTISTEP: group pembawa langkah DITAHAN — placeholder <template>
+        // ditanam di posisinya; fieldset sungguhan baru dibangun saat tombol
+        // Next/Back menekannya (lihat FormMultistepHandler._mount).
+        if (_config.multistep) {
+          this.#multistep?.hold(form, Number(index), input);
           continue;
         }
 
         const fieldset = this.renderGroup(input, formId, isCascading ? String(index) : undefined);
         if (input.id) fieldset.id = input.id;
         if (input.className) fieldset.className = fieldset.className + " " + input.className;
-        if (_config.multistep) {
-          if (fieldset) {
-            fieldset.dataset.index = index;
-            if (Number(index) === 0) fieldset.classList.add("active")
-          };
-          const last = Number(index) === (this.#inputs.length - 1);
-          const buttons = this.render("@form>buttons-set", { index, isLast: last, formId })!;
-          fieldset.appendChild(buttons)
-        }
         // console.log("group", fieldset, this.#inputs.length)
         form.appendChild(fieldset);
       }
@@ -180,7 +187,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       else {
         // 🌊 CASCADE: input tunggal pembawa .condition juga ditahan seperti group
         if (isCascading && FormCascadeHandler.isCascadeItem(input)) {
-          this._handleCascade(form, "hold", { item: input, parent: form, path: String(index) });
+          this.#cascade?.hold(form, String(index));
           continue;
         }
 
@@ -191,8 +198,9 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
 
     };
 
-    // 🌊 CASCADE: evaluasi kondisi awal (item bernilai preset bisa langsung lahir)
-    if (isCascading) this._handleCascade(form, "sync");
+    // 🌊 CASCADE: aktifkan engine — delegasi input/change, evaluasi kondisi awal,
+    // dan gerbang tombol next langsung diset di sini.
+    if (isCascading) this.#cascade?.attach(form);
 
     if (!this.submitButtonId && this.config.submitButton && !this.config.multistep) {
       const defaultSubmitBtn = this.render("@form>actions>submit", { isGroupBtn: false, formId }) as HTMLButtonElement;
@@ -232,7 +240,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
         // 🌊 CASCADE: item anak pembawa .condition ditahan — placeholder <template>
         // ditanam di posisinya (terdaftar otomatis di #nodes) lalu rendering dilewati
         if (cascadeActive && FormCascadeHandler.isCascadeItem(innerInput)) {
-          this._handleCascade(null, "hold", { item: innerInput, parent: fieldset, path: `${cascadePath}.group.${_index}` });
+          this.#cascade?.hold(fieldset, `${cascadePath}.group.${_index}`);
           return;
         }
 
@@ -307,172 +315,52 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
   }
 
   // ==================================================================
-  // 🌊 CASCADING ENGINE — seluruh fitur cascade dalam SATU method.
-  // "hold"  : prepare menemukan item .condition → tanam placeholder <template>
-  //           (otomatis terdaftar di Builder.#nodes via render(), payload =
-  //           descriptor aslinya) tepat di posisi skema-nya sebagai anchor.
-  // "bridge": semai nilai awal kontrol DOM ke state reaktif + kaitkan event
-  //           input/change — setiap penulisan nilai memicu set-trap proxy.
-  // "sync"  : evaluasi kondisi → tukar placeholder <-> elemen asli → gerbang
-  //           multistep (disable next + pesan MessageBuilder).
+  // 🌊 HOST CASCADE — Form hanya menyediakan "tangan" ke engine (Cascade.ts):
+  // renderGroup untuk membangun fieldset, render buttons-set untuk step
+  // multistep, dan refreshSteps untuk memperbaiki langkah aktif bila sebuah
+  // step di-unmount oleh kaskade. Evaluasi/mount/unmount/gate ada di engine.
   // ==================================================================
-  private _handleCascade(
-    form: HTMLFormElement | null,
-    phase: "hold" | "sync" | "bridge",
-    context?: { item: any; parent: HTMLElement; path: string }
-  ): void {
-    // Satu saku state untuk seluruh engine; dibuat malas pada pemanggilan pertama
-    const state = (this.#cascadeState ??= { form: null as unknown as HTMLFormElement, values: null as unknown as Record<string, any>, queued: false, inputs: this.#inputs });
-    if (!state.values) {
-      state.values = this.setProxy("cascade", {}, () => {
-        // Setiap penulisan nilai pada proxy memicu evaluasi — dibatch satu microtask
-        if (!state.queued && state.form) {
-          state.queued = true;
-          queueMicrotask(() => {
-            state.queued = false;
-            this._handleCascade(state.form, "sync");
-          });
-        }
-      });
-    }
-
-    // ---- HOLD: tahan item berkondisi; placeholder <template> mengisi posisinya
-    if (phase === "hold" && context) {
-      const key = `cascade:${context.path}`;
-      (this.config.selectors as any)[key] = { tagName: "template" };
-      const placeholder = this.render(key as FormElementType, context.item) as HTMLElement;
-      placeholder.dataset.cascade = context.path;
-      context.parent.appendChild(placeholder);
-      return;
-    }
-
-    if (!form) return;
-    state.form = form;
-
-    const emit = (action: iCascadeEventDetail["action"], element: HTMLElement | null, item: any, path: string) => {
-      const detail: iCascadeEventDetail = {
-        action,
-        key: path,
-        element,
-        descriptor: item ?? null,
-        condition: FormCascadeHandler.normalizeCondition(item?.condition ?? {}),
-        state: { ...state.values }
-      };
-      if (typeof this.config.onCascade === "function") {
-        try { this.config.onCascade(detail); } catch (error) { console.warn("[Form Cascade] onCascade listener error:", error); }
-      }
-      if (typeof this.config.emit === "function") {
-        try { this.config.emit("elementChanged", { builder: this.builderId, type: "@form", element, data: detail }); } catch { /* emit opsional */ }
-      }
-      form.dispatchEvent(new CustomEvent("formCascade", { bubbles: true, detail }));
+  private _buildCascadeHost(): FormCascadeHost {
+    return {
+      builder: this.builderId,
+      inputs: this.#inputs,
+      multistep: this.config.multistep === true,
+      onCascade: typeof this.config.onCascade === "function" ? this.config.onCascade : null,
+      emit: typeof this.config.emit === "function" ? this.config.emit : null,
+      renderGroup: (group, formId, path) => this.renderGroup(group, formId, path),
+      renderButtonsSet: (payload) => this.render("@form>buttons-set", payload)!,
+      refreshSteps: (form) => this.#multistep?.refresh(form),
     };
-
-    // ---- BRIDGE: semai nilai awal kontrol DOM, lalu dengarkan perubahan user
-    if (phase === "bridge") {
-      form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input[name], select[name], textarea[name]")
-        .forEach((el) => { state.values[el.name || el.id] = FormCascadeHandler.readControlValue(form, el); });
-      const onValueChange = (event: Event) => {
-        const target = event.target as HTMLInputElement | null;
-        if (target && (target.name || target.id)) state.values[target.name || target.id] = FormCascadeHandler.readControlValue(form, target);
-      };
-      form.addEventListener("input", onValueChange);
-      form.addEventListener("change", onValueChange);
-    }
-
-    // ---- SYNC: evaluasi kondisi, tukar placeholder <-> elemen, lalu gerbang multistep
-    const resolve = (field: string) => FormCascadeHandler.resolveFieldValue(state, field);
-    const mount = (item: any, path: string, placeholder: HTMLElement): HTMLElement | null => {
-      let el: HTMLElement | null = null;
-      if (item && typeof item === "object" && "group" in item) {
-        el = this.renderGroup(item, form.id, path);
-        if (el) {
-          if (item.id) el.id = item.id;
-          if (item.className) el.className = `${el.className} ${item.className}`.trim();
-          // Multistep: step yang baru lahir tetap butuh nomor langkah + tombol navigasi
-          if (this.config.multistep && !path.includes(".")) {
-            el.dataset.index = path;
-            const buttons = this.render("@form>buttons-set", { index: Number(path), isLast: Number(path) === this.#inputs.length - 1, formId: form.id });
-            if (buttons) el.appendChild(buttons);
-          }
-        }
-      } else {
-        el = new InputBuilder({ formId: form.id } as any).create(item) as HTMLElement;
-      }
-      if (!el) return null;
-      el.dataset.cascade = path;
-      placeholder.replaceWith(el);
-      return el;
-    };
-
-    let changed = false;
-    let pass = 0;
-    do {
-      changed = false;
-      FormCascadeHandler.walkInputs(state.inputs, "", (item, path) => {
-        if (!FormCascadeHandler.isCascadeItem(item)) return; // bukan kandidat → terus turuni anak-anaknya
-        const placeholder = this.load(`cascade:${path}` as FormElementType);
-        if (!(placeholder instanceof HTMLElement)) return false; // group di atasnya masih ditahan
-        const mounted = form.querySelector<HTMLElement>(`[data-cascade="${CSS.escape(path)}"]:not(template)`);
-        if (FormCascadeHandler.conditionMet(FormCascadeHandler.normalizeCondition(item.condition), resolve, state.values)) {
-          if (!mounted) {
-            const el = mount(item, path, placeholder);
-            if (el) { changed = true; emit("mount", el, item, path); }
-          }
-        } else if (mounted) {
-          mounted.replaceWith(placeholder);
-          changed = true;
-          emit("unmount", mounted, item, path);
-        }
-        return Boolean(mounted); // group kaskade dituruni hanya saat sedang terpasang
-      });
-      pass++;
-    } while (changed && pass < 10); // ulang sebentar untuk kaskade berantai
-
-    // Gerbang multistep: kunci tombol next bila langkah berikutnya masih ditahan kondisi
-    if (this.config.multistep) {
-      form.querySelectorAll<HTMLFieldSetElement>("fieldset[data-index]").forEach((fieldset) => {
-        const nextButton = fieldset.querySelector<HTMLButtonElement>(".buttons.set > button.next");
-        if (!nextButton) return;
-        const nextPath = String(Number(fieldset.dataset.index) + 1);
-        const nextItem = this.#inputs[Number(nextPath)];
-        const nextHeld = this.load(`cascade:${nextPath}` as FormElementType) instanceof HTMLElement;
-        const nextMounted = form.querySelector(`[data-cascade="${CSS.escape(nextPath)}"]:not(template)`);
-        const blocked = nextHeld && !nextMounted && FormCascadeHandler.isCascadeItem(nextItem) &&
-          !FormCascadeHandler.conditionMet(FormCascadeHandler.normalizeCondition(nextItem.condition), resolve, state.values);
-
-        if (blocked) {
-          const guidance = FormCascadeHandler.describeBlock(nextItem);
-          nextButton.disabled = true;
-          nextButton.title = guidance;
-          if (!nextButton.hasAttribute("data-cascade-blocked")) { // atribut = penanda transisi, pesan tak diulang
-            nextButton.setAttribute("data-cascade-blocked", "");
-            FormCascadeHandler.showGateMessage(form, guidance);
-            emit("blocked", nextButton, nextItem, nextPath);
-          }
-        } else if (nextButton.hasAttribute("data-cascade-blocked")) {
-          nextButton.disabled = false;
-          nextButton.removeAttribute("data-cascade-blocked");
-          nextButton.removeAttribute("title");
-          emit("unblocked", nextButton, nextItem, nextPath);
-        }
-      });
-    }
   }
 
-  /** Set nilai field secara programatik — memantik evaluasi kaskade lewat proxy reaktif */
+  // ==================================================================
+  // 🪜 HOST MULTISTEP — Form hanya menyediakan "tangan" ke engine
+  // (Multistep.ts): renderGroup untuk melahirkan fieldset langkah saat
+  // tombol Next/Back menekannya, dan render buttons-set untuk navigasi.
+  // Penomoran langkah, status .active, dan gerbang validasi ada di engine.
+  // ==================================================================
+  private _buildMultistepHost(): FormMultistepHost {
+    return {
+      builder: this.builderId,
+      inputs: this.#inputs,
+      renderGroup: (group, formId, path) => this.renderGroup(group, formId, path),
+      renderButtonsSet: (payload) => this.render("@form>buttons-set", payload)!,
+    };
+  }
+
+  /** Set nilai field secara programatik — engine memantik evaluasi via event change */
   public setCascadeValue(field: string, value: any): void {
-    const state = this.#cascadeState;
-    if (state?.values) state.values[String(field)] = value;
+    this.#cascade?.setValue(field, value);
   }
+  /**
+   * 🪜 Multistep: posisi langkah aktif, gerbang validasi, dan pelahirkan
+   * fieldset langkah kini sepenuhnya dikelola engine FormMultistepHandler
+   * (Handlers/Multistep.ts) — lihat _buildMultistepHost().
+   */
 
   public initialize(formElement: HTMLFormElement): void {
     if (formElement && this.config.createEventListener) {
       this.attachFormListener(formElement);
-    }
-
-    // 🌊 CASCADE BRIDGE: semai nilai DOM ke proxy reaktif + evaluasi kondisi awal
-    if (formElement && this.config.cascading) {
-      this._handleCascade(formElement, "bridge");
     }
 
     // console.log(`[Form Engine v2] Form ID "${formElement?.id}" successfully compiled with active listeners.`);
@@ -595,74 +483,13 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
 
 
   public unmount(): void {
-    this.#cascadeState = null;
-    this.destroy(); // Bersihkan saku memori Map privat!
+    this.#cascade?.dispose(); // Lepas listener delegasi + placeholder engine
+    this.#cascade = null;
+    this.#multistep?.dispose(); // Lepas listener delegasi + langkah tertahan
+    this.#multistep = null;
+    this.destroy();
   }
 
-  private _handleMultiStep(form: HTMLFormElement): void {
-    let currentStep = 0;
-
-    // Fieldset di-query ulang setiap saat — langkah hasil kaskade bisa lahir
-    // kapan saja di tengah perjalanan (fieldset[data-index] hanya milik step utama).
-    const getSteps = (): HTMLFieldSetElement[] =>
-      Array.from(form.querySelectorAll<HTMLFieldSetElement>("fieldset[data-index]"))
-        .sort((a, b) => Number(a.dataset.index) - Number(b.dataset.index));
-
-    // Fungsi untuk memperbarui tampilan step
-    function showStep(stepIndex: number) {
-      const steps = getSteps();
-      for (const fieldset of steps) {
-        const currentIndex = Number(fieldset.dataset.index)
-        if (currentIndex === stepIndex) {
-          fieldset.classList.add("active");
-          const position = steps.indexOf(fieldset);
-          if (position < steps.length - 1) steps[position + 1].setAttribute("animate", "next");
-          if (position > 0) steps[position - 1].setAttribute("animate", "back")
-        } else {
-          fieldset.classList.remove("active");
-        }
-      }
-    }
-
-    // Inisialisasi: Tampilkan step pertama (index 0)
-    showStep(currentStep);
-
-    // Delegasi klik di level form — tombol next/back milik step hasil kaskade
-    // yang baru lahir otomatis ikut tertangkap tanpa perlu re-bind manual.
-    form.addEventListener("click", (event) => {
-      const target = event.target as HTMLElement | null;
-      const button = target?.closest?.("button") as HTMLButtonElement | null;
-      if (!button || !button.closest(".buttons.set")) return;
-      const isNext = button.classList.contains("next");
-      const isBack = button.classList.contains("back");
-      if (!isNext && !isBack) return;
-
-      event.preventDefault();
-
-      if (isNext) {
-        const steps = getSteps();
-        const currentFieldset = steps.find((fieldset) => Number(fieldset.dataset.index) === currentStep);
-        if (currentFieldset && !currentFieldset.checkValidity()) {
-          currentFieldset.reportValidity();
-          return;
-        }
-
-        // Maju hanya jika step berikutnya memang sudah ada di DOM
-        const nextFieldset = steps.find((fieldset) => Number(fieldset.dataset.index) === currentStep + 1);
-        if (nextFieldset) {
-          currentStep++;
-          showStep(currentStep);
-        }
-      } else if (currentStep > 0) {
-        const steps = getSteps();
-        const previousFieldset = steps.filter((fieldset) => Number(fieldset.dataset.index) < currentStep).pop();
-        if (previousFieldset) {
-          currentStep = Number(previousFieldset.dataset.index);
-          showStep(currentStep);
-        }
-      }
-    });
-  }
   /**
    * Logika Listener asinkronus (FileUploader, Event submit, CustomEvent) tetap aman terisolasi di sini
    */
@@ -702,35 +529,35 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
     let IdAddress = null;
     if (typeof FileUploader !== "undefined" && typeof FileUploader.initAll === "function") {
       FileUploader.initAll(form);
-      const csvInput = form.querySelector("input[type='file'][data-uploader-csv]");
-      csvInput?.addEventListener("change", async (_e: any) => {
-        // 1. Cari dan hapus tabel lama terlebih dahulu jika sudah ada (supaya tidak menumpuk)
-        const existingTable = form.querySelector('.table-container');
-        if (existingTable) {
-          existingTable.remove();
+
+      // Delegasi di level form — input file CSV dari step kaskade yang baru
+      // lahir (ecommerce/gallery) ikut membangun tabel, bukan hanya yang awal.
+      form.addEventListener("change", async (event: Event) => {
+        const csvInput = (event.target as HTMLElement)?.closest?.("input[type='file'][data-uploader-csv]") as HTMLInputElement | null;
+        if (!csvInput || !form.contains(csvInput)) return;
+
+        // 1. Hapus tabel lama terlebih dahulu jika sudah ada (supaya tidak menumpuk)
+        const existingTable = form.querySelector(".table-container");
+        if (existingTable) existingTable.remove();
+
+        // 2. File dihapus pengguna → jangan buat tabel baru
+        if (!csvInput.files || csvInput.files.length === 0) {
+          if (table && typeof table.destroy === "function") table.destroy();
+          table = null;
+          return;
         }
 
-        // 3. Jika file ada, lanjutkan proses pembuatan tabel seperti biasa
+        // 3. Bangun tabel dari CSV yang baru dipilih
         const tableData = await FileUploader.parseCSVToTable(form.id);
-
         if (TableBuilder !== undefined && typeof TableBuilder === "function") {
           table = new TableBuilder({
             renderAsCard: false,
-            autoFreezeAt: 1
-          })
+            autoFreezeAt: 0
+          });
 
-          // 2. Cek apakah file kosong (artinya pengguna me-remove file)
-          if (!(csvInput as HTMLInputElement).files || (csvInput as HTMLInputElement).files?.length === 0) {
-            table.destroy();
-            return; // Berhenti di sini, jangan buat tabel baru
-          }
-
-          // 4. Tambahkan class penanda agar mudah dicari dan dihapus nanti
           const tableEl = table.create(tableData);
-
-          (csvInput.parentElement as HTMLElement)?.insertAdjacentElement('afterend', tableEl);
+          (csvInput.parentElement as HTMLElement)?.insertAdjacentElement("afterend", tableEl);
         }
-
       });
     }
 
@@ -753,7 +580,8 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       }
     };
 
-    if (this.config.multistep) this._handleMultiStep(form);
+    // 🪜 Multistep: engine melahirkan langkah awal + memasang delegasi next/back
+    this.#multistep?.attach(form);
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -801,16 +629,15 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
         }));
     });
 
-    if (this.submitButtonId) {
-      const button = this.load("@form>actions>submit") as HTMLButtonElement;
-
-      if (button) {
-        button.addEventListener("click", (e) => {
-          e.preventDefault();
-          form.requestSubmit(button);
-        });
-      }
-    }
+    // Delegasi klik submit di level form — tombol submit yang lahir setelah
+    // initialize (dari step kaskade) tetap hidup, tak perlu re-bind manual.
+    form.addEventListener("click", (event) => {
+      const button = (event.target as HTMLElement)?.closest?.("button[type=submit], input[type=submit]") as HTMLButtonElement | null;
+      if (!button) return;
+      if (!form.contains(button) && button.getAttribute("form") !== form.id) return;
+      event.preventDefault();
+      form.requestSubmit(button);
+    });
 
   }
 

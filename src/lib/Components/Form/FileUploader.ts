@@ -1405,18 +1405,34 @@ export class FileUploader {
    * 5. **Sanitize & Type-Cast**: Scrubs encapsulation wrappers ("quotes") and maps pure numerical strings straight to native float integers.
    */
   static async parseCSVToTable(formId?: string | null): Promise<{ body: any[], header: any[], footer: any }> {
+
+    const toTable = (inputData: any[]): any => {
+      if (!Array.isArray(inputData)) return [];
+      const tableHeaders: string[] = Object.keys(inputData[0]);
+
+      const tableBody = inputData.map((item) => {
+        return Object.values(item)
+      });
+
+      return {
+        header: tableHeaders as any,
+        body: tableBody,
+      };
+    }
+
     return new Promise<{ body: any[], header: any[], footer: any }>((resolve, reject) => {
       const filesMap = FileUploader.getFiles(formId);
       let targetCsvFile: File | null = null;
-
+      let isCsv = false;
       // 1. Iterate through grouped fields to capture the first available .csv file
       if (filesMap && Object.keys(filesMap).length > 0) {
         for (const [_, fileArray] of Object.entries(filesMap)) {
           if (!fileArray || fileArray.length === 0) continue;
 
-          const found = fileArray.find(file => file.name.split('.').pop()?.toLowerCase() === 'csv');
+          const found = fileArray.find(file => file.name.split('.').pop()?.toLowerCase() === 'csv' || file.name.split('.').pop()?.toLowerCase() === 'json');
           if (found) {
             targetCsvFile = found;
+            isCsv = targetCsvFile.name.split('.').pop()?.toLowerCase() === 'csv';
             break;
           }
         }
@@ -1431,51 +1447,61 @@ export class FileUploader {
       const reader = new FileReader();
       reader.readAsText(targetCsvFile, "UTF-8");
 
-      reader.onload = () => {
-        const csvText = reader.result as string;
-        if (!csvText || csvText.trim() === "") {
-          resolve({ header: [], body: [], footer: null });
-          return;
-        }
+      if (isCsv) {
 
-        // 2. Break string text stream blocks down by structural line segments (supports CRLF / LF)
-        const lines = csvText.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-        if (lines.length === 0) {
-          resolve({ header: [], body: [], footer: null });
-          return;
-        }
-
-        const firstLine = lines[0];
-
-        // 3. Dynamic Delimiter detection engine matching standard comma configurations vs European/Excel semicolon presets
-        const delimiter = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
-
-        // Internal evaluation utility for stripping outer quote wrappers and converting data-types
-        const cleanCell = (cell: string): string | number => {
-          let value = cell.trim();
-          if (value.startsWith('"') && value.endsWith('"')) {
-            value = value.substring(1, value.length - 1).trim();
+        reader.onload = () => {
+          const csvText = reader.result as string;
+          if (!csvText || csvText.trim() === "") {
+            resolve({ header: [], body: [], footer: null });
+            return;
           }
 
-          // Force cast plain valid digit fields into native JS number types
-          if (value !== "" && !isNaN(Number(value))) {
-            return Number(value);
+          // 2. Break string text stream blocks down by structural line segments (supports CRLF / LF)
+          const lines = csvText.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+          if (lines.length === 0) {
+            resolve({ header: [], body: [], footer: null });
+            return;
           }
-          return value;
+
+          const firstLine = lines[0];
+
+          // 3. Dynamic Delimiter detection engine matching standard comma configurations vs European/Excel semicolon presets
+          const delimiter = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+
+          // Internal evaluation utility for stripping outer quote wrappers and converting data-types
+          const cleanCell = (cell: string): string | number => {
+            let value = cell.trim();
+            if (value.startsWith('"') && value.endsWith('"')) {
+              value = value.substring(1, value.length - 1).trim();
+            }
+
+            // Force cast plain valid digit fields into native JS number types
+            if (value !== "" && !isNaN(Number(value))) {
+              return Number(value);
+            }
+            return value;
+          };
+
+          // 4. Transform structural raw segments into pure headers and 2D arrays matrix mapping
+          const headerRow = firstLine.split(delimiter).map(cell => cleanCell(cell));
+          const bodyRows = lines.slice(1).map(line => {
+            return line.split(delimiter).map(cell => cleanCell(cell));
+          });
+
+          resolve({
+            header: headerRow,
+            body: bodyRows,
+            footer: null // Left blank intentionally for declarative execution inside TableBuilderService
+          });
         };
+      } else {
+        reader.onload = () => {
+          resolve(toTable(JSON.parse(reader.result as string) as any[]))
+        }
+      }
 
-        // 4. Transform structural raw segments into pure headers and 2D arrays matrix mapping
-        const headerRow = firstLine.split(delimiter).map(cell => cleanCell(cell));
-        const bodyRows = lines.slice(1).map(line => {
-          return line.split(delimiter).map(cell => cleanCell(cell));
-        });
 
-        resolve({
-          header: headerRow,
-          body: bodyRows,
-          footer: null // Left blank intentionally for declarative execution inside TableBuilderService
-        });
-      };
+
 
       reader.onerror = (error) => {
         console.error(`[CSVParser] Critical failure while reading buffer stream from target context:`, error);

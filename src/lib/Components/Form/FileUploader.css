@@ -81,7 +81,6 @@
 
       & i {
         display: block;
-        font-size: 2em;
         line-height: 1.15em;
         text-align: center;
         position: relative;
@@ -136,14 +135,16 @@
   & .item {
     display: flex;
     align-items: center;
-    padding-bottom: 0.25em;
-    padding-top: 0.25em;
+    padding-bottom: 3px;
+    padding-top: 3px;
     padding-right: 0.75em;
     padding-left: 0.75em;
     border-bottom: 1px solid var(--input-border-color);
+    font-size: calc(var(--input-font-size) - 0.15rem);
+    line-height: 1.3;
     &.info {
       justify-content: space-between;
-      background: var(--input-background-color);
+      background: var(--input-background-color-hover);
       & .message:not(.allowed, .unallowed, .warning) {
         color: var(--input-primary-color);
       }
@@ -164,7 +165,7 @@
       flex-grow: 1;
       margin-left: 0.75em;
       & .filename {
-        font-size: 1rem;
+        font-size: var(--input-font-size);
         font-weight: 500;
         font-style: normal;
         color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
@@ -174,7 +175,7 @@
       }
       & .message {
         margin-bottom: 0;
-        font-size: 0.9rem;
+        font-size: calc(var(--input-font-size) * 0.2);
         font-weight: 600;
         font-style: italic;
         &.warning {
@@ -193,8 +194,8 @@
       border-radius: 4px;
       font-size: 0.7rem;
       font-weight: 600;
-      background-color: var(--input-accent-color);
-      color: var(--input-text-color);
+      background-color: var(--input-background-color-hover);
+      color: var(--input-text-color-light);
       &.warning {
         color: var(--input-text-color);
         background-color: var(--warning-color);
@@ -237,6 +238,8 @@
   visibility: visible;
   border-radius: 0 0 var(--input-border-radius, 0.55em) var(--input-border-radius, 0.55em);
   & .item {
+    font-size: calc(var(--input-font-size) - 0.15rem);
+    line-height: 1.3;
     &:hover .label.filesize,
     &:hover .close.button {
       visibility: visible;
@@ -298,9 +301,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: var(--input-background-color);
+      background: var(--input-background-color-hover);
       padding: 0.25em 1em;
-      border-bottom: var(--input-border-color);
+      border-bottom: 1px solid var(--input-border-color);
       & .message:not(.allowed, .unallowed, .warning) {
         color: var(--input-primary-color);
       }
@@ -319,6 +322,7 @@
   }
 
   & .row:is(.details) {
+    font-size: calc(var(--input-font-size) - 0.15rem);
     display: flex;
     flex-direction: column;
     flex-grow: 1;
@@ -326,10 +330,12 @@
     padding: 0.5em;
     color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
     & .title {
+      font-size: calc(var(--input-font-size) * 0.7);
+      line-height: 1.4;
       font-weight: 700;
       padding: 2px 0.5em;
       margin-bottom: 0.25em;
-      background: color-mix(in srgb, var(--input-accent-color) 100%, white 70%);
+      background: color-mix(in srgb, var(--input-accent-color) 80%, black 40%);
     }
     & .message {
       display: flex;
@@ -416,6 +422,7 @@
   }
   & input[type="file"]::file-selector-button {
     /* line-height: 0.75rem; */
+    margin-right: 1em;
     position: relative;
     bottom: 2px;
     min-height: calc(var(--input-icon-size) * 0.85);
@@ -426,14 +433,14 @@
     transition: 30ms;
     align-self: center;
     outline: none;
-    color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+    color: color-mix(in srgb, var(--input-text-color) 80%, white 50%);
     border: 2px solid var(--input-accent-color);
-    background-color: color-mix(in srgb, var(--input-primary-color) 90%, rgb(245, 244, 244, 0.8));
+    background-color: color-mix(in srgb, var(--input-primary-color) 50%, var(--input-accent-color) 5%);
     box-shadow: 0 2px 3px 0 color-mix(in srgb, var(--input-accent-color) 30%, var(--input-primary-color) 45%);
   }
   & input[type="file"]::file-selector-button:hover {
-    color: color-mix(in srgb, var(--input-accent-color) 45%, black 30%);
-    background-color: color-mix(in srgb, var(--input-primary-color) 50%, var(--input-accent-color) 5%);
+    color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+    background-color: color-mix(in srgb, var(--input-primary-color) 90%, rgb(245, 244, 244, 0.8));
   }
   & input[type="file"]::file-selector-button:active {
     transform: scale(0.95);

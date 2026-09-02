@@ -23,12 +23,16 @@ section#home {
   flex-wrap: wrap;
 
   & .form {
+    max-width: 600px;
     --input-background-color: transparent;
     & fieldset:is(.inline-style) {
       --input-placeholder-color: var(--input-primary-color);
       --input-label-color: rgba(255, 248, 215, 0.431);
       --input-font-size: 1.6rem;
       --input-label-size: 1.6rem;
+      & .field:has(> input[type="file"]) {
+        --input-font-size: 1.1rem;
+      }
     }
   }
 
@@ -122,12 +126,7 @@ section#home {
 
 section#home .form fieldset.inline-style {
   padding: 2em 1.5em 0.5em 1.5em;
-  background-color: linear-gradient(
-    45deg,
-    rgba(24, 29, 9, 0.308) 0%,
-    rgba(73, 65, 29, 0.486) 40%,
-    rgba(56, 51, 2, 0.315) 100%
-  );
+  background: linear-gradient(45deg, rgba(24, 29, 9, 0.308) 0%, rgba(73, 65, 29, 0.486) 40%, rgba(56, 51, 2, 0.315) 100%);
   border: none;
   box-shadow: 5px 3px 70px 5px rgba(53, 53, 52, 0.212);
 }

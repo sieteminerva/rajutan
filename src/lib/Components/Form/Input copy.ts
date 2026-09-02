@@ -132,7 +132,6 @@ export class InputBuilder extends Builder<InputElementType> {
 
     switch (typeKey) {
       case "@field": {
-        console.log(el)
         // Gaya kelas & atribut kosmetik wrapper utama
         if (payload.config?.className && payload.config?.className !== "loading") {
           el.classList.add(...payload.config.className.split(" ").filter(Boolean));
@@ -142,6 +141,7 @@ export class InputBuilder extends Builder<InputElementType> {
 
         // A. Render Label jika dikonfigurasi
         if (payload.title && payload.config?.useLabel) {
+          console.log({ payload })
           const label = this.render("@field>label", { id: elementId, text: payload.title, position: payload.position })!;
           el.appendChild(label);
         }
@@ -194,7 +194,7 @@ export class InputBuilder extends Builder<InputElementType> {
       case "@field>checkbox":
         const slider = document.createElement("div");
         slider.className = "slider";
-        slider.setAttribute("data-shape", "round")
+
         el.__outer.appendChild(slider);
         (el as HTMLInputElement).type = "checkbox";
         el.id = payload.id;

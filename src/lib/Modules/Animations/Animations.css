@@ -9,7 +9,7 @@
   /* border-right: 2px solid currentColor; */
   width: auto;
   display: none;
-  max-width: 100%;
+  max-width: fit-content;
 }
 /* =========================================================================
    2. MODULE: TYPEWRITER

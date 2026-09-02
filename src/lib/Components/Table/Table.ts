@@ -159,7 +159,7 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
    */
   public prepare(content: any, _config: Required<iTableConfig>): HTMLElement | Record<string, any | HTMLElement> {
 
-    const container = this.render("@container");
+    const container = this.render("@container")!;
     // Reset internal state
     this.currentPage = 1;
     this.pageRows = [];
@@ -187,11 +187,11 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
 
     this.renderTable()
 
-    container?.appendChild(this.table)!
+    container?.appendChild(this.table)
 
     this.hierarchy.update();
 
-    return container!;
+    return container;
   }
 
   private renderTable() {
@@ -205,8 +205,9 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
     this.table.replaceChildren(this.thead, this.tbody, this.tfoot)
 
 
-
+    this._applyFreezeColumns(this.table)
     // Step 3: Return the fully rendered table element.
+
     return this.table;
   }
 
@@ -216,7 +217,7 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
    * click/drag/swipe interactive listeners onto the completed DOM structure.
    */
   public initialize(el?: HTMLElement, _payload?: any): void {
-    const table = (el || this.table) as HTMLTableElement;
+    const table = el?.firstElementChild as HTMLElement;
     if (!table) return;
 
     if (this._totalColumns! > 5 && !this._isRowTotalRendered && this.config.renderAsCard) table.classList.add("stacked");
@@ -294,38 +295,11 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
       }
     });
 
-    const autoFreezeAt = this.config.autoFreezeAt;
-    if (autoFreezeAt) {
-      requestAnimationFrame(() => {
-        let currentLeft = 0;
-
-        // Lakukan loop hingga indeks batas freeze yang ditentukan di konfigurasi
-        for (let ci = 0; ci <= autoFreezeAt!; ci++) {
-          // Cari semua cell (header dan body) yang memiliki indeks kolom ini
-          const targetCells = table.querySelectorAll(`[data-col-index="${ci}"]`) as NodeListOf<HTMLElement>;
-
-          if (targetCells.length === 0) continue;
-
-          // Ambil lebar cell pertama (biasanya TH) untuk acuan kolom berikutnya
-          const cellWidth = targetCells[0].offsetWidth || 100; // fallback 100px jika elemen belum di-render ke layar
-
-          targetCells.forEach(cell => {
-            cell.style.position = 'sticky';
-            cell.style.left = `${currentLeft}px`;
-            cell.style.backgroundColor = '#f8f9fa'; // Solid background agar tidak tembus
-            cell.style.zIndex = cell.tagName === 'TH' ? '3' : '2';
-
-            // Beri batas border tebal khusus di kolom batas terakhir freeze
-            if (ci === autoFreezeAt) {
-              cell.style.borderRight = '3px solid #b0b0b0';
-            }
-          });
-
-          currentLeft += cellWidth;
-        }
-      });
+    if (this.config.renderAsCard) {
+      el!.style.overflowX = "hidden";
+      el!.style.width = "100%";
     }
-
+    // console.log(el)
     // console.log("[TableBuilder2 Lifecycle] Table component initialized successfully.");
   }
 
@@ -460,6 +434,8 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
         td.contentEditable = "false";
       }
     });
+
+
 
 
     // Step 9: If editing was disabled, re-render the entire table to update
@@ -606,7 +582,7 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
             // Step 5: Check sub-row status
             const rawRow = this.data.body![payload.rowIndex as number];
             const isSubRow = rawRow && typeof rawRow === "object" && rawRow.subrowOfUid != null;
-            if (isSubRow) el.classList.add("sub-row");
+            if (isSubRow) el.classList.add("subrow");
 
             // console.log(payload.cells)
             // Step 6: Render each cell
@@ -799,7 +775,7 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
     this._totalColumns = this._countRenderedColumns();
 
     // Check if has subrow
-    const hasSubRow = data.body!.some((r) => r && (r as TableCellData).subrowOfUid != null);
+    const hasSubRow = this._hasSubRows();
 
     // Create header model
     const headerModel = this._createHeaderDomModel(data.header!);
@@ -844,6 +820,9 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
       this._applyInsertionPagination(domModel);
     }
 
+    // Step 9: Recompute the total column count from the final header layout so that
+    // freezing/stacking thresholds and downstream consumers always use the exact rendered width.
+    this._totalColumns = this._countRenderedColumns(domModel);
 
     return domModel;
   }
@@ -1013,7 +992,14 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
     // Step 1: Check if renderTotal is configured.
     if (Array.isArray(footerOptions?.renderTotal)) {
       const row = { rowIndex: footer.length, cells: [] as TableCellModel[] };
-      const footerColumns = this._totalColumns as number - (this._isRowTotalRendered ? 1 : 0);
+      // `_totalColumns` already accounts for the "Row Total" column (when sub-rows exist),
+      // so the render-total row is created with the full column count – no stale-flag adjustment.
+      const footerColumns = this._totalColumns as number;
+      // A "Row Total" column (inserted right after the formula column) has no dedicated sum cell
+      // here: the formula column's grand-total cell spans across it (colspan 2), so no extra <th>
+      // is left dangling in front of the add-row button column.
+      const formulaIndex = this._getFormulaColumnIndex();
+      const hasRowTotal = formulaIndex !== -1 && this._hasSubRows();
 
       // Step 1a: Fill the row with empty placeholders.
       for (let i = 0; i < footerColumns; i++) {
@@ -1023,16 +1009,24 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
       footerOptions.renderTotal.forEach((title) => {
         const colIdx = __findColIndexByHeader(this.data.header!, title);
         if (colIdx !== -1) {
-          row.cells[(autoNumbering ? 1 : 0) + colIdx] = tcell(`render-total-${title}`)
+          const pos = (autoNumbering ? 1 : 0) + colIdx;
+          const cell = tcell(`render-total-${title}`)
             .value(`${title.toUpperCase()}_PLACEHOLDER`)
             .create();
+          if (hasRowTotal && colIdx === formulaIndex) {
+            // The grand-total for the formula column doubles as the "Row Total" footer cell:
+            // widen it over the row-total slot and drop that slot's placeholder.
+            cell.options.colSpan = 2;
+            row.cells.splice(pos + 1, 1);
+          }
+          row.cells[pos] = cell;
         }
       });
 
       if (editable) {
         // Step 1b: If editable, place an add button placeholder in the last column.
         // 👇 put the button placeholder always in the last obj in a row.cells
-        row.cells[footerColumns - 1] = tcell("add-button").value("ADD_BTN_PLACEHOLDER").create();
+        row.cells[row.cells.length - 1] = tcell("add-button").value("ADD_BTN_PLACEHOLDER").create();
         addButtonPlaced = true;
       }
 
@@ -1062,12 +1056,14 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
     if (pageSize) {
       const row = { rowIndex: footer.length, cells: [] as TableCellModel[] };
       if (editable) {
-        const hasSubRow = this.data.body!.some((r) => r && (r as TableCellData).subrowOfUid != null);
         row.cells.push(
           // Step 3a: If editable, create a pagination placeholder spanning all but the last column.
+          // The last column is always occupied by the add-button placeholder (`addButtonPlaced`)
+          // or a plain placeholder pushed below, so subtracting exactly 1 keeps this row's width
+          // equal to `_totalColumns` – regardless of whether sub-rows / a Row Total are rendered.
           tcell("pagination")
             .value("PAGINATION_PLACEHOLDER")
-            .colspan(this._totalColumns! - (hasSubRow ? 0 : 1))
+            .colspan((this._totalColumns as number) - 1)
             .create()
         );
 
@@ -1140,6 +1136,33 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
     return payload.reverse();
   }
 
+  /**
+   * Determine whether the current data contains any sub-rows.
+   * Covers both the modern `subrowOfUid` reference and the legacy `subrowOf` numeric marker.
+   */
+  private _hasSubRows(): boolean {
+    return (this.data?.body || []).some(
+      (r) => r && typeof r === "object" && ((r as TableCellData).subrowOfUid != null || (r as TableCellData).subrowOf != null)
+    );
+  }
+
+  /**
+   * Determine whether a "Row Total" column will be rendered for the current data.
+   * A Row Total column is inserted only when a body column has a `formula` AND sub-rows exist.
+   * This is the live-data equivalent of `_isRowTotalRendered` (which is only set *after* the
+   * column is inserted, so it is useless for pre-computing `_totalColumns`).
+   */
+  private _hasRowTotalColumn(): boolean {
+    return this._getFormulaColumnIndex() !== -1 && this._hasSubRows();
+  }
+
+  /**
+   * Index (within `bodyOptions`) of the column configured with a `formula`, or -1 if none.
+   */
+  private _getFormulaColumnIndex(): number {
+    return (this.config.bodyOptions || []).findIndex((opt) => !!opt?.formula);
+  }
+
   private _countRenderedColumns(domModel: DOMModel | null = null): number {
     if (domModel && domModel.header && domModel.header.length > 0) {
       // Step 1a: Get the first header row.
@@ -1160,7 +1183,7 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
     // Step 2a: Calculate the total columns by adding base header columns and optional columns.
     const headerCols = this.data?.header?.length || 0;
     // Return the calculated count based on configuration.
-    return (cfg.autoNumbering ? 1 : 0) + headerCols + (this._isRowTotalRendered ? 1 : 0) + (cfg.editable ? 1 : 0);
+    return (cfg.autoNumbering ? 1 : 0) + headerCols + (this._hasRowTotalColumn() ? 1 : 0) + (cfg.editable ? 1 : 0);
   }
 
   private _openRowForEditByGlobalIndex(globalIndex: number): void {
@@ -1344,6 +1367,7 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
           row.cells[idx] = tcell(title)
             .value(this.render("@table>trow>total", this._createGrandTotalColumnPayload({ title, colIndex: idx }, this.config)))
             .class(`sum ${title}`)
+            .options({ ...(c.options || {}) }) // preserve colSpan (e.g. the Row Total merge colspan 2)
             .create();
         }
       });
@@ -1370,8 +1394,7 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
   private _applyInsertionRowTotalColumns(domModel: DOMModel): void {
     // Step 1: Get configuration and find the index of the column with a formula.
     const config = this.config;
-    const bodyOpts = config.bodyOptions || [];
-    const formulaIndex = bodyOpts.findIndex((opt) => !!opt?.formula);
+    const formulaIndex = this._getFormulaColumnIndex();
     // If no formula column is found, there's nothing to total, so return.
     if (formulaIndex === -1) return; // no formula column, nothing to total
     // Step 2: Calculate the position where the "Row Total" column should be inserted.
@@ -1382,16 +1405,59 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
     // Step 3: Insert the "Row Total" header cell.
     const headerRows = domModel.header || [];
     if (headerRows.length) {
-      // Create a header cell object for "Row Total".
-      // It will span all header rows.
+      // Create a header cell object for "Row Total". It spans every header row so it is
+      // visually connected to the "Row Total" body column regardless of header grouping.
       const headerCellObj = tcell("row-total")
         .value("Row Total")
         .class("row-total")
         .align("center")
         .rowspan(headerRows.length)
         .create();
-      // Insert the header cell into the first header row at the calculated position.
-      headerRows[0].cells.splice(formulaIndex, 0, headerCellObj);
+
+      if (headerRows.length === 1) {
+        // Single (non-grouped) header row: its cells mirror the body cells 1:1, so insert at
+        // the same index the body uses. (`insertPos` already includes the auto-numbering offset
+        // and lands the column right after the formula column – splicing at the bare
+        // `formulaIndex` would skew every later column and break header/body alignment plus
+        // the `data-col-index` numbering.)
+        headerRows[0].cells.splice(insertPos, 0, headerCellObj);
+      } else {
+        // Grouped header: group titles live in the top row, per-column cells in the bottom row.
+        const top = headerRows[0];
+        const bottom = headerRows[headerRows.length - 1];
+        const formulaGrid = (config.autoNumbering ? 1 : 0) + formulaIndex;
+
+        // Walk the top-row cells grid-based (honoring colspans) to find the cell that covers
+        // the formula column and whether that title extends past the new row-total slot.
+        let grid = 0;
+        let coveringIdx = -1;
+        let coveringEnd = -1;
+        for (let i = 0; i < top.cells.length; i++) {
+          const span = top.cells[i].options?.colSpan || 1;
+          if (coveringIdx === -1 && grid + span - 1 >= formulaGrid) {
+            coveringIdx = i;
+            coveringEnd = grid + span - 1;
+          }
+          grid += span;
+        }
+
+        if (coveringIdx !== -1 && coveringEnd >= insertPos) {
+          // The group holding the formula column also covers the new row-total slot
+          // (formula is followed by more members inside the same group). Widen that group
+          // title by one so the row-total header can live in the bottom row beneath it.
+          top.cells[coveringIdx].options.colSpan = (top.cells[coveringIdx].options.colSpan || 1) + 1;
+          headerCellObj.options.rowSpan = 1;
+          let hIdx = bottom.cells.findIndex((c) => c.key === `col${formulaIndex}`);
+          if (hIdx === -1) hIdx = bottom.cells.findIndex((c) => (c as any).columnIndex === formulaIndex);
+          hIdx = hIdx === -1 ? insertPos : hIdx + 1; // insert right AFTER the formula column
+          bottom.cells.splice(hIdx, 0, headerCellObj);
+        } else {
+          // The formula column is the last member of its covering title: place the "Row Total"
+          // header in the TOP row, right after that title, spanning all header rows.
+          const insertIdx = coveringIdx === -1 ? top.cells.length : coveringIdx + 1;
+          top.cells.splice(insertIdx, 0, headerCellObj);
+        }
+      }
     }
 
     // ------------- BODY --------------
@@ -1445,11 +1511,61 @@ export class TableBuilder extends Builder<TableElementType, iTableConfig> {
     }
 
     this._isRowTotalRendered = true;
-    // Step 5: Adjust the colspan of the footer cell immediately before the inserted column
-    // to accommodate the new "Row Total" column.
-    if (domModel.footer[0].cells.length > 0) {
-      domModel.footer[0].cells[insertPos - 1].options.colSpan = 2;
+    // Step 5: Footer rows were already built spanning the full `_totalColumns` (which now already
+    // includes this "Row Total" column), so no footer colspan adjustment is required here.
+    // (Bumping `footer[0].cells[insertPos - 1].options.colSpan = 2` here used to create a phantom
+    // extra column in the pagination row when `footer[0]` was the pagination row.)
+  }
+
+  private _applyFreezeColumns(table: HTMLTableElement) {
+    const autoFreezeAt = this.config.autoFreezeAt;
+    if (!this.config.renderAsCard && autoFreezeAt !== null) {
+      requestAnimationFrame(() => {
+        let currentLeft = 0;
+
+        // Lakukan loop hingga indeks batas freeze yang ditentukan di konfigurasi
+        for (let ci = 0; ci <= autoFreezeAt!; ci++) {
+          // Cari semua cell (header dan body) yang memiliki indeks kolom ini
+          const targetCells = table.querySelectorAll(`[data-col-index="${ci}"]`) as NodeListOf<HTMLElement>;
+
+          if (targetCells.length === 0) continue;
+
+          // Ambil lebar cell pertama (biasanya TH) untuk acuan kolom berikutnya
+          const cellWidth = targetCells[0].offsetWidth || 100; // fallback 100px jika elemen belum di-render ke layar
+
+          targetCells.forEach(cell => {
+            const zIndex = cell.tagName === 'TH' ? '3' : '2';
+            // Beri batas border tebal khusus di kolom batas terakhir freeze
+            const borderWidth = ci === autoFreezeAt ? "3px" : "0px";
+            cell.setAttribute("style", `--border-width: ${borderWidth}; --current-left: ${currentLeft}px; --z-index: ${zIndex};`.trim())
+            !cell.classList.contains("sticky") ? cell.classList.add("sticky") : cell.classList.remove("sticky")
+            // console.log(cell, currentLeft)
+          });
+
+          currentLeft += cellWidth;
+        }
+      });
     }
+  }
+
+  _applyKeydownHandler(e?: KeyboardEvent) {
+    if (e?.key === 'ArrowRight') {
+      // move to the previous column which has contenteditable = true
+      e.preventDefault();
+    }
+    if (e?.key === 'ArrowLeft') {
+      // move to the next column which has contenteditable = true
+      e.preventDefault();
+    }
+    if (e?.key === 'Escape') {
+      // set contenteditable=false to all column 
+      e.preventDefault();
+    }
+    if (e?.key === 'Enter') {
+      // new row / subrow, check first which one is activated
+      e.preventDefault();
+    }
+    // dont forget to remove listener after editing complete or use {once:true}
   }
 
 }

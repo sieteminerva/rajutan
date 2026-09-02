@@ -3,7 +3,7 @@
    ========================================================================== */
 .native.form {
   /* Global Color Overrides */
-  --gsheets-accent-color: #f0f4f9;
+  /* --gsheets-accent-color: #f0f4f9;
   --primary-color: rgba(91, 63, 134, 0.65);
   --primary-color-solid: rgba(143, 126, 174, 1);
   --primary-text-color: var(--primary-color);
@@ -16,25 +16,29 @@
 
   --light-border-color: rgba(183, 164, 216, 0.85);
   --primary-border-color: rgba(144, 116, 186, 0.85);
-  --border-color: rgba(34, 36, 38, 0.15);
+  --border-color: rgba(34, 36, 38, 0.15); */
 
+  /* NEW VARIABLES To Replace Above */
   /* Shared Asset & Interface Parameters */
   --dropdown-arrow-content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M12.707 14.707a1 1 0 0 1-1.414 0l-5-5a1 1 0 0 1 1.414-1.414L12 12.586l4.293-4.293a1 1 0 1 1 1.414 1.414l-5 5Z' fill='black'/%3E%3C/svg%3E");
   --spinner-content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8' fill='none' stroke='rgba(138,138,178,0.3)' stroke-width='4'/%3E%3Ccircle cx='10' cy='10' r='8' fill='none' stroke='rgba(91, 63, 134, 0.65)' stroke-width='3' stroke-linecap='round' stroke-dasharray='45'%3E%3CanimateTransform attributeName='transform' attributeType='XML' type='rotate' from='0 10 10' to='360 10 10' dur='0.6s' repeatCount='indefinite'/%3E%3Canimate attributeName='stroke-dashoffset' values='0;90;180' dur='3s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E");
+
   /* coloring */
   --input-primary-color: darkgoldenrod;
   --input-accent-color: rgba(184, 135, 11, 0.384);
-  --input-text-color: color-mix(in srgb, var(--input-accent-color) 30%, var(--input-primary-color) 45%);
-
-  --input-label-color: var(--input-accent-color);
 
   --input-border-color: var(--input-primary-color);
-  --input-text-color-light: var(--default-text-color);
+
+  --input-text-color: color-mix(in srgb, var(--input-accent-color) 30%, var(--input-primary-color) 45%);
+  --input-label-color: var(--input-accent-color);
+  --input-text-color-light: color-mix(in srgb, var(--input-primary-color) 40%, white 50%);
   --input-text-hover-color: darkgoldenrod;
-  --input-background-color: color-mix(in srgb, var(--input-accent-color) 30%, #fff 100%);
-  --input-picker-background: color-mix(in srgb, var(--input-background-color) 100%, #fff 90%);
-  --input-background-color-hover: var(--primary-hover-color);
   --input-placeholder-color: color-mix(in srgb, grey 15%, var(--input-text-color) 30%);
+
+  --input-background-color: color-mix(in srgb, var(--input-accent-color) 30%, #fff 100%);
+  --input-background-color-hover: color-mix(in srgb, var(--input-accent-color) 50%, #fff 15%);
+  --input-picker-background: color-mix(in srgb, var(--input-background-color) 100%, #fff 90%);
+  --input-popover-background-color: var(--input-picker-color);
 
   /* sizing */
   --input-font-size: 1.1rem;
@@ -48,10 +52,13 @@
   --dropdown-transition-delay: 30ms;
 
   margin: 0 auto;
+  min-width: 1000px;
 }
 
 input:focus-visible,
-textarea:focus-visible {
+input:is(:autofill),
+textarea:focus-visible,
+select:focus-visible {
   outline: none;
 }
 
@@ -176,32 +183,31 @@ textarea:focus-visible {
       max-height: unset;
     }
 
+    & input:has(:autofill),
+    & textarea:has(:autofill) {
+      background-color: transparent !important;
+    }
+
     /* --- Form Fields Base Interactive States --- */
-    & input:not([type="checkbox"]):hover,
-    & input:not([type="checkbox"]):focus,
-    & input:not([type="checkbox"]):active,
-    & input:not([type="checkbox"]):focus-visible,
-    & textarea:hover,
-    & textarea:focus,
-    & textarea:active,
-    & textarea:focus-visible,
-    & select:hover,
-    & select:active,
-    & select:focus-visible,
-    & select:open,
-    & select:open::picker(select),
-    &:has(select:active) select:open::picker(select),
-    &:has(select:focus) select:open::picker(select) {
-      border: 1px solid var(--input-primary-color);
+    & :is(input:not([type="checkbox"]), textarea, select):hover,
+    & :is(input:not([type="checkbox"]), textarea, select):active,
+    & :is(input:not([type="checkbox"]), textarea, select):focus,
+    & :is(input:not([type="checkbox"]), textarea, select):focus-visible {
+      border-width: 1px;
+      border-style: solid;
+      border-color: var(--input-text-color-light);
       /* background-blend-mode: normal; */
     }
     /* Open Select Special Rounding Layer Override */
     & select:open,
     &:has(select:open) select,
-    &:has(select:open) select:hover,
-    &:has(select:open) select:active {
+    &:has(select:open) select:is(:hover, :active),
+    &:has(select:active) select:open::picker(select),
+    &:has(select:focus) select:open::picker(select) {
       transition: 200ms;
-      border-bottom: 1px solid var(--input-primary-color);
+      border-color: var(--input-primary-color);
+      border-width: 1px;
+      border-style: solid;
     }
 
     & select {
@@ -342,8 +348,8 @@ textarea:focus-visible {
   }
 }
 
+/* 7. Spinner Icons & Dynamic Indicators */
 .native.form .field {
-  /* 7. Spinner Icons & Dynamic Indicators */
   & select::picker-icon,
   & select:is(.loading)::picker-icon,
   & span.spinner {
@@ -359,8 +365,8 @@ textarea:focus-visible {
     z-index: 99;
   }
 
-  & select:is(.loading)::picker-icon,
   &.loading > select::picker-icon,
+  & select:is(.loading)::picker-icon,
   & span.spinner {
     mask-image: var(--spinner-content);
     width: calc(var(--input-icon-size) * 0.8);
@@ -376,6 +382,25 @@ textarea:focus-visible {
     bottom: calc(var(--input-min-height) - 5px);
   }
 
+  &.loading:has(input:not([type="checkbox"]))::before {
+    content: "";
+    mask-image: var(--spinner-content);
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-mode: alpha;
+    background-color: var(--input-primary-color);
+    width: calc(var(--input-icon-size) * 0.85);
+    height: calc(var(--input-icon-size) * 0.85);
+    position: absolute;
+    display: block;
+    visibility: hidden;
+    justify-self: right;
+    text-align: right;
+    z-index: 99;
+    right: 20px;
+    bottom: calc(var(--input-min-height) - 14px);
+  }
+
   & select:open::picker-icon {
     rotate: 90deg;
   }
@@ -387,24 +412,6 @@ textarea:focus-visible {
 
   &.loading:has(input:not([type="checkbox"])) {
     position: relative;
-  }
-  &.loading:has(input:not([type="checkbox"]))::before {
-    content: "";
-    mask-image: var(--spinner-content);
-    width: calc(var(--input-icon-size) * 0.85);
-    height: calc(var(--input-icon-size) * 0.85);
-    mask-size: contain;
-    mask-repeat: no-repeat;
-    mask-mode: alpha;
-    background-color: var(--input-primary-color);
-    position: absolute;
-    display: block;
-    visibility: hidden;
-    justify-self: right;
-    text-align: right;
-    z-index: 99;
-    right: 20px;
-    bottom: calc(var(--input-min-height) - 14px);
   }
 
   &.loading:has(input:not([type="checkbox"]))::before {
@@ -423,12 +430,13 @@ textarea:focus-visible {
 /* ==========================================================================
    8. Toggle Switch Components
    ========================================================================== */
-.native.form .field {
+.native.form .field,
+.form .field {
   &.toggle-switch {
     display: inline-grid;
     align-items: center;
     justify-content: start;
-    gap: 0.5em 0.75em;
+    gap: 0.5em 0.25em;
     width: max-content;
     height: auto;
     &:has(> label[data-position="top"]) {
@@ -445,12 +453,15 @@ textarea:focus-visible {
     }
     & > label {
       grid-area: label;
-      margin-bottom: 0;
+      margin-bottom: 5px;
+      margin-right: 0;
+      padding: 5px 2px;
       color: var(--input-text-color);
       font-size: calc(var(--input-font-size) * 0.75);
       font-weight: 600;
       cursor: pointer;
       user-select: none;
+      align-content: center;
     }
     & > .control,
     & > .control > input[type="checkbox"] {
@@ -475,16 +486,20 @@ textarea:focus-visible {
         position: absolute;
         inset: 0;
         display: block;
-        background-color: rgb(208, 208, 214);
+        background-color: var(--input-background-color);
+        border: 2px solid var(--input-border-color);
+        box-shadow: 0px 0px 2px 2px inset rgba(46, 46, 44, 0.5);
         transition: 0.4s;
+
         &:before {
           position: absolute;
           content: "";
           height: 18px;
           width: 18px;
-          left: 4px;
-          bottom: 4px;
-          background-color: white;
+          left: 3px;
+          bottom: 3px;
+          background-color: var(--input-primary-color);
+
           transition: 0.4s;
         }
         &:is([data-shape="round"]) {
@@ -502,12 +517,18 @@ textarea:focus-visible {
       }
 
       & > input[type="checkbox"]:checked ~ .slider {
-        background-color: var(--primary-color);
+        background-color: var(--input-accent-color);
+        box-shadow: 0px 0px 2px 2px inset rgba(46, 46, 44, 0.5);
       }
-      & > input[type="checkbox"]:focus-visible ~ .slider {
-        box-shadow: 0 0 1px #2196f3;
+      & > input[type="checkbox"] ~ .slider::before {
+        box-shadow:
+          -1px 0px 1px 1px rgba(20, 20, 12, 0.5),
+          -1px -1px 1px 0px rgba(20, 20, 12, 0.3);
       }
       & > input[type="checkbox"]:checked ~ .slider:before {
+        box-shadow:
+          1px 0px 1px 1px rgba(20, 20, 12, 0.5),
+          2px 0px 1px 0px rgba(20, 20, 12, 0.3);
         transform: translateX(18px);
       }
     }
@@ -518,33 +539,22 @@ textarea:focus-visible {
    INLINE STYLE
    ============ */
 
-.inline.form,
-.form fieldset:is(.inline-style) {
-  --input-border-radius: 0.2em;
-  /* --input-min-height: 1.7lh; */
-  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 1.5rem;
-  line-height: 1.6;
-  color: var(--input-text-color);
-  width: 100%;
-  max-width: 1000px;
-  /* margin: 40px auto; */
-  justify-self: center;
-  padding: 20px;
-  display: block;
-  border-radius: var(--input-border-radius);
-  & .field {
-    display: inline;
-    position: relative;
-    margin-bottom: 0;
-    margin-right: 8px;
-    width: auto;
-    vertical-align: middle;
-    line-height: calc(var(--input-line-height) * 1.4);
-    align-content: center;
-    height: max-content;
-    /* 2. Tata Letak Wrapper dan Label */
-    & label {
+.form {
+  &:is(.inline),
+  & fieldset:is(.inline-style) {
+    --input-border-radius: 0.2em;
+    /* --input-min-height: 1.7lh; */
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1.5rem;
+    line-height: 1.6;
+    color: var(--input-text-color);
+    width: 100%;
+    /* margin: 40px auto; */
+    justify-self: center;
+    padding: 20px;
+    display: block;
+    border-radius: var(--input-border-radius);
+    & .label {
       display: inline;
       font-weight: normal;
       color: var(--input-label-color);
@@ -552,129 +562,144 @@ textarea:focus-visible {
       font-size: var(--input-label-size);
       word-break: balance;
     }
-    & select:has(option[value=""]:checked),
-    & input:not([type="radio"], [type="file"], [type="checkbox"])::placeholder,
-    & textarea::placeholder {
-      color: var(--input-placeholder-color);
-    }
-
-    & input:not([type="radio"], [type="file"], [type="checkbox"]),
-    & select,
-    & textarea {
-      cursor: pointer;
-      border-radius: unset;
-      appearance: unset;
-      width: auto;
-      min-width: min-content;
-      min-height: unset;
-      border: none;
-      font-family: inherit;
-      outline: none;
-      background: transparent;
-      /* height: calc(var(--input-min-height) * 1.3); */
-      max-height: max-content;
+    & .field {
       display: inline-block;
-      field-sizing: content;
-      font-size: var(--input-font-size);
-      font-weight: 400;
-      padding: 0 0.25em;
-      transition: all 0.3s ease;
-      vertical-align: middle;
-      border-bottom: 1px solid transparent;
       position: relative;
-      bottom: 3.5px;
-      /* margin: 0 4px; */
-    }
-
-    & input:not([type="radio"], [type="file"], [type="checkbox"]):hover,
-    & select:hover,
-    & textarea:hover {
-      border: none;
-      border-bottom: 1px solid transparent;
-      outline: none;
-      background: none;
-      border-bottom: 1px dashed var(--input-primary-color);
-    }
-
-    & input:not([type="radio"], [type="file"], [type="checkbox"]):focus,
-    & input:not([type="radio"], [type="file"], [type="checkbox"]):active,
-    & select:focus,
-    & select:active,
-    & textarea:focus,
-    & textarea:active {
-      background: none;
-      border: none;
-    }
-
-    /* 5. Aturan Khusus Masing-Masing Elemen */
-    & select {
-      cursor: pointer;
-      appearance: base-select;
-      min-width: max-content;
-
-      /* 5.1.1 Penggabungan Efek Fokus Bersama */
-      &::picker-icon {
-        display: none;
+      margin-bottom: 0;
+      margin-right: 8px;
+      width: auto;
+      vertical-align: middle;
+      line-height: calc(var(--input-line-height) * 1.4);
+      align-content: center;
+      height: max-content;
+      /* 2. Tata Letak Wrapper dan Label */
+      & label {
+        display: inline;
+        font-weight: normal;
+        color: var(--input-label-color);
+        margin-right: 6px;
+        font-size: var(--input-label-size);
+        word-break: balance;
       }
-      &:open::picker(select) {
-        opacity: 1;
-        border-radius: calc(var(--input-border-radius));
-        transition-delay: var(--dropdown-transition-delay);
-        transform: translateY(-50%) translateX(-25%) scaleY(1) scaleX(1);
-        box-shadow: 0 2px 3px 0 var(--input-primary-color);
+      & select:has(option[value=""]:checked),
+      & input:not([type="radio"], [type="file"], [type="checkbox"])::placeholder,
+      & textarea::placeholder {
+        color: var(--input-placeholder-color);
       }
-      &:open,
-      &:active,
-      &:focus,
-      &:focus-visible,
-      &.error {
-        border: none;
-        border-bottom: 1px solid transparent;
-        background: none;
+
+      & input:not([type="radio"], [type="file"], [type="checkbox"]),
+      & select,
+      & textarea {
+        cursor: pointer;
+        border-radius: unset;
+        appearance: unset;
+        width: auto;
+        min-width: min-content;
+        min-height: unset;
+        font-family: inherit;
         outline: none;
-        width: fit-content;
+        background-color: transparent;
+        /* height: calc(var(--input-min-height) * 1.3); */
+        max-height: max-content;
+        display: inline-block;
+        field-sizing: content;
+        font-size: var(--input-font-size);
+        font-weight: 400;
+        padding: 0 0.25em;
+        transition: all 0.3s ease;
+        vertical-align: middle;
+        position: relative;
+        bottom: 3.5px;
+
+        border-color: transparent;
+        border-bottom-color: transparent;
+        /* margin: 0 4px; */
       }
 
-      & option {
-        transition: all 100ms;
-        &:hover {
-          color: color-mix(in srgb, grey 30%, var(--input-text-color) 35%);
-          background-color: color-mix(in srgb, var(--input-primary-color) 10%, var(--input-accent-color) 5%);
+      & input:not([type="radio"], [type="file"], [type="checkbox"]):hover,
+      & select:not(.input-popover > select):hover,
+      & textarea:not(.input-popover > textarea):hover {
+        outline: none;
+        background: none;
+        border-color: transparent;
+        border-bottom-style: dashed;
+        border-bottom-color: var(--input-primary-color);
+      }
+
+      & input:not([type="radio"], [type="file"], [type="checkbox"]):is(:focus, :active),
+      & select:not(.input-popover > select):is(:focus, :active, :focus-within),
+      & textarea:not(.input-popover > textarea):is(:focus, :active) {
+        background: transparent;
+        border-color: transparent;
+        border-bottom-style: dashed;
+        border-bottom-color: var(--input-primary-color);
+      }
+
+      /* 5. Aturan Khusus Masing-Masing Elemen */
+      & select {
+        cursor: pointer;
+        appearance: base-select;
+        min-width: max-content;
+
+        /* 5.1.1 Penggabungan Efek Fokus Bersama */
+        &::picker-icon {
+          display: none;
+        }
+        &:open::picker(select) {
+          opacity: 1;
+          border-radius: calc(var(--input-border-radius));
+          transition-delay: var(--dropdown-transition-delay);
+          transform: translateY(-50%) translateX(-25%) scaleY(1) scaleX(1);
+          box-shadow: 0 2px 3px 0 var(--input-primary-color);
+          border-top: 1px solid var(--input-border-color);
+        }
+        &:is(:open, :active, :focus, :focus-visible, .error) {
+          border: 1px solid transparent;
+          background: none;
+          outline: none;
+          width: fit-content;
+        }
+
+        & option {
+          transition: all 100ms;
+          &:hover {
+            color: color-mix(in srgb, grey 30%, var(--input-text-color) 35%);
+            background-color: color-mix(in srgb, var(--input-primary-color) 10%, var(--input-accent-color) 5%);
+          }
+        }
+
+        & option:checked,
+        &::part(selectedcontent) {
+          color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+          background-color: color-mix(in srgb, var(--input-primary-color) 80%, rgb(245, 244, 244, 0.8));
         }
       }
 
-      & option:checked,
-      &::part(selectedcontent) {
-        color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
-        background-color: color-mix(in srgb, var(--input-primary-color) 80%, rgb(245, 244, 244, 0.8));
+      &:has(select:open) {
+        & select,
+        & select:is(:hover, :active) {
+          border-bottom-left-radius: unset;
+          border-bottom-right-radius: unset;
+        }
       }
-    }
 
-    &:has(select:open) {
-      & select,
-      & select:hover,
-      & select:active {
-        border-bottom-left-radius: unset;
-        border-bottom-right-radius: unset;
+      /* 6. Fitur Customizable Dropdown (Picker) */
+      & ::picker(select) {
+        max-width: fit-content;
+        min-width: min-content;
       }
-    }
 
-    /* 6. Fitur Customizable Dropdown (Picker) */
-    & ::picker(select) {
-      max-width: fit-content;
-      min-width: min-content;
-    }
-
-    & textarea {
-      min-height: unset;
-      resize: both;
-      vertical-align: middle;
+      & textarea {
+        min-height: unset;
+        resize: both;
+        vertical-align: middle;
+      }
     }
   }
 }
 
 @starting-style {
-  .inline.form,
+  .form:is(.inline),
   .form fieldset:is(.inline-style) {
     & .field select:open::picker(select) {
       display: block;
@@ -684,82 +709,101 @@ textarea:focus-visible {
   }
 }
 
-.inline.form .field .input-popover,
-.form fieldset:is(.inline-style) .field .input-popover {
-  position-area: bottom span-right;
-  margin: unset;
-  inset: unset;
+.form {
+  & .field,
+  & fieldset:is(.inline-style) .field {
+    & > .input-popover {
+      position-area: bottom span-right;
+      margin: unset;
+      inset: unset;
+      appearance: base-select;
+      top: anchor(bottom);
+      opacity: 0;
+      max-width: 500px;
 
-  appearance: base-select;
-  box-sizing: border-box;
-  top: anchor(bottom);
-  border: 1px solid var(--input-primary-color);
-  border-top: none;
-  opacity: 0;
-  transform-origin: top;
-  transform: translateY(0) translateX(0) scaleY(0%) scaleX(99.7%);
-  transition: all 150ms ease;
-  transition-behavior: allow-discrete;
-  transition-delay: var(--dropdown-transition-delay);
-  background-color: rgba(216, 216, 216, 1);
-  color: inherit;
+      border: 1px solid var(--input-primary-color);
+      border-radius: var(--input-border-radius);
+      transition-delay: var(--dropdown-transition-delay);
+      background-color: var(--input-popover-background-color);
+      backdrop-filter: blur(12px);
+      color: inherit;
 
-  /* display: block !important;
-  opacity: 1 !important;
-  transform: translateY(-70%) translateX(0) scaleY(1) !important;
-  position: absolute !important;
-  transition: none !important; */
+      transform-origin: top;
+      transform: translateY(0) translateX(0) scaleY(0%) scaleX(99.7%);
+      transition: all 150ms ease;
+      transition-behavior: allow-discrete;
 
-  box-shadow: 0 14px 20px rgba(136, 135, 81, 0.356);
-  display: block;
-  padding: 0.75em 0.5em 0.5em 0.5em;
+      box-shadow: 0 14px 20px rgba(136, 135, 81, 0.356);
+      display: block;
+      padding: 0.75em 0.5em 0.5em 0.5em;
+      overflow-x: hidden;
 
-  &:popover-open {
-    opacity: 1;
-    transition-delay: var(--dropdown-transition-delay);
-    transform: translateY(-80%) translateX(0) scaleY(1) scaleX(1);
-    scrollbar-width: thin;
-    box-shadow: 0 2px 3px 0 var(--input-primary-color);
-  }
+      &:popover-open {
+        opacity: 1;
+        transition-delay: var(--dropdown-transition-delay);
+        transform: translateY(-80%) translateX(0) scaleY(1) scaleX(1);
+        scrollbar-width: thin;
+        box-shadow: 0 2px 3px 0 var(--input-primary-color);
+      }
 
-  & textarea {
-    field-sizing: content;
-    background-color: rgba(255, 255, 255, 0.185);
-    min-height: 1.7lh;
-    padding: 0.25em;
-    font-size: 1.8rem;
-    font-weight: 100;
-    color: darkgoldenrod;
-    line-height: 2rem;
-    resize: vertical;
-    vertical-align: middle;
-    min-width: 400px;
-    max-width: 500px;
-    height: auto;
-    max-height: 5lh;
-  }
-  & textarea::placeholder {
-    font-weight: 100;
-    color: rgba(184, 135, 11, 0.384);
-  }
-  & .info {
-    display: block;
-    margin-top: 0.5em;
-    padding: 0 0.25em;
-    font-size: 70%;
-    font-style: italic;
-    max-width: 320px;
-    line-height: 1.2rem;
+      & textarea {
+        min-height: 1.7lh;
+        padding: 0.25em;
+        line-height: 2rem;
+        font-size: 1.8rem;
+        font-weight: 100;
+
+        field-sizing: content;
+        resize: vertical;
+
+        height: auto;
+        width: 100%;
+        max-height: 5lh;
+        vertical-align: middle;
+
+        color: var(--input-text-color);
+        border: 1px solid var(--input-border-color);
+        border-radius: var(--input-border-radius);
+        background-color: var(--input-popover-background-color);
+      }
+
+      & textarea:is(:hover, :focus, :active, :focus-within) {
+        font-weight: 100;
+        border: 1px solid var(--input-border-color);
+        color: var(--input-accent-color);
+      }
+
+      & textarea::placeholder {
+        font-weight: 100;
+        color: var(--input-accent-color);
+      }
+
+      & .info {
+        display: inline-block;
+        position: relative;
+        margin-top: 0.5em;
+        padding: 0 0.25em;
+        font-size: 70%;
+        font-style: italic;
+        /* max-width: 300px; */
+        line-height: 1.2rem;
+        width: 100%;
+      }
+    }
   }
 }
 
 @starting-style {
-  .inline.form .field .input-popover,
-  .form fieldset:is(.inline-style) .field .input-popover {
-    &:popover-open {
-      display: block;
-      opacity: 0;
-      transform: translateY(0) translateX(0) scaleY(0%) scaleX(99.7%);
+  .form {
+    & .field,
+    & fieldset:is(.inline-style) .field {
+      & > .input-popover {
+        &:popover-open {
+          display: block;
+          opacity: 0;
+          transform: translateY(0) translateX(0) scaleY(0%) scaleX(99.7%);
+        }
+      }
     }
   }
 }
@@ -805,155 +849,122 @@ textarea:focus-visible {
   }
 }
 
-/* 7. Gaya Tombol Submit */
-.form .buttons.set {
-  display: flex;
-  justify-self: center;
-  gap: 0.5em;
-  padding: 2em 0.5em 1em 0.5em;
-  width: 100%;
-  flex-direction: row;
-  justify-content: space-between;
-}
+.form,
+.form fieldset {
+  /* Grid Container Button */
+  & .buttons.set {
+    display: flex;
+    justify-self: center;
+    gap: 0.5em;
+    padding: 2em 0.5em 1em 0.5em;
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    &:has(> :first-child:is(button.next)) {
+      justify-content: flex-end;
+    }
+  }
+  & button:is(.next, .back, .submit) {
+    text-transform: capitalize;
+    display: inline-flex;
+    position: relative;
+    overflow: hidden;
+    justify-self: center;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    font-size: var(--input-font-size);
+    line-height: var(--input-line-height);
+    width: 200px;
+    color: var(--input-text-color);
+    background: transparent;
+    border: 1px solid var(--input-primary-color);
+    border-radius: calc(var(--input-border-radius) * 2);
+    padding: 3px 1em;
+    min-width: 120px;
+    height: max-content;
+    cursor: pointer;
+    text-align: center;
+    vertical-align: middle;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition:
+      background 0.2s ease,
+      transform 0.1s ease;
 
-.form .buttons.set:has(> :first-child:is(button.next)) {
-  justify-content: flex-end;
-  /* background-color: red; */
-}
+    & > i.icon {
+      position: absolute;
+      z-index: 1;
+      padding: 5px;
+      width: 17%;
+      height: 20px;
+    }
 
-.form button:is(.next, .back, .submit),
-.form fieldset button:is(.next, .back, .submit),
-.form button.submit {
-  text-transform: capitalize;
-  display: inline-flex;
-  position: relative;
-  overflow: hidden;
-  justify-self: center;
-  align-items: center;
-  justify-content: center;
-  font-family: inherit;
-  font-size: var(--input-font-size);
-  line-height: var(--input-line-height);
-  width: 200px;
-  color: var(--input-text-color);
-  background: transparent;
-  border: 1px solid var(--input-primary-color);
-  border-radius: calc(var(--input-border-radius) * 2);
-  padding: 3px 1em;
-  min-width: 120px;
-  height: max-content;
-  cursor: pointer;
-  text-align: center;
-  vertical-align: middle;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition:
-    background 0.2s ease,
-    transform 0.1s ease;
-}
+    &::after {
+      content: "";
+      display: block;
+      position: absolute;
+      width: 17%;
+      height: 100%;
+      top: 0;
+      right: 0;
+      background-color: color-mix(in srgb, var(--input-primary-color) 10%, var(--input-accent-color) 5%);
+      /* border-left: 1px solid var(--input-primary-color); */
+      /* mix-blend-mode: color-burn; */
+    }
 
-.form button:is(.back),
-.form fieldset button:is(.back) {
-  padding-left: 2em;
-}
+    &:is(.back)::after,
+    &:is(.back) i.icon {
+      left: 0;
+    }
 
-.form button:is(.next),
-.form fieldset button:is(.next),
-.form button:is(.submit),
-.form fieldset button:is(.submit),
-.form button:is(.submit) {
-  padding-right: 2em;
-}
+    &:is(.next, .submit)::after,
+    &:is(.next, .submit) i.icon {
+      right: 0;
+    }
 
-.form .buttons.set button:is(.back, .next, .submit) i.icon,
-.form fieldset .buttons.set button:is(.back, .next, .submit) i.icon,
-.form button:is(.submit) i.icon {
-  position: absolute;
-  z-index: 1;
-  padding: 5px;
-  width: 17%;
-  height: 20px;
-}
+    &:is(.back) {
+      padding-left: 2em;
+    }
 
-.form .buttons.set button:is(.back, .next, .submit)::after,
-.form fieldset .buttons.set button:is(.back, .next, .submit)::after,
-.form button.submit::after {
-  content: "";
-  display: block;
-  position: absolute;
-  width: 17%;
-  height: 100%;
-  top: 0;
-  right: 0;
-  background-color: color-mix(in srgb, var(--input-primary-color) 10%, var(--input-accent-color) 5%);
-  /* border-left: 1px solid var(--input-primary-color); */
-  /* mix-blend-mode: color-burn; */
-}
+    &:is(.next, .submit) {
+      padding-right: 2em;
+    }
 
-.form .buttons.set button:is(.back)::after,
-.form fieldset .buttons.set button:is(.back)::after,
-.form .buttons.set button:is(.back) i.icon,
-.form fieldset .buttons.set button:is(.back) i.icon {
-  left: 0;
-}
+    /* 8. Cascade Gate — tombol next terkunci oleh kondisi kaskade yang belum terpenuhi */
+    &:is(.next):disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: grayscale(0.35);
+    }
 
-form .buttons.set button:is(.next)::after,
-.form fieldset .buttons.set button:is(.next)::after,
-form .buttons.set button:is(.submit)::after,
-.form fieldset .buttons.set button:is(.submit)::after,
-form .buttons.set button:is(.next) i.icon,
-.form fieldset .buttons.set button:is(.next) i.icon,
-form .buttons.set button:is(.submit) i.icon,
-.form fieldset .buttons.set button:is(.submit) i.icon,
-.form button:is(.submit) i.icon {
-  right: 0;
-}
+    &:is(.back, .next, .submit):hover {
+      background-color: color-mix(in srgb, var(--input-primary-color) 10%, var(--input-accent-color) 5%);
+      color: color-mix(in srgb, grey 30%, var(--input-text-color) 35%);
+    }
 
-/* 8. Cascade Gate — tombol next terkunci oleh kondisi kaskade yang belum terpenuhi */
-.form button.next:disabled,
-.form fieldset button.next:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  filter: grayscale(0.35);
-}
+    &:active {
+      transform: scale(0.98);
+    }
+  }
 
-form button.submit:hover,
-.form fieldset button.submit:hover {
-  background-color: color-mix(in srgb, var(--input-primary-color) 10%, var(--input-accent-color) 5%);
-  color: color-mix(in srgb, grey 30%, var(--input-text-color) 35%);
-}
-
-form button:hover,
-.form fieldset button:hover {
-  background-color: color-mix(in srgb, var(--input-primary-color) 10%, var(--input-accent-color) 5%);
-  color: color-mix(in srgb, grey 30%, var(--input-text-color) 35%);
-}
-
-form button:active,
-.form fieldset button:active {
-  transform: scale(0.98);
-}
-
-.form .link.download,
-.form fieldset .link.download {
-  display: inline-block;
-  font-size: calc(var(--input-font-size) / 1.42);
-  text-decoration: none;
-  color: color-mix(in srgb, grey 30%, var(--input-text-color) 35%);
-  vertical-align: middle;
-  width: max-content;
-}
-
-.form .link.download:hover,
-.form fieldset .link.download:hover {
-  color: var(--input-text-color);
-}
-
-.form .link.download i.icon,
-.form fieldset .link.download i.icon {
-  /* position: absolute; */
-  top: 0;
-  right: 0;
-  width: 24px;
-  height: 24px;
-  margin-left: 5px;
+  & .link {
+    &:is(.download) {
+      display: inline-block;
+      font-size: calc(var(--input-font-size) / 1.42);
+      text-decoration: none;
+      color: var(--input-text-color);
+      vertical-align: middle;
+      width: max-content;
+      & > i.icon {
+        top: 0;
+        right: 0;
+        width: 24px;
+        height: 24px;
+        margin-left: 5px;
+      }
+    }
+    &:is(.download):hover {
+      color: color-mix(in srgb, grey 30%, var(--input-text-color) 35%);
+    }
+  }
 }

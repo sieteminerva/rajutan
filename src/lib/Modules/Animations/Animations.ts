@@ -25,6 +25,17 @@ export class AnimationsService {
   private observer: MutationObserver | null = null;
 
   /**
+   * 🔭 GERBANG VIEWPORT — node [animation] yang baru terdeteksi (init() atau
+   * MutationObserver) tidak langsung dinyalakan; ia menunggu sampai benar-benar
+   * terlihat di viewport. Elemen display:none (step multistep non-aktif) ikut
+   * tertahan di sini dan menyala tepat saat step-nya ditampilkan.
+   */
+  private viewObserver: IntersectionObserver | null = null;
+  private pendingView: Set<HTMLElement> = new Set();
+  /** Penanda "sudah pernah dijalankan" agar init() ulang & discovery tidak menumpuk animasi */
+  private triggeredOnce: Set<HTMLElement> = new Set();
+
+  /**
    * 🔗 REGISTRY LISTENER RANTAI — melacak setiap listener 'animation:done'
    * yang menunggu giliran di _setupChainedAnimation(). Dipakai agar:
    * - init() ulang tidak pernah menumpuk listener ganda untuk node yang sama,
@@ -65,14 +76,14 @@ export class AnimationsService {
 
   private _initCleanupTracker(): void {
     this.observer = new MutationObserver((mutations) => {
-      // 🚀 EARLY-EXIT: saat registry kosong (kondisi normal di luar animasi
-      // berjalan), callback ini langsung pulang. Tanpa ini, SETIAP mutasi DOM
-      // di seluruh aplikasi (page-switching brutal!) membayar iterasi Map.
-      if (this.activeAnimations.size === 0) return;
-
       mutations.forEach((mutation) => {
         mutation.removedNodes.forEach((node) => {
-          if (node instanceof HTMLElement) {
+          if (!(node instanceof HTMLElement)) return;
+
+          // 🚀 EARLY-EXIT (dipertahankan): saat tidak ada animasi berjalan maupun
+          // listener rantai, iterasi Map pembersihan dilewati — mutasi DOM biasa
+          // (page-switching brutal) tidak membayar biaya itu.
+          if (this.activeAnimations.size > 0 || this.chainedListeners.size > 0) {
             // Cek apakah elemen yang dihapus (atau anak-anaknya) ada di daftar animasi aktif
             this.activeAnimations.forEach((state, el) => {
               if (el === node || node.contains(el)) {
@@ -90,6 +101,29 @@ export class AnimationsService {
               }
             });
           }
+
+          // Bersihkan penanda viewport & "sudah jalan" agar node yang dipasang
+          // kembali (re-render) beranimasi lagi dari awal.
+          const sweep = (el: HTMLElement) => {
+            if (this.pendingView.has(el)) {
+              this.viewObserver?.unobserve(el);
+              this.pendingView.delete(el);
+            }
+            this.triggeredOnce.delete(el);
+          };
+          sweep(node);
+          node.querySelectorAll<HTMLElement>('[animation]').forEach(sweep);
+        });
+
+        // 🔭 DISCOVERY: node baru pembawa [animation] (builder asinkron, step
+        // multistep yang baru lahir, hasil kaskade) DIARMED di sini — bukan
+        // dinyalakan langsung. Tunda dua frame: subtree rakitan builder sering
+        // menempel bertahap; scan terlalu dini membuat pencarian pendahulu
+        // rantai melompati saudara yang belum lahir (typewriter melepas diri
+        // sendiri dan berjalan seketika).
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof HTMLElement)) return;
+          requestAnimationFrame(() => requestAnimationFrame(() => this._discoverAnimationNodes(node)));
         });
       });
     });
@@ -99,20 +133,79 @@ export class AnimationsService {
   }
 
   public init(): void {
-    // 1. Ambil semua elemen animasi
-    const animatedElements = document.querySelectorAll<HTMLElement>('[animation]');
-
-    animatedElements.forEach((node) => {
-      // 2. Jika elemen memiliki [animation-chain="true"], sembunyikan dulu di awal
-      // dan buat ia menunggu instruksi dari elemen sebelumnya
-      if (node.getAttribute('animation-chain') === 'true') {
-        this._setupChainedAnimation(node);
-        return; // Jangan jalankan animasinya dulu!
-      }
-
-      // Jika bukan elemen rantai, langsung jalankan normal
-      this._triggerAnimation(node);
+    // Semua elemen animasi — yang sudah ada maupun yang baru terdeteksi
+    // observer — melewati gerbang yang sama: tunggu viewport, hormati rantai.
+    document.querySelectorAll<HTMLElement>('[animation]').forEach((node) => {
+      this._armAnimationNode(node);
     });
+  }
+
+  // ==================================================================
+  // 🔭 GERBANG VIEWPORT & DISCOVERY — setiap node [animation] diarmed lewat
+  // _armAnimationNode: dicegah dobel (triggeredOnce), lalu dinyalakan HANYA
+  // ketika benar-benar terlihat di viewport. Node di luar layar / display:none
+  // (step multistep non-aktif) menunggu di IntersectionObserver dan menyala
+  // tepat saat tampil — animasi tidak pernah berjalan buta di luar pandangan.
+  // ==================================================================
+  private _armAnimationNode(node: HTMLElement): void {
+    if (this.triggeredOnce.has(node) || this.pendingView.has(node)) return;
+    this.triggeredOnce.add(node);
+
+    // 🔓 TIPE SELF-REVEALING: fade-in membawa pre-hide milik CSS-nya sendiri
+    // ([animation="fade-in"] { display: none }) dan reveal-nya justru DIPICU
+    // oleh animasinya (WAAPI display:none → block, fill: forwards). Node
+    // beginilah mustahil diadili lewat gerbang viewport: rect-nya nol dan
+    // IntersectionObserver tidak PERNAH menyala untuk display:none — akibatnya
+    // deadlock dan seluruh rantai animation-chain di belakangnya ikut beku
+    // (section#home .row$1: h3 tak pernah selesai → typewriter, h4, dan
+    // tombol next menunggu selamanya di opacity:0). Tipe ini dinyalakan
+    // langsung; gerbang viewport tetap berlaku untuk tipe yang kotaknya
+    // memang sudah terlihat sebelum beranimasi (typewriter, scramble, dst.).
+    if (node.getAttribute('animation') === 'fade-in') {
+      this._startAnimationNode(node);
+      return;
+    }
+
+    const rect = node.getBoundingClientRect();
+    const inViewport = rect.bottom > 0 && rect.right > 0
+      && rect.top < (window.innerHeight || document.documentElement.clientHeight)
+      && rect.left < (window.innerWidth || document.documentElement.clientWidth);
+
+    if (inViewport) {
+      this._startAnimationNode(node);
+      return;
+    }
+
+    // Belum terlihat (atau masih display:none) → tunda sampai masuk viewport
+    this.viewObserver ??= new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target as HTMLElement;
+        this.viewObserver?.unobserve(el);
+        this.pendingView.delete(el);
+        if (el.isConnected) this._startAnimationNode(el);
+      });
+    });
+    this.pendingView.add(node);
+    this.viewObserver.observe(node);
+  }
+
+  /** Satu pintu masuk animasi: node berantai menunggu giliran, sisanya langsung */
+  private _startAnimationNode(node: HTMLElement): void {
+    if (node.getAttribute('animation-chain') === 'true') {
+      this._setupChainedAnimation(node);
+      return;
+    }
+    this._triggerAnimation(node);
+  }
+
+  /** Kumpulkan semua node [animation] pada subtree yang baru menempel ke DOM */
+  private _discoverAnimationNodes(root: HTMLElement): void {
+    if (!root.isConnected) return;
+    const nodes = root.matches('[animation]')
+      ? [root]
+      : Array.from(root.querySelectorAll<HTMLElement>('[animation]'));
+    nodes.forEach((node) => this._armAnimationNode(node));
   }
 
   /**
@@ -159,9 +252,15 @@ export class AnimationsService {
     // STRICT berurutan, bukan semuanya menyala serentak pada event pertama.
     const predecessor = this._previousAnimatedSibling(node);
 
-    // Tidak ada pendahulu (mis. elemen rantai pertama dalam parent) → tidak ada
-    // yang ditunggu; langsung siap beranimasi sejak awal.
-    if (!predecessor) {
+    // Tidak ada pendahulu, ATAU pendahulu sudah tidak akan beranimasi lagi
+    // (sudah selesai / tidak terdaftar menunggu di mana pun) → tidak ada
+    // 'animation:done' yang akan datang darinya; langsung siap beranimasi.
+    const predecessorBusy = !!predecessor && (
+      this.activeAnimations.has(predecessor) ||
+      this.pendingView.has(predecessor) ||
+      this.chainedListeners.has(predecessor)
+    );
+    if (!predecessor || !predecessorBusy) {
       this._releaseChainedNode(node, originalOpacity, originalPointerEvents);
       this._triggerAnimation(node);
       return;
@@ -192,16 +291,34 @@ export class AnimationsService {
   }
 
   /**
-   * Saudara BERANIMASI tepat di atas node (pendahulu rantai). Elemen tanpa
-   * atribut [animation] dilewati; null bila tidak ada pendahulu animasi.
+   * Pendahulu rantai: elemen BERANIMASI terakhir yang berada sebelum node
+   * dalam urutan dokumen. Pencarian saudara DINAIKKAN ke atas melewati
+   * wrapper — struktur flat ala .row$1/.row$2 menempatkan atribut chain di
+   * keluarga elemen berbeda (label span vs input di .field), bukan saudara
+   * kandung, sehingga pencarian sibling-saja membuat rantai mati mendadak.
+   * Pendakian BERHENTI di elemen batas (form/section/main/dsb.) agar rantai
+   * tidak bocor menangkap animasi milik bagian halaman lain.
    */
   private _previousAnimatedSibling(node: HTMLElement): HTMLElement | null {
-    let el = node.previousElementSibling;
-    while (el) {
-      if (el.hasAttribute('animation')) return el as HTMLElement;
-      el = el.previousElementSibling;
+    const boundaries = new Set(['BODY', 'MAIN', 'SECTION', 'ARTICLE', 'FORM', 'FIELDSET', 'DIALOG', 'ASIDE', 'HEADER', 'FOOTER', 'NAV']);
+    let current: HTMLElement = node;
+    while (true) {
+      // (a) Saudara sebelum current — ambil yang TERAKHIR beranimasi
+      // (paling dekat dengan node) termasuk di dalam subtree-nya.
+      let el = current.previousElementSibling;
+      while (el) {
+        if (el.hasAttribute('animation')) return el as HTMLElement;
+        const animated = el.querySelectorAll<HTMLElement>('[animation]');
+        if (animated.length > 0) return animated[animated.length - 1];
+        el = el.previousElementSibling;
+      }
+      const parent = current.parentElement;
+      if (!parent || boundaries.has(parent.tagName)) return null;
+      // (b) Parent sendiri — posisinya di dokumen setelah semua saudaranya,
+      // tepat sebelum subtree node, jadi dicek sebelum pendakian lanjut.
+      if (parent.hasAttribute('animation')) return parent;
+      current = parent;
     }
-    return null;
   }
 
   /**
@@ -228,6 +345,12 @@ export class AnimationsService {
       this.observer.disconnect();
       this.observer = null;
     }
+    if (this.viewObserver) {
+      this.viewObserver.disconnect();
+      this.viewObserver = null;
+    }
+    this.pendingView.clear();
+    this.triggeredOnce.clear();
     // Lepas semua listener rantai yang masih menggantung pada parent mana pun.
     this.chainedListeners.forEach((info) => {
       info.parent.removeEventListener('animation:done', info.handler);

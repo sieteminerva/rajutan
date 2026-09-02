@@ -3,10 +3,10 @@ import type { iBuilderRegistry } from './lib/interface';
 import { ComponentRegistry } from './lib/Modules/ComponentRegistry2';
 import { DOMRenderer } from './lib/Modules/DOMRenderer';
 import { AnimationsService } from './lib/Modules/Animations/Animations';
+
 import './lib/Styles/variables.css';
 import './lib/Styles/icon.css';
 import './style.css';
-// import "./lib/Components/Form/Form.css";
 
 async function start(container: HTMLElement) {
   const animation = new AnimationsService();
