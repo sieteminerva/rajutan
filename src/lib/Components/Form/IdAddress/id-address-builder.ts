@@ -53,7 +53,7 @@ const DEFAULT_CONFIG: IdAddressConfig = {
   useAdapter: null,
   headless: false,
   textContent: {
-    loading: "Loading #{level}...",
+    loading: "Loading #{level}  ",
     placeholder: "Pilih #{level}",
     notFound: "Tidak menemukan hasil",
     error: "Terjadi kesalahan",

@@ -56,6 +56,7 @@ table.table,
 
   & th,
   & td {
+    border-collapse: collapse;
     padding: 0.78571429em 1em;
     border-bottom: 1px solid color-mix(in srgb, var(--table-border-color) 30%, black 70%);
     vertical-align: middle;
@@ -259,6 +260,7 @@ table.table,
   & tfoot {
     & tr {
       & > th {
+        border-collapse: collapse;
         border-top: 1px solid var(--table-border-color);
         background: var(--table-background-color-darken);
       }
@@ -335,7 +337,7 @@ table.table,
         vertical-align: middle;
         align-self: center;
         border-bottom: none;
-        /* border-left: none; */
+        border-right-width: 0px !important;
         border-left: 1px solid var(--table-border-color);
       }
 

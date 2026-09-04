@@ -8,8 +8,6 @@
 // berjalan di dalam engine, tanpa membebani Form.ts.
 // ======================================================================
 
-import { FileUploader } from "../FileUploader";
-
 /** Kontrak minimal yang wajib dipenuhi host (FormBuilder) agar engine bekerja */
 export interface FormMultistepHost {
   builder: string;
@@ -19,6 +17,12 @@ export interface FormMultistepHost {
   renderGroup(group: any, formId: string, path?: string): HTMLElement;
   /** Bangun tombol navigasi multistep untuk step yang baru dilahirkan */
   renderButtonsSet?(payload: { index: number; isLast: boolean; formId: string }): HTMLElement | null;
+  /** Beri tahu host saat fieldset step baru lahir ke DOM (lazy mount) —
+   *  kesempatan menghidupkan uploader/IdAddress pada area yang baru lahir */
+  onStepMount?(fieldset: HTMLElement): void;
+  /** Beri tahu host setiap kali langkah aktif BERPINDAH (next/back/attach) —
+   *  kesempatan engine kaskade menilai ulang gerbang tombol next yang baru */
+  onStepChange?(index: number): void;
 }
 
 interface PendingStep {
@@ -35,6 +39,8 @@ export class FormMultistepHandler {
   /** Step yang masih tertahan sebagai <template data-step> — belum lahir ke DOM */
   private pending = new Map<number, PendingStep>();
   private onClick: ((event: MouseEvent) => void) | null = null;
+  /** Set tombol navigasi bersama yang saat ini menempel di level form */
+  private navBar: HTMLElement | null = null;
 
   constructor(host: FormMultistepHost) {
     this.host = host;
@@ -111,27 +117,22 @@ export class FormMultistepHandler {
     if (!entry) return null;
 
     const group = entry.item;
-    const fieldset = this.host.renderGroup(group, form.id);
+    // Teruskan index sebagai cascadePath: bila cascading aktif, anak-anak
+    // step yang membawa .condition ditahan sebagai placeholder kaskade
+    // (path "N.group.j" konsisten dengan walkInputs pada skema).
+    const fieldset = this.host.renderGroup(group, form.id, String(index));
     if (!fieldset) return null;
 
     if (group?.id) fieldset.id = group.id;
     if (group?.className) fieldset.className = `${fieldset.className} ${group.className}`.trim();
     fieldset.dataset.index = String(index);
 
-    // Step yang baru lahir butuh nomor langkah + tombol navigasi
-    const isLast = index === this.host.inputs.length - 1;
-    const buttons = this.host.renderButtonsSet?.({ index, isLast, formId: form.id });
-    if (buttons) fieldset.appendChild(buttons);
-
-    // Hidupkan uploader (file input CSV dsb.) pada area yang baru lahir
-    try {
-      if (typeof FileUploader !== "undefined") FileUploader.initAll(fieldset);
-    } catch (error) {
-      console.warn("[Form Multistep] file uploader init failed:", error);
-    }
-
     entry.placeholder.replaceWith(fieldset);
     this.pending.delete(index);
+
+    // Beri tahu host — uploader/IdAddress pada area yang baru lahir
+    // dihidupkan oleh Form (attachFormListener), bukan oleh engine ini.
+    this.host.onStepMount?.(fieldset);
     return fieldset;
   }
 
@@ -141,8 +142,36 @@ export class FormMultistepHandler {
     if (!form) return;
     const fieldset = this._mount(form, index);
     if (!fieldset) return;
+    // Arah animasi mengikuti arah perpindahan — paritas dengan fieldset tujuan
+    // yang membawa attribute animate dari sinkronisasi sebelumnya.
+    const direction: "next" | "back" | null =
+      index === this.currentStep ? null : index > this.currentStep ? "next" : "back";
     this.currentStep = index;
+    // Set navigasi ditukar di SETIAP perpindahan — bukan hanya saat fieldset
+    // baru lahir. Inilah kunci tombol Back: langkah tujuan sudah lama terpasang
+    // di DOM, tapi set-nya tetap wajib diganti (mis. kembali dari langkah
+    // terakhir: back+submit harus kembali menjadi back+next).
+    this._syncButtons(form, index, direction);
     this._syncActive(form);
+    this.host.onStepChange?.(index);
+  }
+
+  /**
+   * Tukar set tombol navigasi bersama yang HIDUP DI LEVEL FORM — dipanggil di
+   * setiap perpindahan langkah (goTo/refresh), bukan hanya saat fieldset baru
+   * lahir, agar arah navigasi (next/back/submit) selalu cocok dengan langkah.
+   * Set membawa attribute paritas dengan fieldset langkah terkait (data-index
+   * + animate) supaya bisa dianimasikan sinkron lewat CSS.
+   */
+  private _syncButtons(form: HTMLFormElement, index: number, direction?: "next" | "back" | null): void {
+    const isLast = index === this.host.inputs.length - 1;
+    const buttons = this.host.renderButtonsSet?.({ index, isLast, formId: form.id });
+    if (!buttons) return;
+    buttons.dataset.index = String(index);
+    if (direction) buttons.setAttribute("animate", direction);
+    if (this.navBar && this.navBar.isConnected) this.navBar.replaceWith(buttons);
+    else form.appendChild(buttons);
+    this.navBar = buttons;
   }
 
   /**
@@ -157,12 +186,18 @@ export class FormMultistepHandler {
     const mounted = this._mountedSteps(target);
     if (!mounted.length) return;
 
+    // Arah animasi fallback: langkah aktif di-unmount kaskade → gandol mundur
+    let direction: "next" | "back" | null = null;
     const isCurrentMounted = mounted.some((fieldset) => Number(fieldset.dataset.index) === this.currentStep);
     if (!isCurrentMounted) {
       const fallback = mounted.filter((fieldset) => Number(fieldset.dataset.index) < this.currentStep).pop() ?? mounted[0];
       this.currentStep = Number(fallback.dataset.index);
+      // Fieldset & nav yang masuk sama-sama membawa arah "back" agar animasinya koheren
+      direction = "back";
+      fallback.setAttribute("animate", "back");
     }
 
+    this._syncButtons(target, this.currentStep, direction);
     this._syncActive(target);
   }
 
@@ -196,6 +231,7 @@ export class FormMultistepHandler {
     }
     this.form = null;
     this.onClick = null;
+    this.navBar = null;
     this.pending.clear();
   }
 }

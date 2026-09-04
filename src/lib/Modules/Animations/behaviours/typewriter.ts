@@ -276,11 +276,12 @@ export class TypewriterBehaviour {
     for (let i = 0; i < sequentialData.length; i++) {
       if (!node.isConnected || isStopped()) return;
       const item = sequentialData[i];
-      const isLastItem = i === sequentialData.length - 1;
 
-      // Kembalikan teks lalu oper ke fungsi utama
+      // isLastSentence SELALU true: mode sekuensial adalah sekali jalan TANPA
+      // rewrite — setiap baris dipertahankan setelah selesai diketik, bukan
+      // dihapus mundur seperti pada mode rewrite/loop.
       item.el.textContent = item.text;
-      await this._typewriterEffect(node, item.el, item.text, options, isLastItem, isStopped);
+      await this._typewriterEffect(node, item.el, item.text, options, true, isStopped);
     }
     onDone();
   }
@@ -322,6 +323,29 @@ export class TypewriterBehaviour {
       : baseOptions.rewrite;
 
     const options: TypewriterOptions = { ...baseOptions, loop, rewrite };
+
+    // =========================================================================
+    // 🚧 LAYOUT SHIFT — KETERBATASAN DESAIN SAAT INI (TODO: FIX PERMANEN):
+    // Teks diketik runtime (`textContent += char`) mengubah tinggi kotak
+    // secara alami, sehingga konten di bawahnya ikut bergeser selama mengetik.
+    // Percobaan reservasi `min-height` (ukur tinggi penuh sebelum wipe →
+    // kunci → lepas saat done untuk rewrite) sudah DITARIK, karena:
+    //   1. Konten panjang (mis. ConfirmationSet) memegang area kosong besar
+    //      selama paragraf-paragraf awal mengetik — terlihat buruk.
+    //   2. Mode rewrite: konten akhir (blok terakhir) lebih pendek daripada
+    //      tinggi terukur — pelepasan reservasi di done justru memicu
+    //      layout jump baru di posisi yang salah.
+    // Ide fix permanen: ketik ke dalam klon "sizer" tersembunyi lalu tukar,
+    // grid baris terukur per-baris, atau menunggu CSS `interpolate-size` —
+    // apapun yang mengetik TANPA mengubah tinggi kotak sampai selesai.
+    // =========================================================================
+
+    // 👁️ Buka visibility inline (mengalahkan pre-hide `visibility: hidden`
+    // dari Animations.css yang mencegah kilatan teks penuh saat node baru
+    // terpasang / langkah multistep aktif / chain masih menunggu giliran).
+    // Harus satu task dengan mulainya ketikan agar tidak ada frame yang
+    // menampilkan konten setengah siap.
+    node.style.visibility = 'visible';
 
     // =========================================================================
     // ROUTER STRUKTUR JALUR DOM (logika inti sudah diekstrak ke helper method)

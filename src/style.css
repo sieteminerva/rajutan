@@ -30,9 +30,29 @@ section#home {
       --input-label-color: rgba(255, 248, 215, 0.431);
       --input-font-size: 1.6rem;
       --input-label-size: 1.6rem;
+      /* min-height: 500px; */
+      height: 100%;
+      padding: 2em 1.5em 0.5em 1.5em;
+      background: linear-gradient(
+        45deg,
+        rgba(24, 29, 9, 0.308) 0%,
+        rgba(73, 65, 29, 0.486) 40%,
+        rgba(56, 51, 2, 0.315) 100%
+      );
+      border: none;
+      box-shadow: 5px 3px 70px 5px rgba(53, 53, 52, 0.212);
       & .field:has(> input[type="file"]) {
         --input-font-size: 1.1rem;
       }
+    }
+    & .buttons.set {
+      background: linear-gradient(
+        160deg,
+        rgba(24, 29, 9, 0.308) 0%,
+        rgba(73, 65, 29, 0.486) 40%,
+        rgba(56, 51, 2, 0.315) 100%
+      );
+      border: none;
     }
   }
 
@@ -123,10 +143,3 @@ section#home {
   --picker-background: var(--primary-light-color);
   --input-border-radius: 0;
 } */
-
-section#home .form fieldset.inline-style {
-  padding: 2em 1.5em 0.5em 1.5em;
-  background: linear-gradient(45deg, rgba(24, 29, 9, 0.308) 0%, rgba(73, 65, 29, 0.486) 40%, rgba(56, 51, 2, 0.315) 100%);
-  border: none;
-  box-shadow: 5px 3px 70px 5px rgba(53, 53, 52, 0.212);
-}

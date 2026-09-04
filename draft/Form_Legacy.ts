@@ -1,10 +1,10 @@
-import type { iBuilderConfig, iBuilderRegistry } from "../../interface";
-import { Builder } from "../Base";
-import { MessageBuilder } from "../Message/Message";
-import { TableBuilder } from "../Table/Table";
-import { FileUploader } from "./FileUploader";
-import { IdAddressBuilder } from "./IdAddress/id-address-builder";
-import { InputBuilder } from "./Input";
+import type { iBuilderConfig, iBuilderRegistry } from "../src/lib/interface";
+import { Builder } from "../src/lib/Components/Base";
+import { MessageBuilder } from "../src/lib/Components/Message/Message";
+import { TableBuilder } from "../src/lib/Components/Table/Table";
+import { FileUploader } from "../src/lib/Components/Form/FileUploader";
+import { IdAddressBuilder } from "../src/lib/Components/Form/IdAddress/id-address-builder";
+import { InputBuilder } from "../src/lib/Components/Form/Input";
 
 export type FormElementType =
   | "@container"

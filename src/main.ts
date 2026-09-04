@@ -7,15 +7,18 @@ import { AnimationsService } from './lib/Modules/Animations/Animations';
 import './lib/Styles/variables.css';
 import './lib/Styles/icon.css';
 import './style.css';
+import { EventEmitter } from './lib/Modules/EventEmitter';
 
 async function start(container: HTMLElement) {
+  // @ts-ignore
+  const emitter = new EventEmitter();
   const animation = new AnimationsService();
   const components = new ComponentRegistry()
     .register("form", (data: any) => {
       return {
         path: "lib/Components/Form/Form.ts",
         stylesheet: "lib/Components/Form/Form.css", // alternative style definition also didn't loaded
-        config: data?.config,
+        config: Object.assign({}, data?.config || {}, { emit: (event: any, payload: any) => emitter.emit(event, payload as any) }),
         schema: data?.schema !== undefined ? data.schema : (data?.content !== undefined ? data.content : data),
       };
     })

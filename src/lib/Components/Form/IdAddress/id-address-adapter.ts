@@ -29,15 +29,20 @@ export const setPlaceholderText = (element: HTMLInputElement | HTMLSelectElement
 
 export function __setloadingState(el: HTMLInputElement | HTMLSelectElement, level: any, state = "loading", placeholderEl: HTMLInputElement | null = null) {
   if (state === "start") {
-    el instanceof HTMLInputElement ? el.parentElement?.classList.add("loading") : el.classList.add("loading");
-    setPlaceholderText(placeholderEl as HTMLInputElement | HTMLSelectElement, `Loading ${level}...`);
+    el?.classList.add("loading");
+    const spinner = document.createElement("span");
+    spinner.className = "spinner";
+    setPlaceholderText(placeholderEl as HTMLInputElement | HTMLSelectElement, `Loading ${level} `);
+    el.parentElement?.appendChild(spinner);
   } else if (state === "complete") {
     el.classList.remove("error");
-    el instanceof HTMLInputElement ? el.parentElement?.classList.remove("loading") : el.classList.remove("loading");
+    el.classList.remove("loading");
+    el.parentElement?.querySelector(".spinner")?.remove()
     const text = level === "kodepos" ? "Isi kodepos tujuan" : `Pilih ${level}`;
     setPlaceholderText(placeholderEl as HTMLInputElement | HTMLSelectElement, text);
   } else {
-    el instanceof HTMLInputElement ? el.parentElement?.classList.remove("loading") : el.classList.remove("loading");
+    el.classList.remove("loading");
+    el.parentElement?.querySelector(".spinner")?.remove()
   }
   return;
 }

@@ -268,6 +268,7 @@ export type InputType =
   | "textarea"
   | "number"
   | "select"
+  | "dropdown"
   | "checkbox"
   | "radio"
   | "range"

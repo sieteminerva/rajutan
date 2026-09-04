@@ -18,13 +18,25 @@ export interface iDropdownOption {
 }
 
 export interface iDropdownConfig extends iBuilderConfig<DropdownElementType> {
+  attributes?: Array<{ name: string; value: string }>;
   apiUrl?: string | null; // URL jika mengambil data dinamis
   debounceDelay?: number; // Waktu tunggu debounce dalam milidetik
+  style?: string;
   onSelect?: (value: string, id: string | null) => void; // Callback saat item dipilih
   min?: number; // Menggantikan hardcode keyword.length < 2
   max?: number; // Membatasi jumlah option yang dirender ke DOM
-  isMultiple?: false;
-  onMultiChange?: (a: any) => void
+  isMultiple?: boolean;
+  onMultiChange?: (items: iDropdownOption[]) => void;
+}
+
+export interface iDropdownContent {
+  id?: string;
+  name?: string;
+  title?: string;
+  placeholder?: string;
+  value?: string | number | null;
+  options?: iDropdownOption[];
+  attributes?: Array<{ name: string; value: string }>;
 }
 
 export interface iDropdownState {
@@ -56,7 +68,7 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
       "@dropdown>label": { tagName: "label", className: "label" },
       "@dropdown>input": {
         tagName: "input",
-        attrs: { type: "text", list: this.listId, autocomplete: "off", placeholder: "Type to search..." },
+        attrs: { type: "text", list: this.listId, autocomplete: "off" },
         className: "dropdown"
       },
       "@dropdown>hidden": { tagName: "input", attrs: { type: "hidden" } },
@@ -71,8 +83,10 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
       namespace: null,
       selectors: defaultSelector,
       emit: null,
+      attributes: [],
       apiUrl: null,
       debounceDelay: 400,
+      style: "select",
       min: 3, // Menggantikan hardcode keyword.length < 2
       max: 10, // Membatasi jumlah option yang dirender ke DOM
       isMultiple: false,
@@ -87,22 +101,35 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
   protected template(typeKey: DropdownElementType, el: HTMLElement, payload?: any): void {
     switch (typeKey) {
       case "@dropdown":
+        el.dataset.style = this.config.style || "select";
+        el.classList.add(`style-${this.config.style || "select"}`);
 
-        const hidden = this.render("@dropdown>hidden");
-        const input = this.render("@dropdown>input");
+        const hidden = this.render("@dropdown>hidden", payload);
+        const input = this.render("@dropdown>input", payload);
         const datalist = this.render("@dropdown>list", payload?.options || []);
-        const label = this.render("@dropdown>label")
+        const label = payload?.title ? this.render("@dropdown>label", payload) : null;
+        const tags = this.render("@dropdown>tags", payload?.selectedMultiItems || []);
 
-        el.append(label!, input!, hidden!, datalist!);
+        el.append(...[label, tags, input, hidden, datalist].filter(Boolean) as HTMLElement[]);
         break;
 
       case "@dropdown>input":
-        // Atribut dasar sudah di-handle oleh defaultSelector.attrs
+        if (payload?.id) el.id = String(payload.id);
+        if (payload?.placeholder) el.setAttribute("placeholder", String(payload.placeholder));
+        if (payload?.value != null) (el as HTMLInputElement).value = String(payload.value);
+        break;
+
+      case "@dropdown>label":
+        el.setAttribute("for", String(payload.id));
+        el.textContent = payload.title || "";
         break;
 
       case "@dropdown>hidden":
         // Digunakan sebagai penampung nilai ID terpilih
         if (payload?.name) el.setAttribute("name", payload.name);
+        if (payload?.id) el.id = `${payload.id}-value`;
+        if (payload?.value != null) (el as HTMLInputElement).value = String(payload.value);
+        this.applyAttributes(el, payload?.attributes || this.config.attributes);
         break;
 
       case "@dropdown>list":
@@ -125,7 +152,12 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
         }
         break;
       case "@dropdown>tags":
-        // Wadah kosong awal untuk menampung tag badge
+        if (Array.isArray(payload)) {
+          for (const item of payload) {
+            const tag = this.render("@dropdown>tags>item", item);
+            if (tag) el.appendChild(tag);
+          }
+        }
         break;
 
       case "@dropdown>tags>item":
@@ -138,7 +170,7 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
   public prepare(content: any, _config?: Required<iDropdownConfig> | undefined): HTMLElement {
     // Inisialisasi state awal sebelum dibungkus Proxy oleh framework Anda
     this.#state = {
-      options: content?.options || [],
+      options: Array.isArray(content?.options) ? content.options : [],
       selectedMultiItems: [],
       keyword: "",
       isLoading: false,
@@ -147,7 +179,7 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
 
     // Kembalikan element. Framework Anda akan membalut 'this.state' ke dalam Proxy 
     // sehingga jika properti di dalam `this.state` berubah, ia otomatis memicu sub-render.
-    return this.render("@dropdown", this.#state) as HTMLElement;
+    return this.render("@dropdown", { ...content, ...this.#state }) as HTMLElement;
   }
 
   public initialize(el?: HTMLElement, _payload?: any, _context?: any): void {
@@ -155,14 +187,22 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
 
     const input = el.querySelector("input[type='text']") as HTMLInputElement;
     const datalist = el.querySelector("datalist") as HTMLDataListElement;
-    const tagsContainer = el.querySelector(".dropdown-tags-container") as HTMLDivElement;
+    const tagsContainer = el.querySelector(".tags") as HTMLDivElement;
 
     if (!input || !datalist || !tagsContainer) return;
+
+    const hidden = el.querySelector("input[type='hidden']") as HTMLInputElement | null;
+    if (this.#state.options.length > 0) {
+      datalist.dataset.options = JSON.stringify(this.#state.options);
+    }
+    const notifyLevelChange = (value: any) => {
+      (hidden as HTMLInputElement & { __onLevelChange?: (value: any) => void } | null)?.__onLevelChange?.(value);
+    };
 
     // 1. Listener saat mengetik (Sudah ada di kode sebelumnya)
     input.addEventListener("input", (_e) => {
       this.#state.keyword = input.value;
-      this.handleSearch(input, datalist);
+      this.handleSearch(input, datalist, hidden);
     });
 
     // 2. PROTEKSI NILAI TIDAK VALID (Strict Mode saat Blur)
@@ -173,7 +213,10 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
       const currentText = input.value;
       if (currentText === "") {
         this.#state.value = "";
+        const hidden = input.parentElement?.querySelector("input[type='hidden']") as HTMLInputElement | null;
+        if (hidden) hidden.value = "";
         if (this.config.onSelect) this.config.onSelect("", null);
+        notifyLevelChange(null);
         return;
       }
 
@@ -185,10 +228,13 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
         input.value = "";
         this.#state.keyword = "";
         this.#state.value = "";
+        const hidden = input.parentElement?.querySelector("input[type='hidden']") as HTMLInputElement | null;
+        if (hidden) hidden.value = "";
         if (this.config.onSelect) this.config.onSelect("", null);
+        notifyLevelChange(null);
 
         // Sinkronkan ulang datalist jika diperlukan
-        this.#state.options = [];
+        // Keep the current options so blur can validate the selected label.
         this.renderOptions(datalist);
       }
     });
@@ -198,15 +244,19 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
       const target = e.target as HTMLElement;
       if (target.classList.contains("remove-tag-btn")) {
         const idToRemove = target.getAttribute("data-id");
-        this.removeTag(idToRemove);
+        this.removeTag(idToRemove, tagsContainer);
         this.renderTags(tagsContainer);
       }
     });
   }
 
-  private handleSearch(input: HTMLInputElement, datalist: HTMLDataListElement): void {
+  private handleSearch(input: HTMLInputElement, datalist: HTMLDataListElement, hidden: HTMLInputElement | null): void {
     const value = this.#state.keyword;
     const minLength = this.config.min ?? 2;
+    const level = hidden?.dataset.level || input.dataset.level;
+    const notifyLevelChange = (selected: any) => {
+      (hidden as HTMLInputElement & { __onLevelChange?: (value: any) => void } | null)?.__onLevelChange?.(selected);
+    };
 
     // 1. Cek Match Terpilih
     const matchedOption = datalist.querySelector(`option[value="${CSS.escape(value)}"]`);
@@ -220,6 +270,8 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
           // Cukup ubah datanya secara reaktif!
           this.#state.selectedMultiItems.push({ id: selectedId, label: value });
           this.#state.value = this.#state.selectedMultiItems.map(item => item.id).join(",");
+          const hidden = input.parentElement?.querySelector("input[type='hidden']") as HTMLInputElement | null;
+          if (hidden) hidden.value = this.#state.value;
 
           if (this.config.onMultiChange) this.config.onMultiChange(this.#state.selectedMultiItems);
         }
@@ -229,23 +281,35 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
         this.#state.options = [];
       } else {
         this.#state.value = selectedId;
+        const hidden = input.parentElement?.querySelector("input[type='hidden']") as HTMLInputElement | null;
+        if (hidden) hidden.value = selectedId;
         if (this.config.onSelect) this.config.onSelect(value, selectedId);
+        notifyLevelChange({
+          [`${level}_id`]: selectedId,
+          [`${level}_name`]: value,
+        });
       }
 
       // Trigger render ulang bagian DOM yang terpengaruh perubahan state
-      this.renderOptions(datalist);
-      const tagsContainer = datalist.parentElement?.querySelector(".dropdown-tags-container") as HTMLDivElement;
+      if (this.config.isMultiple) this.renderOptions(datalist);
+      const tagsContainer = datalist.parentElement?.querySelector(".tags") as HTMLDivElement;
       if (tagsContainer) this.renderTags(tagsContainer);
       return;
     }
 
     if (value.length < minLength) {
-      this.#state.options = [];
-      this.renderOptions(datalist);
+      if (!this.config.apiUrl) this.renderLocalOptions(datalist, value);
+      else {
+        this.#state.options = [];
+        this.renderOptions(datalist);
+      }
       return;
     }
 
-    if (!this.config.apiUrl) return;
+    if (!this.config.apiUrl) {
+      this.renderLocalOptions(datalist, value);
+      return;
+    }
 
     // 2. Handle API dengan Debounce (Hanya mutasi data state)
     this.#state.isLoading = true;
@@ -287,21 +351,42 @@ export class DropdownBuilder extends Builder<DropdownElementType, iDropdownConfi
     this.template("@dropdown>list", datalistEl, this.#state.options);
   }
 
+  private renderLocalOptions(datalist: HTMLDataListElement, keyword: string): void {
+    const serializedOptions = datalist.dataset.options;
+    const sourceOptions: iDropdownOption[] = serializedOptions
+      ? JSON.parse(serializedOptions)
+      : this.#state.options;
+    const normalizedKeyword = keyword.trim().toLocaleLowerCase();
+    this.#state.options = sourceOptions
+      .filter(option => option.label.toLocaleLowerCase().includes(normalizedKeyword))
+      .slice(0, this.config.max || 10);
+    this.renderOptions(datalist);
+  }
+
   public renderTags(tagsContainerEl: HTMLDivElement): void {
     tagsContainerEl.innerHTML = "";
-    this.template("@dropdown>tags", tagsContainerEl, this.#state.value ? this.#state.selectedMultiItems : this.#state.selectedMultiItems);
+    this.template("@dropdown>tags", tagsContainerEl, this.#state.selectedMultiItems);
   }
 
   private renderInputState(inputEl: HTMLInputElement): void {
-    this.template("@dropdown>input", inputEl, { isLoading: this.#state.isLoading });
+    inputEl.classList.toggle("loading", this.#state.isLoading);
   }
 
-  private removeTag(id: string | null): void {
+  private removeTag(id: string | null, tagsContainer: HTMLDivElement): void {
     if (!id) return;
     this.#state.selectedMultiItems = this.#state.selectedMultiItems.filter(item => String(item.id) !== String(id));
     this.#state.value = this.#state.selectedMultiItems.map(item => item.id).join(",");
+    const hidden = tagsContainer.parentElement?.querySelector("input[type='hidden']") as HTMLInputElement | null;
+    if (hidden) hidden.value = this.#state.value;
 
     if (this.config.onMultiChange) this.config.onMultiChange(this.#state.selectedMultiItems);
+  }
+
+  private applyAttributes(el: HTMLElement, attributes: Array<{ name: string; value: string }>): void {
+    for (const attribute of attributes) {
+      if (!attribute?.name) continue;
+      el.setAttribute(attribute.name, String(attribute.value ?? ""));
+    }
   }
 }
 

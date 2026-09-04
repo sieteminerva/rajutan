@@ -7,6 +7,8 @@ import { FormCascade, type FormCascadeHost, type iCascadeEventDetail, FormCascad
 import { FormMultistepHandler, type FormMultistepHost } from "./Handlers/Multistep";
 import { IdAddressBuilder } from "./IdAddress/id-address-builder";
 import { InputBuilder } from "./Input";
+import "./Dropdown.css";
+import "./inputControls.css";
 
 export type FormElementType =
   | "@container"
@@ -34,6 +36,7 @@ export interface iFormConfig extends iBuilderConfig<FormElementType> {
   resetOnSubmit?: boolean;
   resetOnComplete?: boolean;
   createEventListener?: boolean;
+  autoDisableNextStep?: boolean
   minHeight?: string;
   multistep?: boolean;
   cascading?: boolean; // show or build input or group based on condition from input value before. it will looking "condition" property 
@@ -58,6 +61,10 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
   // 🪜 Engine multistep: langkah ditahan sebagai placeholder dan baru
   // dilahirkan ke DOM saat tombol Next/Back menekannya (Multistep.ts).
   #multistep: FormMultistepHandler | null = null;
+
+  // Inisialisasi komponen (uploader, IdAddress, dsb.) untuk step yang baru
+  // lahir — engine memanggil ini lewat host hook onStepMount.
+  #onStepMounted: ((fieldset: HTMLElement) => void) | null = null;
 
   constructor(config: Partial<iFormConfig> = {}) {
     super();
@@ -95,6 +102,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       selectors: defaultSelectors,
       multistep: false,
       cascading: false,
+      autoDisableNextStep: false, // null = ikuti cascading && multistep
       onCascade: null,
       namespace: null,
       emit: null,
@@ -118,13 +126,18 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
     // 🌊 Reset engine kaskade (siklus hidup baru per prepare)
     this.#cascade = null;
     this.#multistep = null;
+    this.#onStepMounted = null;
 
     // const wrapper = this.render("@container", inputs);
 
     const form = this.render("@form", inputs) as HTMLFormElement;
     const formId = form.id;
     const isCascading = this.config.cascading === true;
-    if (isCascading) this.#cascade = new FormCascade(this._buildCascadeHost());
+    // 🌊 Engine kaskade dibangun bila cascading aktif — ATAU bila gerbang
+    // next diminta eksplisit (autoDisableNextStep:true, mis. untuk kondisi眼
+    // manual pada group schema tanpa cascading), agar gate() tetap berjalan.
+
+    if (isCascading || this.config.autoDisableNextStep === true) this.#cascade = new FormCascade(this._buildCascadeHost());
     if (this.config.multistep) this.#multistep = new FormMultistepHandler(this._buildMultistepHost());
 
     // Iterasi dan transformasikan setiap input secara murni
@@ -199,8 +212,9 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
     };
 
     // 🌊 CASCADE: aktifkan engine — delegasi input/change, evaluasi kondisi awal,
-    // dan gerbang tombol next langsung diset di sini.
-    if (isCascading) this.#cascade?.attach(form);
+    // dan gerbang tombol next langsung diset di sini. (Engine yang dibuat khusus
+    // untuk autoDisableNextStep juga di-attach — tanpa attach, gate() tak pernah jalan.)
+    if (isCascading || this.config.autoDisableNextStep === true) this.#cascade?.attach(form);
 
     if (!this.submitButtonId && this.config.submitButton && !this.config.multistep) {
       const defaultSubmitBtn = this.render("@form>actions>submit", { isGroupBtn: false, formId }) as HTMLButtonElement;
@@ -325,10 +339,12 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       builder: this.builderId,
       inputs: this.#inputs,
       multistep: this.config.multistep === true,
+      // Gerbang next: null/undefined = ikuti cascading; true = paksa kunci;
+      // false = nonaktif. (Lihat iFormConfig.autoDisableNextStep)
+      autoDisableNextStep: this.config.autoDisableNextStep ?? (this.config.cascading === true && this.config.multistep === true),
       onCascade: typeof this.config.onCascade === "function" ? this.config.onCascade : null,
       emit: typeof this.config.emit === "function" ? this.config.emit : null,
       renderGroup: (group, formId, path) => this.renderGroup(group, formId, path),
-      renderButtonsSet: (payload) => this.render("@form>buttons-set", payload)!,
       refreshSteps: (form) => this.#multistep?.refresh(form),
     };
   }
@@ -345,6 +361,10 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       inputs: this.#inputs,
       renderGroup: (group, formId, path) => this.renderGroup(group, formId, path),
       renderButtonsSet: (payload) => this.render("@form>buttons-set", payload)!,
+      onStepMount: (fieldset) => this.#onStepMounted?.(fieldset),
+      // 🌊 Setiap perpindahan langkah melahirkan set tombol navigasi yang baru —
+      // engine kaskade perlu menilai ulang gerbang next yang baru tersebut.
+      onStepChange: () => this.#cascade?.gate(),
     };
   }
 
@@ -400,6 +420,20 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
           desc.className = "group-desc";
           desc.textContent = String(payload.description);
           el.appendChild(desc);
+        }
+
+        if (payload?.infos) {
+          const list = document.createElement("ul");
+          list.className = "group-infos";
+          if (Array.isArray(payload.infos)) {
+            for (const i of payload.infos) {
+              const item = document.createElement("li")
+              item.className = "item"
+              item.textContent = String(i);
+              list.appendChild(item);
+            }
+          }
+          el.appendChild(list);
         }
         break;
       }
@@ -487,6 +521,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
     this.#cascade = null;
     this.#multistep?.dispose(); // Lepas listener delegasi + langkah tertahan
     this.#multistep = null;
+    this.#onStepMounted = null;
     this.destroy();
   }
 
@@ -526,10 +561,18 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
   private attachFormListener(form: HTMLFormElement): void {
     // console.log("Form Listeners Attached")
     let table: any = null;
-    let IdAddress = null;
-    if (typeof FileUploader !== "undefined" && typeof FileUploader.initAll === "function") {
-      FileUploader.initAll(form);
+    let IdAddress: any = null;
+    // 🪜 Uploader dihidupkan MALAS dan IDEMPOTEN: FileUploader.initAll melewati
+    // input yang sudah bertanda data-uploader-initialized, jadi aman dipanggil
+    // berulang. Form biasa dihidupkan sekali di ekor metode ini (semua input
+    // sudah ada di DOM sejak prepare); setiap step lazy multistep yang baru
+    // lahir dihidupkan ulang lewat onStepMount di bawah.
+    const ensureUploaders = (root: HTMLElement): void => {
+      if (typeof FileUploader === "undefined" || typeof FileUploader.initAll !== "function") return;
+      try { FileUploader.initAll(root); } catch (error) { console.warn("[Form] file uploader init failed:", error); }
+    };
 
+    if (typeof FileUploader !== "undefined" && typeof FileUploader.initAll === "function") {
       // Delegasi di level form — input file CSV dari step kaskade yang baru
       // lahir (ecommerce/gallery) ikut membangun tabel, bukan hanya yang awal.
       form.addEventListener("change", async (event: Event) => {
@@ -561,7 +604,12 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       });
     }
 
-    if (form.querySelectorAll("[data-level]").length > 1) {
+    // 🪜 IdAddress dibangun MALAS: pada form multistep, field [data-level] bisa
+    // berada di step yang belum lahir (lazy mount) — pemeriksaan DOM saat init
+    // belum tentu menemukannya. Cek ulang setiap kali sebuah step lahir.
+    const ensureIdAddress = (): any => {
+      if (IdAddress) return IdAddress;
+      if (form.querySelectorAll("[data-level]").length <= 1) return null;
       const DEPLOYMENT_ID = "AKfycbwjQ_iNQClJuyf5z1ZlJcJ-j6LEnINfvbBmjBFlE4T3X4dVAoxF_GzUCCv6TXZ_apfhpA";
       const API_URL = `https://script.google.com/macros/s/${DEPLOYMENT_ID}/exec`;
       IdAddress = new IdAddressBuilder({
@@ -569,8 +617,9 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
         url: API_URL,
         geocode: false,
       });
-      IdAddress.init()
-    }
+      IdAddress.init();
+      return IdAddress;
+    };
 
     const toggleLoadingState = (success: boolean) => {
       form.classList.remove("loading");
@@ -580,8 +629,27 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       }
     };
 
-    // 🪜 Multistep: engine melahirkan langkah awal + memasang delegasi next/back
+    // 🪜 Multistep: engine melahirkan langkah awal + memasang delegasi next/back.
+    // Setiap fieldset step yang lahir (termasuk step 0) dihidupkan uploader-nya
+    // dan memicu IdAddress bila [data-level] kini ada.
+    this.#onStepMounted = (fieldset: HTMLElement) => {
+      ensureUploaders(fieldset);
+      ensureIdAddress();
+      // 🌊 Kaskade: langkah yang baru lahir membawa placeholder anak
+      // ber-condition (ditahan saat renderGroup) — evaluasi segera agar
+      // yang kondisinya sudah terpenuhi langsung lahir, tanpa menunggu
+      // event input/change berikutnya.
+      this.#cascade?.sync();
+    };
     this.#multistep?.attach(form);
+
+    // 🪜 Form biasa (non-multistep): seluruh input sudah berada di DOM sejak
+    // prepare — hidupkan uploader & IdAddress sekali di sini. Pada form
+    // multistep, langkah masih tertahan sebagai <template> (tak terlihat
+    // querySelector) sehingga pemindaian ini no-op; penggantinya adalah
+    // onStepMount di atas yang mengiringi tiap kelahiran langkah.
+    ensureUploaders(form);
+    ensureIdAddress();
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -619,7 +687,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
             formId: form.id,
             data: dataWithFiles,
             complete: (success: boolean, messageConfig: any, resetForm: boolean) => {
-
+              // TODO reset / destroy table & idAddress if available
               toggleLoadingState(success);
               this.createMessage(form, success, messageConfig);
               if (resetForm || this.config.resetOnComplete) form.reset();

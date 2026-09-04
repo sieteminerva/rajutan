@@ -18,23 +18,19 @@ function createPopover(content: { info: string, placeholder: string }) {
   return popover;
 }
 
+const selectors = { "@field>label": { tagName: "label", attrs: { "animation": "typewriter", "animation-chain": "true" } } }
+
 const IntroSet = {
   id: "intro-set",
   group: [
-    `<span class="label" animation="typewriter" animation-chain="true">Kategory website yang ingin kamu buat dan tunjukkan kepada dunia adalah website</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">Kategory website yang ingin kamu buat dan tunjukkan kepada dunia adalah website</span>`,
     {
       type: "select",
       id: "web-type",
-      // title: "Kategory website yang ingin kamu buat dan tunjukkan kepada dunia adalah website",
+      title: "Kategory website yang ingin kamu buat dan tunjukkan kepada dunia adalah website",
       placeholder: "berjenis apa?",
       config: {
-        selectors: {
-          "@field": {
-            tagName: "div",
-            className: "field",
-            attrs: { "animation": "fade-in", "animation-chain": "true" }
-          }
-        },
+        selectors,
         options: [
           { value: "blog", label: "Catatan Cerita / Blog" },
           { value: "ecommerce", label: "Toko Online / E-Commerce" },
@@ -44,6 +40,8 @@ const IntroSet = {
           { value: "gallery", label: "Galeri Visual" }
         ],
         attributes: [
+          { name: "animation", value: "fade-in" },
+          { name: "animation-chain", value: "true" },
           // {
           //   name: "onchange", value: (e: Event) => {
           //     console.log("wow its changed!", (e.target as any).value)
@@ -53,13 +51,15 @@ const IntroSet = {
         ]
       }
     },
-    `<span class="label" animation="typewriter" animation-chain="true">Kamu akan meluncurkannya dengan alamat nama digital</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">Kamu akan meluncurkannya dengan alamat nama digital</span>`,
     {
       type: "text",
       id: "web-name",
-      // title: "Kamu akan meluncurkannya dengan alamat nama digital",
+      condition: { field: "web-type", filled: true },
+      title: "Kamu akan meluncurkannya dengan alamat nama digital",
       placeholder: "namapilihanmu.com",
       config: {
+        selectors,
         attributes: [
           { name: "animation", value: "fade-in" },
           { name: "animation-chain", value: "true" },
@@ -70,13 +70,15 @@ const IntroSet = {
         })
       }
     },
-    `<span class="label" animation="typewriter" animation-chain="true">Apa alasan singkat dibalik kenapa kamu ingin membuat website ini, dan beritahu alasan kenapa orang lain harus mendatangi dan jangan sampai melewatkan website mu ini</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">Apa alasan singkat dibalik kenapa kamu ingin membuat website ini, dan beritahu alasan kenapa orang lain harus mendatangi dan jangan sampai melewatkan website mu ini</span>`,
     {
       type: "textarea",
       id: "web-reason",
-      // title: "Apa alasan singkat dibalik kenapa kamu ingin membuat website ini, dan beritahu alasan kenapa orang lain harus mendatangi dan jangan sampai melewatkan website mu ini",
+      condition: { field: "web-name", filled: true },
+      title: "Apa alasan singkat dibalik kenapa kamu ingin membuat website ini, dan beritahu alasan kenapa orang lain harus mendatangi dan jangan sampai melewatkan website mu ini",
       placeholder: "Ceritakan alasan atau mimpi besar di balik karyamu...",
       config: {
+        selectors,
         attributes: [
           { name: "animation", value: "fade-in" },
           { name: "animation-chain", value: "true" },
@@ -87,13 +89,15 @@ const IntroSet = {
         })
       }
     },
-    `<span class="label" animation="typewriter" animation-chain="true">Situs web ini dirancang secara personal, dan dirajut oleh</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">Situs web ini dirancang secara personal, dan dirajut oleh</span>`,
     {
       type: "text",
       id: "web-author",
-      // title: "Situs web ini dirancang secara personal, dan dirajut oleh",
+      condition: { field: "web-reason", filled: true },
+      title: "Situs web ini dirancang secara personal, dan dirajut oleh",
       placeholder: "dirimu...",
       config: {
+        selectors,
         attributes: [
           { name: "animation", value: "fade-in" },
           { name: "animation-chain", value: "true" },
@@ -132,15 +136,17 @@ function createDownloadLink(filename: string = "address.csv") {
 
 const DetailSetShop = {
   id: "ecommerce-detail-set",
-  // condition: { field: "web-type", equals: "ecommerce" },
+  // condition: { field: "web-type", filled: true },
   group: [
-    `<span class="label" animation="typewriter" animation-chain="true">Untuk mengisi seluruh isi etalase data tokonya secara instan, silakan unggah baris berkas CSV</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">Untuk mengisi seluruh isi etalase data tokonya secara instan, silakan unggah baris berkas CSV</span>`,
     {
       type: "file",
-      id: "product",
-      // title: "Untuk mengisi seluruh isi etalase data tokonya secara instan, silakan unggah baris berkas CSV",
+      id: "detail-product",
+      condition: { field: "web-name", filled: true },
+      title: "Untuk mengisi seluruh isi etalase data tokonya secara instan, silakan unggah baris berkas CSV",
       placeholder: "Pilih file template .csv data...",
       config: {
+        selectors,
         attributes: [
           { name: "animation", value: "fade-in" },
           { name: "animation-chain", value: "true" },
@@ -154,37 +160,19 @@ const DetailSetShop = {
   ]
 }
 
-// const DetailSetGallery = {
-//   id: "gallery-detail-set",
-//   // condition: { field: "web-type", equals: "gallery" },
-//   group: [
-//     {
-//       type: "file",
-//       id: "gallery",
-//       title: "Untuk mengisi seluruh isi etalase data gallery nya secara instan, silakan unggah baris berkas CSV",
-//       placeholder: "Pilih file template .csv data...",
-//       config: {
-//         attributes: [
-//           { name: "data-max-upload", value: 1 },
-//           { name: "accept", value: ".csv, text/csv, .json, text/json" },
-//           { name: "data-uploader-csv", value: "true" }
-//         ],
-//       }
-//     },
-//     createDownloadLink("gallery.csv")
-//   ]
-// }
 
 const ContactSet = {
   id: "contact-set",
   group: [
-    `<span class="label" animation="typewriter" animation-chain="true">Jika ada pengunjung atau calon pembeli yang ingin menyapa melalu surat elektronik mereka akan ditermia di</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">Jika ada pengunjung atau calon pembeli yang ingin menyapa melalu surat elektronik mereka akan ditermia di</span>`,
     {
       type: "email",
-      id: "email",
-      // title: "Jika ada pengunjung atau calon pembeli yang ingin menyapa melalu surat elektronik mereka akan ditermia di",
+      id: "contact-email",
+      condition: { field: "detail-product", filled: true },
+      title: "Jika ada pengunjung atau calon pembeli yang ingin menyapa melalu surat elektronik mereka akan diterima di",
       placeholder: "alamat email aktifmu",
       config: {
+        selectors,
         attributes: [
           { name: "animation", value: "fade-in" },
           { name: "animation-chain", value: "true" },
@@ -195,13 +183,15 @@ const ContactSet = {
         })
       }
     },
-    `<span class="label" animation="typewriter" animation-chain="true">Seluruh hak cipta dan kepemilikan operasional website ini bernaung di bawah</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">Seluruh hak cipta dan kepemilikan operasional website ini bernaung di bawah</span>`,
     {
       type: "text",
-      id: "company",
-      // title: "Seluruh hak cipta dan kepemilikan operasional website ini bernaung di bawah",
+      id: "contact-company",
+      condition: { field: "contact-email", filled: true },
+      title: "Seluruh hak cipta dan kepemilikan operasional website ini bernaung di bawah",
       placeholder: "nama badan usaha / studionya",
       config: {
+        selectors,
         attributes: [
           { name: "animation", value: "fade-in" },
           { name: "animation-chain", value: "true" },
@@ -212,13 +202,15 @@ const ContactSet = {
         })
       }
     },
-    `<span class="label" animation="typewriter" animation-chain="true">Dan sebagai penanda identitas visual yang khas, mari sematkan gambar logo usahamu</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">Dan sebagai penanda identitas visual yang khas, mari sematkan gambar logo usahamu</span>`,
     {
       type: "file",
-      id: "logo",
-      // title: "Dan sebagai penanda identitas visual yang khas, mari sematkan gambar logo usahamu",
+      id: "contact-logo",
+      condition: { field: "contact-company", filled: true },
+      title: "Dan sebagai penanda identitas visual yang khas, mari sematkan gambar logo usahamu",
       placeholder: "unggah logo tokomu disini...",
       config: {
+        selectors,
         attributes: [
           { name: "animation", value: "fade-in" },
           { name: "animation-chain", value: "true" },
@@ -232,27 +224,37 @@ const ContactSet = {
 
 const AddressSet = {
   id: "address-set",
+  // condition: { field: "contact-company", filled: true },
   group: [
-    `<span class="label" animation="typewriter" animation-chain="true">Pusat workshop atau rumah tempat kerja mu ini beralamat di</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">Pusat workshop atau rumah tempat kerja mu ini beralamat di</span>`,
     {
       type: "textarea",
-      id: "jalan",
-      // title: "Pusat workshop atau rumah tempat kerja mu ini beralamat di",
+      id: "address-jalan",
+      // condition: { field: "logo", filled: true },
+      title: "Pusat workshop atau rumah tempat kerja mu ini beralamat di",
       placeholder: "Tuliskan nama jalan, nomor rumah, atau ruko usahamu...",
       config: {
+        selectors,
+        attributes: [
+          { name: "animation", value: "fade-in" },
+          { name: "animation-chain", value: "true" },
+        ],
         popover: createPopover({
           info: "Alamat fisik ini akan memandu sistem peta direktori untuk mempromosikan lokasi workshop-mu.",
           placeholder: "Contoh: Jl. Tenun Ikat No. 12B, RT 02/RW 04"
         })
       }
     },
-    `<span class="label" animation="typewriter" animation-chain="true">Tepatnya, wilayah tersebut berada di cakupan wilayah</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">Tepatnya, wilayah tersebut berada di cakupan wilayah</span>`,
     {
       type: "select",
-      // title: "Tepatnya, wilayah tersebut berada di cakupan wilayah",
-      placeholder: "pilih provinsi...",
+      id: "address-propinsi",
+      // condition: { field: "jalan", filled: true },
+      title: "Tepatnya, wilayah tersebut berada di cakupan wilayah",
+      placeholder: "pilih provinsi   ",
       config: {
         className: "loading",
+        selectors,
         attributes: [
           { name: "data-level", value: "propinsi" },
           { name: "animation", value: "fade-in" },
@@ -260,12 +262,15 @@ const AddressSet = {
         ]
       }
     },
-    `<span class="label" animation="typewriter" animation-chain="true">pada wilayah administrasi daerah</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">pada wilayah administrasi daerah</span>`,
     {
       type: "select",
-      // title: "pada wilayah administrasi daerah",
-      placeholder: "pilih kota/kabupaten...",
+      id: "address-kota",
+      // condition: { field: "jalan", filled: true },
+      title: "pada wilayah administrasi daerah",
+      placeholder: "pilih kota/kabupaten   ",
       config: {
+        selectors,
         attributes: [
           { name: "data-level", value: "kota" },
           { name: "animation", value: "fade-in" },
@@ -273,12 +278,15 @@ const AddressSet = {
         ]
       }
     },
-    `<span class="label" animation="typewriter" animation-chain="true">meluas ke area wilayah tingkat</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">meluas ke area wilayah tingkat</span>`,
     {
       type: "select",
-      // title: "meluas ke area wilayah tingkat",
-      placeholder: "pilih kecamatan...",
+      id: "address-kecamatan",
+      // condition: { field: "jalan", filled: true },
+      title: "meluas ke area wilayah tingkat",
+      placeholder: "pilih kecamatan   ",
       config: {
+        selectors,
         attributes: [
           { name: "data-level", value: "kecamatan" },
           { name: "animation", value: "fade-in" },
@@ -286,12 +294,15 @@ const AddressSet = {
         ]
       }
     },
-    `<span class="label" animation="typewriter" animation-chain="true">hingga menyentuh batas terkecil di</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">hingga menyentuh batas terkecil di</span>`,
     {
       type: "select",
-      // title: "hingga menyentuh batas terkecil di",
-      placeholder: "pilih kelurahan...",
+      id: "address-kelurahan",
+      // condition: { field: "jalan", filled: true },
+      title: "hingga menyentuh batas terkecil di",
+      placeholder: "pilih kelurahan   ",
       config: {
+        selectors,
         attributes: [
           { name: "data-level", value: "kelurahan" },
           { name: "animation", value: "fade-in" },
@@ -299,12 +310,15 @@ const AddressSet = {
         ]
       }
     },
-    `<span class="label" animation="typewriter" animation-chain="true">dengan penguncian kode pos resmi</span>`,
+    // `<span class="label" animation="typewriter" animation-chain="true">dengan penguncian kode pos resmi</span>`,
     {
       type: "text",
+      id: "address-kodepos",
+      // condition: { field: "jalan", filled: true },
       title: "dengan penguncian kode pos resmi",
       placeholder: "kodepos",
       config: {
+        selectors,
         attributes: [
           { name: "data-level", value: "kodepos" },
           { name: "animation", value: "fade-in" },
@@ -324,30 +338,51 @@ const ConfirmationSet = {
         Menakjubkan! Anda sudah sampai sejauh ini, dan ini membuktikan seberapa besar keseriusan anda
         untuk membangun halaman pribadi anda sendiri.
       </span>
+      <br>
       <span>
         Sebelum system kami mewujudkan impian anda, kami membutuhkan konfirmasi dari anda bahwa data yang anda isikan 
-        benar, tidak ditujukan untuk melakukan kejahatan siber, tindak kriminal atau kejahatan untuk melawan hukum lainnya, 
-        tidak terkait dengan perjudian online, serta berisi konten yang mengandung pornografi.
-      </span>
+        benar adanya. 
+        </span><br>
+        <span style="font-style:italic; color: var(--input-label-color)">
+        tidak ditujukan untuk melakukan tindak kejahatan siber, tindak kriminal atau tindak kejahatan melawan hukum lainnya.
+        Tidak terkait dengan perjudian online, serta berisi konten yang mengandung pornografi.
+        </span>
+        <br>
       <span>
         Apabila dikemudian hari ditemukan konten yang mengandung hal-hal yang disebutkan sebelumnya, 
-        dan apabila konten tersebut mempunyai akibat hukum setelahnya itu sepenuhnya menjadi
-        tanggung jawab anda. kami akan segera menghapus website tersebut, dan apabila diperlukan
-        kami akan patuh membantu menyelesaikan perkara hukum akibat konten tersebut. 
+        dan apabila konten tersebut mempunyai akibat hukum setelahnya 
+      </span>
+      <span style="font-style:italic; color: var(--input-label-color)">
+      itu sepenuhnya menjadi tanggung jawab anda. 
       </span>
       <span>
+        kami akan segera menghapus website tersebut, serta apabila diperlukan
+        kami akan patuh membantu menyelesaikan perkara hukum akibat konten tersebut. 
+      </span>
+      </div><br>`,
+
+    `<div animation="typewriter" animation-chain="true">
         Silahkan periksa kembali seluruh konten yang telah anda isi.
         Jika sudah yakin silahkan berikan persetujuan anda lalu submit.
         System kami akan merajut data tersebut kedalam website yang nyata
-      </span>
-     </div>`
+      </div><br>`
     ,
     {
       type: "checkbox",
-      title: "setuju",
+      id: "confirmation",
+      // condition: { field: "kodepos", filled: true },
+      title: "Saya setuju dan bertanggung jawab sepenuhnya atas konten tersebut",
       position: "left",
       config: {
-        style: "toggle"
+        selectors: {
+          "@field": {
+            tagName: "div",
+            className: "field",
+            attrs: { "animation": "fade-in", "animation-chain": "true" }
+          }
+        },
+        style: "toggle",
+
       }
     }
   ]
@@ -356,19 +391,109 @@ const ConfirmationSet = {
 const formConfig = {
   id: "wizardo",
   multistep: true,
-  // cascading: true,
+  cascading: true, // 🌊 setiap input dirantai condition ke input sebelumnya
+  autoDisableNextStep: true,
   selectors: {
     "@form>group": { tagName: "fieldset", className: "inline-style" },
   },
   // submitButton: false,
 };
 
+let isEditing = false;
+// @ts-ignore
+const TestSet = {
+  id: "test-set",
+  group: [
+    {
+      type: "text",
+      id: "test-1",
+      title: "Test Text",
+      placeholder: "Isi apa aja",
+      config: {
+        actions: [
+          {
+            type: "copy",
+            label: "copy",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! COPY", payload)
+            }
+          },
+          {
+            type: "delete",
+            label: "delete",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! delete", payload)
+            }
+          },
+          {
+            type: "add",
+            label: "new",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! ADD", payload)
+            }
+          },
+          {
+            type: "edit",
+            label: "edit",
+            onClick: (_e: Event, payload: any) => {
+              isEditing = !isEditing;
+              console.log("action!! EDIT", `isEditing: ${isEditing}`, payload)
+            }
+          }
+        ]
+      }
+    },
+    {
+      type: "select",
+      id: "test-2",
+      title: "Test Text",
+      placeholder: "Isi apa aja",
+      config: {
+        options: [
+          "A", "B", "C", "D"
+        ],
+        actions: [
+          {
+            type: "copy",
+            label: "copy",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! COPY", payload)
+            }
+          },
+          {
+            type: "delete",
+            label: "delete",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! delete", payload)
+            }
+          },
+          {
+            type: "add",
+            label: "new",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! ADD", payload)
+            }
+          },
+          {
+            type: "edit",
+            label: "edit",
+            onClick: (_e: Event, payload: any) => {
+              isEditing = !isEditing;
+              console.log("action!! EDIT", `isEditing: ${isEditing}`, payload)
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+
 const formContent = [
+  // TestSet,
   IntroSet,
   DetailSetShop,
-  // DetailSetGallery,
-  ContactSet,
   AddressSet,
+  ContactSet,
   ConfirmationSet,
 ]
 
@@ -398,89 +523,92 @@ export const HomepageContent: iNodeContent =
         content: {
           "section#home": {
             content: {
-              // ".row$1": {
-              //   content: {
-              //     "h3.title": {
-              //       attrs: { "animation": "fade-in", "animation-chain": "true" },
-              //       content: "Rakit Website Modern dengan Bahasa Manusia"
-              //     },
-              //     ".description.natural": {
-              //       attrs: { "animation": "typewriter", "data-tw-rewrite": "true", "animation-chain": "true" },
-              //       content: `
-              //         <span>
-              //           Anda berada di tempat yang tepat jika saat ini mulai menyadari pentingnya website bagi eksistensi diri, merek dagang, maupun identitas usaha Anda. 
-              //           Kehadiran website kini telah menjadi kebutuhan dasar dalam menghadapi persaingan bisnis di era digital. 
-              //           Saat ini mungkin anda terbentur banyak rintangan dan telah melalui berbagai proses yang rumit bahkan sebelum website pertama anda berhasil diluncurkan.
-              //         </span>
+              ".row$1": {
+                content: {
+                  "h3.title": {
+                    attrs: { "animation": "fade-in", "animation-chain": "true" },
+                    content: "Rakit Website Modern dengan Bahasa Manusia"
+                  },
+                  ".description.natural": {
+                    attrs: { "animation": "typewriter", "data-tw-rewrite": "true", "animation-chain": "true" },
+                    content: `
+                      <span>
+                        Anda berada di tempat yang tepat jika saat ini mulai menyadari pentingnya website bagi eksistensi diri, merek dagang, maupun identitas usaha Anda. 
+                        Kehadiran website kini telah menjadi kebutuhan dasar dalam menghadapi persaingan bisnis di era digital. 
+                        Saat ini mungkin anda terbentur banyak rintangan dan telah melalui berbagai proses yang rumit bahkan sebelum website pertama anda berhasil diluncurkan.
+                      </span>
 
-              //         <span>
-              //         dan mungkin terbesit di benak anda sebuah pertanyaan:
-              //         </span>
+                      <span>
+                      dan mungkin terbesit di benak anda sebuah pertanyaan:
+                      </span>
 
-              //         <blockquote>
+                      <blockquote>
 
-              //         "Ada ga ya cara dimana saya tinggal menjabarkan website seperti apa yang akan dibuat lalu secara otomatis website itu dibentuk sesuai deskripsi saya?"
+                      "Ada ga ya cara dimana saya tinggal menjabarkan website seperti apa yang akan dibuat lalu secara otomatis website itu dibentuk sesuai deskripsi saya?"
 
-              //         </blockquote>
+                      </blockquote>
 
-              //         <span>
-              //           Jika anda salah satu orang tersebut mungkin keluhan serta keresahan itu yang terbisik sampai ke telinga kami, 
-              //           dan mendorong hati kecil kami untuk merajut tautan ini.
-              //         </span>`
-              //     },
+                      <span>
+                        Jika anda salah satu orang tersebut mungkin keluhan serta keresahan itu yang terbisik sampai ke telinga kami, 
+                        dan mendorong hati kecil kami untuk merajut tautan ini.
+                      </span>`
+                  },
 
-              //     "h4.asking.question": {
-              //       attrs: { "animation": "fade-in", "animation-chain": "true" },
-              //       content: "Siap memulai pembangunan website impian anda?"
-              //     },
-              //     "button#start.button.small": {
-              //       attrs: {
-              //         "animation": "text-scramble",
-              //         "animation-chain": "true",
-              //       },
-              //       content: "Mari Mulai",
-              //       onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
-              //         el.addEventListener("click", () => {
-              //           console.log("start clicked")
-              //           const form = builderFn("form", wizard)
-              //           form?.addEventListener("change", (e: any) => {
-              //             const formEl = e.target.form as HTMLFormElement;
-              //             const csvTemplateLink = formEl.querySelector("#csv-template") as HTMLAnchorElement;
-              //             const filename = `${e.target.value}.csv`
-              //             csvTemplateLink.href = `docs/${filename}`;
-              //             csvTemplateLink.download = filename;
-              //           })
-              //           form?.addEventListener("formSubmit", (e: any) => {
-              //             const detail = e.detail;
-              //             console.log("AAA", e.detail)
-              //             detail.complete(true, true)
-              //           })
-              //           el.parentElement?.replaceChildren(form)
-              //         }, { once: true })
-              //       }
-              //     }
-              //   },
-              // },
-              ".row$2": {
-
-                onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
-                  const form = builderFn("form", wizard)
-                  form?.addEventListener("change", (e: any) => {
-                    const formEl = e.target.form as HTMLFormElement;
-                    const csvTemplateLink = formEl.querySelector("#csv-template") as HTMLAnchorElement;
-                    const filename = `${e.target.value}.csv`
-                    csvTemplateLink.href = `docs/${filename}`;
-                    csvTemplateLink.download = filename;
-                  })
-
-                  form?.addEventListener("formSubmit", (e: any) => {
-                    const detail = e.detail;
-                    detail.complete(true, true)
-                  })
-                  el.append(form)
-                }
-
+                  "h4.asking.question": {
+                    attrs: { "animation": "fade-in", "animation-chain": "true" },
+                    content: "Siap memulai pembangunan website impian anda?"
+                  },
+                  "button#start.button.small": {
+                    attrs: {
+                      "animation": "text-scramble",
+                      "animation-chain": "true",
+                    },
+                    content: "Mari Mulai",
+                    onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
+                      el.addEventListener("click", () => {
+                        console.log("start clicked")
+                        const form = builderFn("form", wizard)
+                        form?.addEventListener("change", (e: any) => {
+                          const formEl = e.target.form as HTMLFormElement;
+                          const csvTemplateLink = formEl.querySelector("#csv-template") as HTMLAnchorElement;
+                          const filename = `${e.target.value}.csv`
+                          csvTemplateLink.href = `docs/${filename}`;
+                          csvTemplateLink.download = filename;
+                        })
+                        form?.addEventListener("formSubmit", (e: any) => {
+                          const detail = e.detail;
+                          console.log("AAA", e.detail)
+                          detail.complete(true, true)
+                        })
+                        el.parentElement?.replaceChildren(form)
+                      }, { once: true })
+                    }
+                  }
+                },
               },
+              // ".row$2": {
+
+              //   onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
+              //     const form = builderFn("form", wizard)
+              //     form?.addEventListener("change", (e: any) => {
+              //       const formEl = e.target.form as HTMLFormElement;
+              //       // #csv-template hidup di step DetailSetShop (lazy mount) — belum ada
+              //       // di DOM sebelum step itu lahir. Lewati aman sampai ia terpasang..
+              //       const csvTemplateLink = formEl?.querySelector("#csv-template") as HTMLAnchorElement | null;
+              //       if (!csvTemplateLink) return;
+              //       const filename = `${e.target.value}.csv`
+              //       csvTemplateLink.href = `docs/${filename}`;
+              //       csvTemplateLink.download = filename;
+              //     })
+
+              //     form?.addEventListener("formSubmit", (e: any) => {
+              //       const detail = e.detail;
+              //       detail.complete(true, true)
+              //     })
+              //     el.append(form)
+              //   }
+
+              // },
               // ".rows$3": {
               //   onCreated: (el: HTMLElement, _renderFn: any, _builderFn: any) => {
               //     const table = new TableBuilder(TablePageContent.config as any);
@@ -503,7 +631,7 @@ export function simpleCascade(form: HTMLFormElement) {
     console.log("form Changed:", e.target.form)
     const detailMap = new Map<string, HTMLFieldSetElement>()
     const formEl = e.target.form as HTMLFormElement;
-    for (const f of formEl.querySelectorAll("fieldset")) {
+    for (const f of (formEl.querySelectorAll("fieldset") as any)) {
       if (!f.id.includes("detail")) {
         continue;
       }
@@ -639,5 +767,4 @@ export const TablePageContent =
     // footer: footerTemplate,
   }
 }
-
 

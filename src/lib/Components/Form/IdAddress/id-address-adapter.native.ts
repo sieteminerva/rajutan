@@ -24,6 +24,10 @@ export const IdAddressAdapterNative: IAddressAdapter = {
 
   setOptions(el: HTMLSelectElement | HTMLInputElement, args: any) {
     const level = el.dataset.level;
+    const isAddressValue = el instanceof HTMLInputElement && el.type === "hidden" && !!level;
+    const visibleInput = isAddressValue
+      ? el.parentElement?.querySelector("input.dropdown") as HTMLInputElement | null
+      : el as HTMLInputElement;
     const { options = [], state = "complete", onLevelChange } = args;
     // console.log(`run [%s] > setOptions : <${state}>`, level, options);
 
@@ -33,6 +37,29 @@ export const IdAddressAdapterNative: IAddressAdapter = {
       placeholderEl = document.createElement("option");
       placeholderEl.classList.add("placeholder");
       el.add(placeholderEl, 1);
+    }
+
+    const isCustomDropdown = isAddressValue || (el instanceof HTMLInputElement && el.classList.contains("dropdown"));
+
+    if (isCustomDropdown) {
+      const searchInput = visibleInput || el as HTMLInputElement;
+      const listId = searchInput.getAttribute("list");
+      const datalist = listId ? document.getElementById(listId) as HTMLDataListElement | null : null;
+      if (datalist) {
+        datalist.dataset.options = JSON.stringify((options as any[]).map((option) => ({
+          id: option[`${level}_id`],
+          label: option[`${level}_name`],
+        })));
+        datalist.replaceChildren(...(options as any[]).map((option) => {
+          const optionEl = document.createElement("option");
+          optionEl.value = option[`${level}_name`];
+          optionEl.dataset.id = String(option[`${level}_id`]);
+          return optionEl;
+        }));
+      }
+      (el as HTMLInputElement & { __onLevelChange?: (value: any) => void }).__onLevelChange = onLevelChange;
+      __setloadingState(searchInput, level, state, searchInput);
+      return;
     }
 
     // remove any old options incrementally from the top except for placeholder
@@ -66,6 +93,21 @@ export const IdAddressAdapterNative: IAddressAdapter = {
     // const level = el.dataset.level;
     // console.log("run %s > setSelectedOption", level, value, typeof value);
     if (el.classList.contains("error")) el.classList.remove("error");
+    if (el instanceof HTMLInputElement && (el.type === "hidden" || el.classList.contains("dropdown"))) {
+      const visibleInput = el.type === "hidden"
+        ? el.parentElement?.querySelector("input.dropdown") as HTMLInputElement | null
+        : el;
+      const listId = visibleInput?.getAttribute("list");
+      const option = listId ? document.getElementById(listId)?.querySelector(`option[data-id="${CSS.escape(String(value))}"]`) : null;
+      if (visibleInput) visibleInput.value = option?.getAttribute("value") || String(value);
+      if (el.type !== "hidden") {
+        const hidden = el.parentElement?.querySelector("input[type='hidden']") as HTMLInputElement | null;
+        if (hidden) hidden.value = String(value);
+      } else {
+        el.value = String(value);
+      }
+      return;
+    }
     el.value = value; // set value both input / select
     if (el.tagName === "SELECT" && el instanceof HTMLSelectElement) {
       const selectedOptEl = el.selectedOptions?.[0];
@@ -74,8 +116,12 @@ export const IdAddressAdapterNative: IAddressAdapter = {
     }
   },
 
-  onLevelChange(el: HTMLSelectElement) {
+  onLevelChange(el: HTMLSelectElement | HTMLInputElement) {
     const level = el.dataset.level;
+
+    if (el instanceof HTMLInputElement && (el.type === "hidden" || el.classList.contains("dropdown"))) {
+      return;
+    }
 
     if (el.tagName === "SELECT" && el instanceof HTMLSelectElement) {
       const selectEl = /** @type {HTMLSelectElement & { __nativeChangeHandler?: (e: Event) => void }} */ (el);
@@ -119,6 +165,17 @@ export const IdAddressAdapterNative: IAddressAdapter = {
   },
 
   clear(el: HTMLSelectElement | HTMLInputElement) {
+    if (el instanceof HTMLInputElement && (el.type === "hidden" || el.classList.contains("dropdown"))) {
+      const visibleInput = el.type === "hidden"
+        ? el.parentElement?.querySelector("input.dropdown") as HTMLInputElement | null
+        : el;
+      if (visibleInput) visibleInput.value = "";
+      if (el.type === "hidden") el.value = "";
+      const listId = visibleInput?.getAttribute("list");
+      document.getElementById(listId || "")?.replaceChildren();
+      visibleInput?.classList.remove("loading");
+      return;
+    }
     if (el.tagName === "SELECT" && el instanceof HTMLSelectElement) {
       let placeholder = el.options[0].cloneNode(true);
       placeholder.textContent = "Pilih " + el.dataset.level;

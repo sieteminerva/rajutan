@@ -47,12 +47,13 @@ export interface FormCascadeHost {
   builder: string;
   inputs: any[];
   multistep: boolean;
+  /** Gerbang tombol next: null/undefined = ikuti cascading && multistep;
+   * true = kunci selama ada kondisi belum terpenuhi; false = nonaktif. */
+  autoDisableNextStep?: boolean;
   onCascade?: null | ((detail: iCascadeEventDetail) => void);
   emit?: any;
   /** Bangun <fieldset> dari deskriptor group (termasuk menahan anak ber-condition) */
   renderGroup(group: any, formId: string, path?: string): HTMLElement;
-  /** Bangun tombol navigasi multistep untuk step yang baru lahir */
-  renderButtonsSet?(payload: { index: number; isLast: boolean; formId: string }): HTMLElement | null;
   /** Perbaiki langkah aktif bila sebuah step di-unmount oleh kaskade */
   refreshSteps?(form: HTMLFormElement): void;
 }
@@ -73,6 +74,19 @@ export class FormCascadeHandler {
         this.walkInputs(item.group, `${path}.group.`, visit);
       }
     });
+  }
+
+  /** Peta nama/id field → index langkah multistep di skema (aturan gerbang masuk) */
+  static collectFieldSteps(inputs: any[]): Map<string, number> {
+    const map = new Map<string, number>();
+    const visit = (item: any, step: number): void => {
+      if (!item || typeof item !== "object" || item instanceof Node) return;
+      const key = item.name ?? item.id;
+      if (key) map.set(String(key), step);
+      if (Array.isArray(item.group)) item.group.forEach((child: string | HTMLElement | any) => visit(child, step));
+    };
+    inputs.forEach((item, step) => visit(item, step));
+    return map;
   }
 
   static normalizeCondition(raw: any): iFormCondition {
@@ -224,21 +238,21 @@ export class FormCascade {
         if (el) {
           if (item.id) el.id = item.id;
           if (item.className) el.className = `${el.className} ${item.className}`.trim();
-          // Step multistep yang baru lahir butuh nomor langkah + tombol navigasi
+          // Step multistep yang baru lahir cukup membawa nomor langkah —
+          // tombol navigasi HIDUP DI LEVEL FORM sebagai satu set bersama
+          // yang ditukar engine multistep pada setiap perpindahan langkah.
           if (this.host.multistep && !path.includes(".")) {
             el.dataset.index = path;
-            const buttons = this.host.renderButtonsSet?.({
-              index: Number(path),
-              isLast: Number(path) === this.host.inputs.length - 1,
-              formId: form.id,
-            });
-            if (buttons) el.appendChild(buttons);
           }
           // Hidupkan uploader (file input CSV dsb.) di area yang baru lahir
           try { if (typeof FileUploader !== "undefined") FileUploader.initAll(el); } catch (error) { console.warn("[Form Cascade] file uploader init failed:", error); }
         }
       } else {
         el = new InputBuilder({ formId: form.id } as any).create(item) as HTMLElement;
+        // Hidupkan uploader untuk item tunggal yang baru lahir dari kaskade
+        // (mis. input file CSV yang dikondisikan) — item non-group tak pernah
+        // masuk jalur group di atas.
+        try { if (typeof FileUploader !== "undefined") FileUploader.initAll(el); } catch (error) { console.warn("[Form Cascade] file uploader init failed:", error); }
       }
       if (!el) return null;
       el.dataset.cascade = path;
@@ -279,48 +293,87 @@ export class FormCascade {
   }
 
   /**
-   * Gerbang kaskade sederhana: tombol "next" sebuah langkah dinonaktifkan bila
-   * langkah berikutnya di skema adalah item kaskade yang syaratnya belum dipenuhi
-   * (placeholder <template> masih tertahan). Begitu SATU cabang kaskade terpasang
-   * (mis. ecommerce/galeri), cabang saudara yang tertahan tidak lagi mengunci.
+   * Gerbang kaskade (multistep) — dikendalikan `autoDisableNextStep`:
+   * tombol "next" sebuah langkah dinonaktifkan selama masih ada kondisi kaskade
+   * yang belum terpenuhi — baik kondisi manual pada group langkah itu sendiri,
+   * maupun kondisi anak input di dalamnya (rantai fill-in).
+   *
+   * Aturan gerbang masuk: sebuah kondisi HANYA mengunci tombol next bila
+   * field sumbernya berada di langkah ini ATAU sebelumnya (≤ langkah tempat
+   * tombol itu berada). Kondisi yang seluruh field sumbernya masih di langkah
+   * berikutnya BUKAN gerbang masuk — isian itu justru dikerjakan SETELAH
+   * masuk ke langkah tersebut; ia akan mengunci tombol next langkah itu
+   * sendiri nanti (sesuai aturan yang sama).
    */
   gate(form?: HTMLFormElement): void {
     const target = form ?? this.form;
     if (!target || !this.host.multistep) return;
 
+    // Tombol next kini HIDUP DI LEVEL FORM — satu set bersama milik engine
+    // multistep yang ditukar pada setiap perpindahan langkah. Gerbang cukup
+    // mengunci/membuka set milik langkah AKTIF (fieldset.active).
+    const nextButton = target.querySelector<HTMLButtonElement>(":scope > .buttons.set > button.next");
+    if (!nextButton) return;
+
+    const apply = (disabled: boolean, guidance: string): void => {
+      nextButton.disabled = disabled;
+      if (disabled) nextButton.title = guidance;
+      else nextButton.removeAttribute("title");
+    };
+
+    if (!this.host.autoDisableNextStep) {
+      // Mode nonaktif: pastikan tombol next aktif kembali (mis. saat runtime toggle)
+      apply(false, "");
+      return;
+    }
+
+    // Langkah aktif menentukan kondisi mana yang berhak mengunci next
+    const activeFieldset = target.querySelector<HTMLFieldSetElement>("fieldset[data-index].active");
+    if (!activeFieldset) return;
+    const currentIndex = Number(activeFieldset.dataset.index);
+
     const values = FormCascadeHandler.collectValues(target);
     const resolve = (field: string) => FormCascadeHandler.resolveFieldValue({ form: target, inputs: this.host.inputs }, field);
+    const fieldSteps = FormCascadeHandler.collectFieldSteps(this.host.inputs);
     // Cabang kaskade yang sedang terpasang → syarat telah dipenuhi satu di antaranya
     const branchChosen = !!target.querySelector("[data-cascade]:not(template)");
 
-    target.querySelectorAll<HTMLFieldSetElement>("fieldset[data-index]").forEach((fieldset) => {
-      const nextButton = fieldset.querySelector<HTMLButtonElement>(".buttons.set > button.next");
-      if (!nextButton) return;
+    let blocked = false;
+    let guidance = "";
 
-      const currentIndex = Number(fieldset.dataset.index);
-      const nextItem = this.host.inputs[currentIndex + 1];
-      let blocked = false;
-      let guidance = "";
+    // Telusuri skema dari langkah 0 s/d langkah berikutnya (N+1):
+    // langkah yang sudah lewat ikut diperiksa — misalnya pengguna mengosongkan
+    // isian lama, kondisi turunannya ikut mengunci lagi.
+    FormCascadeHandler.walkInputs(
+      this.host.inputs.slice(0, currentIndex + 2),
+      "",
+      (item) => {
+        if (!FormCascadeHandler.isCascadeItem(item)) return; // bukan kandidat → turuni anaknya
+        if (blocked) return false; // sudah terkunci → hentikan telusuran
 
-      if (FormCascadeHandler.isCascadeItem(nextItem)) {
-        const nextPath = String(currentIndex + 1);
-        const nextMounted = target.querySelector<HTMLElement>(`[data-cascade="${CSS.escape(nextPath)}"]:not(template)`);
-        // Langkah berikutnya masih placeholder → kondisinya belum terpenuhi
-        if (!nextMounted) {
-          const met = FormCascadeHandler.conditionMet(FormCascadeHandler.normalizeCondition(nextItem.condition), resolve, values);
-          blocked = !met && !branchChosen;
-          if (blocked) {
-            guidance = typeof nextItem.condition?.message === "string"
-              ? nextItem.condition.message
-              : "Lengkapi isian sebelumnya untuk membuka langkah berikutnya.";
-          }
-        }
+        // "Gerbang masuk": lewati kondisi yang SELURUH field sumbernya masih
+        // di langkah berikutnya (N+1) — isian itu dikerjakan di sana.
+        const sourceFields = ([] as any[]).concat(item.condition?.field ?? []);
+        const sourceSteps = sourceFields.map((f: any) => fieldSteps.get(String(f)) ?? -1);
+        if (sourceSteps.length > 0 && sourceSteps.every((s) => s > currentIndex)) return; // bukan gerbang masuk; lanjut ke anaknya
+
+        const met = FormCascadeHandler.conditionMet(FormCascadeHandler.normalizeCondition(item.condition), resolve, values);
+        if (met) return; // terpenuhi → lanjut
+
+        // Kondisi manual pada level group langkah: dilonggarkan bila cabang
+        // saudara sudah terpilih (branchChosen) — perilaku multi-cabang asli
+        // engine kaskade dipertahankan.
+        if (Array.isArray(item.group) && branchChosen) return; // relaksasi cabang saudara
+
+        blocked = true;
+        guidance = typeof item.condition?.message === "string"
+          ? item.condition.message
+          : "Lengkapi isian sebelumnya untuk membuka langkah berikutnya.";
+        return false;
       }
+    );
 
-      nextButton.disabled = blocked;
-      if (blocked) nextButton.title = guidance;
-      else nextButton.removeAttribute("title");
-    });
+    apply(blocked, guidance);
   }
 
   private emit(form: HTMLFormElement, action: iCascadeEventDetail["action"], element: HTMLElement | null, item: any, path: string): void {
