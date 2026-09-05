@@ -178,6 +178,7 @@ export class TypewriterBehaviour {
       const rawText = (child.textContent || '').trim().replace(/\s+/g, ' ');
       const sentences = [...sentenceSegmenter.segment(rawText)].map(s => s.segment.trim()).filter(Boolean);
       child.textContent = ''; // Kosongkan tampilan awal layar secara sinkronus
+      child.style.visibility = "hidden";
       return { el: child, sentences };
     });
   }
@@ -191,7 +192,7 @@ export class TypewriterBehaviour {
   ): Promise<void> {
     for (const block of blockData) {
       block.el.style.display = ''; // Tampilkan elemen pembungkus asli saat gilirannya tiba
-
+      block.el.style.visibility = "visible";
       for (let sIndex = 0; sIndex < block.sentences.length; sIndex++) {
         if (!node.isConnected || isStopped()) return;
 
@@ -206,6 +207,7 @@ export class TypewriterBehaviour {
 
       // Sembunyikan elemen lama agar tidak meninggalkan ruang kosong sebelum elemen berikutnya muncul
       if (block !== blockData[blockData.length - 1] || options.loop) {
+
         block.el.style.display = 'none';
       }
     }

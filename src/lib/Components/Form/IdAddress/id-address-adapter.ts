@@ -29,20 +29,36 @@ export const setPlaceholderText = (element: HTMLInputElement | HTMLSelectElement
 
 export function __setloadingState(el: HTMLInputElement | HTMLSelectElement, level: any, state = "loading", placeholderEl: HTMLInputElement | null = null) {
   if (state === "start") {
-    el?.classList.add("loading");
-    const spinner = document.createElement("span");
-    spinner.className = "spinner";
     setPlaceholderText(placeholderEl as HTMLInputElement | HTMLSelectElement, `Loading ${level} `);
-    el.parentElement?.appendChild(spinner);
+    if (el instanceof HTMLInputElement) {
+      el?.parentElement?.classList.add("loading");
+      // const spinner = document.createElement("span");
+      // spinner.className = "spinner";
+      // el.parentElement?.appendChild(spinner);
+    }
+    if (el instanceof HTMLSelectElement) {
+      el.classList.add("loading");
+    }
   } else if (state === "complete") {
     el.classList.remove("error");
-    el.classList.remove("loading");
-    el.parentElement?.querySelector(".spinner")?.remove()
+    if (el instanceof HTMLInputElement) {
+      el?.parentElement?.classList.remove("loading");
+      // el.parentElement?.querySelector(".spinner")?.remove()
+    }
+    if (el instanceof HTMLSelectElement) {
+      el.classList.remove("loading");
+    }
     const text = level === "kodepos" ? "Isi kodepos tujuan" : `Pilih ${level}`;
     setPlaceholderText(placeholderEl as HTMLInputElement | HTMLSelectElement, text);
   } else {
-    el.classList.remove("loading");
-    el.parentElement?.querySelector(".spinner")?.remove()
+    el.classList.remove("error");
+    if (el instanceof HTMLInputElement) {
+      el?.parentElement?.classList.remove("loading");
+      // el.parentElement?.querySelector(".spinner")?.remove()
+    }
+    if (el instanceof HTMLSelectElement) {
+      el.classList.remove("loading");
+    }
   }
   return;
 }

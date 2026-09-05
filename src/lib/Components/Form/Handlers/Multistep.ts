@@ -23,6 +23,8 @@ export interface FormMultistepHost {
   /** Beri tahu host setiap kali langkah aktif BERPINDAH (next/back/attach) —
    *  kesempatan engine kaskade menilai ulang gerbang tombol next yang baru */
   onStepChange?(index: number): void;
+  /** Laporkan validasi native gagal saat menekan Next pada langkah `step` */
+  reportNativeInvalid?(form: HTMLFormElement, step: number): void;
 }
 
 interface PendingStep {
@@ -79,6 +81,12 @@ export class FormMultistepHandler {
       const currentFieldset = this._mountedFieldset(form, this.currentStep);
       if (currentFieldset && !currentFieldset.checkValidity()) {
         currentFieldset.reportValidity();
+        // 🧾 Laporkan validasi native langkah gagal ke jalur terpusat (emit + toast).
+        try {
+          this.host.reportNativeInvalid?.(form, this.currentStep);
+        } catch (error) {
+          console.warn("[Form Multistep] reportNativeInvalid failed:", error);
+        }
         return;
       }
 
@@ -109,19 +117,31 @@ export class FormMultistepHandler {
    * tinggal di DOM (class .active yang dipindah-pindah). Bila langkah sudah
    * terpasang (atau dipasang kaskade lebih dulu), kembalikan yang ada.
    */
-  private _mount(form: HTMLFormElement, index: number): HTMLElement | null {
+  private _mount(form: HTMLFormElement, index: number): HTMLElement {
     const existing = this._mountedFieldset(form, index);
     if (existing) return existing;
 
     const entry = this.pending.get(index);
-    if (!entry) return null;
+    if (!entry) {
+      throw new Error(
+        `[Form Multistep] Langkah ke-${index} tidak dikenal: tidak ada placeholder tertahan ` +
+          "dan belum terpasang di DOM. Pastikan setiap langkah group diteruskan lewat hold() pada skema form."
+      );
+    }
 
     const group = entry.item;
     // Teruskan index sebagai cascadePath: bila cascading aktif, anak-anak
     // step yang membawa .condition ditahan sebagai placeholder kaskade
     // (path "N.group.j" konsisten dengan walkInputs pada skema).
     const fieldset = this.host.renderGroup(group, form.id, String(index));
-    if (!fieldset) return null;
+    if (!fieldset) {
+      const label = group && (group.id || group.title || group.legend);
+      throw new Error(
+        `[Form Multistep] Gagal membangun fieldset langkah ke-${index}` +
+          (label ? ` untuk "${label}"` : "") +
+          ". Pastikan selektor '@form>group' terkonfigurasi & renderGroup mengembalikan elemen (render() mengembalikan undefined bila selektor tidak dikenal)."
+      );
+    }
 
     if (group?.id) fieldset.id = group.id;
     if (group?.className) fieldset.className = `${fieldset.className} ${group.className}`.trim();
@@ -140,8 +160,8 @@ export class FormMultistepHandler {
   public goTo(index: number): void {
     const form = this.form;
     if (!form) return;
-    const fieldset = this._mount(form, index);
-    if (!fieldset) return;
+    // _mount() melempar Error bila langkah tidak dikenal / gagal dibangun — tidak lagi ditelan.
+    this._mount(form, index);
     // Arah animasi mengikuti arah perpindahan — paritas dengan fieldset tujuan
     // yang membawa attribute animate dari sinkronisasi sebelumnya.
     const direction: "next" | "back" | null =

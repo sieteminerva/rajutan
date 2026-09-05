@@ -7,6 +7,7 @@
 
 import { FileUploader } from "../FileUploader";
 import { InputBuilder } from "../Input";
+import type { CascadeBlockedInfo } from "./Validation";
 
 /**
  * Aturan kaskade form: menentukan kapan sebuah input/group boleh "lahir" ke DOM.
@@ -56,6 +57,8 @@ export interface FormCascadeHost {
   renderGroup(group: any, formId: string, path?: string): HTMLElement;
   /** Perbaiki langkah aktif bila sebuah step di-unmount oleh kaskade */
   refreshSteps?(form: HTMLFormElement): void;
+  /** Laporkan tombol "next" terkunci karena sebuah condition belum terpenuhi */
+  reportCascadeBlocked?(info: CascadeBlockedInfo): void;
 }
 
 export class FormCascadeHandler {
@@ -190,6 +193,11 @@ export class FormCascade {
   private placeholders = new Map<string, HTMLElement>();
   private onChange: ((event: Event) => void) | null = null;
 
+  // Status terakhir gerbang (untuk memancarkan reportCascadeBlocked HANYA saat
+  // status berubah — hindari spam emit/toast pada setiap ketukan tombol).
+  private lastGateBlocked = false;
+  private lastGateGuidance = "";
+
   constructor(host: FormCascadeHost) {
     this.host = host;
   }
@@ -231,7 +239,7 @@ export class FormCascade {
     const resolve = (field: string) => FormCascadeHandler.resolveFieldValue({ form, inputs: this.host.inputs }, field);
 
     // Bangun elemen nyata dari deskriptor lalu tukar dengan placeholder-nya
-    const mount = (item: any, path: string, placeholder: HTMLElement): HTMLElement | null => {
+    const mount = (item: any, path: string, placeholder: HTMLElement): HTMLElement => {
       let el: HTMLElement | null = null;
       if (item && typeof item === "object" && "group" in item) {
         el = this.host.renderGroup(item, form.id, path);
@@ -254,7 +262,14 @@ export class FormCascade {
         // masuk jalur group di atas.
         try { if (typeof FileUploader !== "undefined") FileUploader.initAll(el); } catch (error) { console.warn("[Form Cascade] file uploader init failed:", error); }
       }
-      if (!el) return null;
+      if (!el) {
+        const label = item && (item.id || item.name || item.type);
+        throw new Error(
+          `[Form Cascade] Gagal membangun elemen kaskade pada path "${path}"` +
+            (label ? ` untuk "${label}"` : "") +
+            ". Pastikan selektor '@form>group' terkonfigurasi & InputBuilder mengembalikan elemen yang valid (render() mengembalikan undefined bila selektor tidak dikenal)."
+        );
+      }
       el.dataset.cascade = path;
       placeholder.replaceWith(el);
       return el;
@@ -272,8 +287,10 @@ export class FormCascade {
         const met = FormCascadeHandler.conditionMet(FormCascadeHandler.normalizeCondition(item.condition), resolve, values);
         if (met) {
           if (!mounted) {
+            // mount() melempar Error bila pembangunan elemen gagal — tidak lagi ditelan.
             const el = mount(item, path, placeholder);
-            if (el) { changed = true; this.emit(form, "mount", el, item, path); }
+            changed = true;
+            this.emit(form, "mount", el, item, path);
           }
         } else if (mounted) {
           mounted.replaceWith(placeholder);
@@ -340,6 +357,8 @@ export class FormCascade {
 
     let blocked = false;
     let guidance = "";
+    let blockedCondition: iFormCondition | null = null;
+    let blockedPath = "";
 
     // Telusuri skema dari langkah 0 s/d langkah berikutnya (N+1):
     // langkah yang sudah lewat ikut diperiksa — misalnya pengguna mengosongkan
@@ -347,7 +366,7 @@ export class FormCascade {
     FormCascadeHandler.walkInputs(
       this.host.inputs.slice(0, currentIndex + 2),
       "",
-      (item) => {
+      (item, path) => {
         if (!FormCascadeHandler.isCascadeItem(item)) return; // bukan kandidat → turuni anaknya
         if (blocked) return false; // sudah terkunci → hentikan telusuran
 
@@ -366,6 +385,8 @@ export class FormCascade {
         if (Array.isArray(item.group) && branchChosen) return; // relaksasi cabang saudara
 
         blocked = true;
+        blockedCondition = FormCascadeHandler.normalizeCondition(item.condition);
+        blockedPath = path;
         guidance = typeof item.condition?.message === "string"
           ? item.condition.message
           : "Lengkapi isian sebelumnya untuk membuka langkah berikutnya.";
@@ -374,6 +395,25 @@ export class FormCascade {
     );
 
     apply(blocked, guidance);
+
+    // 🧾 Emisikan perubahan gerbang HANYA saat status (terkunci/perubahan pesan)
+    // berganti — tolak spam emit/toast pada setiap ketukan tombol.
+    const gateChanged = blocked !== this.lastGateBlocked || guidance !== this.lastGateGuidance;
+    this.lastGateBlocked = blocked;
+    this.lastGateGuidance = guidance;
+    if (gateChanged && blocked) {
+      try {
+        this.host.reportCascadeBlocked?.({
+          form: target,
+          guidance,
+          condition: blockedCondition,
+          step: currentIndex,
+          path: blockedPath,
+        });
+      } catch (error) {
+        console.warn("[Form Cascade] reportCascadeBlocked failed:", error);
+      }
+    }
   }
 
   private emit(form: HTMLFormElement, action: iCascadeEventDetail["action"], element: HTMLElement | null, item: any, path: string): void {

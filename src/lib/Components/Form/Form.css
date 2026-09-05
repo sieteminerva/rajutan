@@ -52,7 +52,7 @@
   --dropdown-transition-delay: 30ms;
 
   margin: 0 auto;
-  min-width: 1000px;
+  /* min-width: 1000px; */
 }
 
 input:focus-visible,
@@ -345,81 +345,86 @@ select:focus-visible {
 }
 
 /* 7. Spinner Icons & Dynamic Indicators */
-.native.form .field {
-  & select::picker-icon,
-  & select:is(.loading)::picker-icon,
-  & span.spinner {
-    mask-size: contain;
-    mask-repeat: no-repeat;
-    mask-mode: alpha;
-    background-color: var(--input-primary-color);
-    display: inherit;
-    box-sizing: border-box;
-    position: relative;
-    bottom: var(--input-min-height);
-    justify-self: right;
-    z-index: 99;
-  }
+.native.form {
+  & .field {
+    & select:is(.loading)::picker-icon {
+      right: 2px;
+    }
+    & select::picker-icon,
+    & select:is(.loading)::picker-icon,
+    & span.spinner {
+      mask-size: contain;
+      mask-repeat: no-repeat;
+      mask-mode: alpha;
+      background-color: var(--input-primary-color);
+      display: inherit;
+      box-sizing: border-box;
+      position: relative;
+      bottom: var(--input-min-height);
+      justify-self: right;
+      z-index: 99;
+    }
 
-  &.loading > select::picker-icon,
-  & select:is(.loading)::picker-icon,
-  & span.spinner {
-    mask-image: var(--spinner-content);
-    width: calc(var(--input-icon-size) * 0.8);
-    height: calc(var(--input-icon-size) * 0.8);
-  }
+    &.loading > select::picker-icon,
+    & select:is(.loading)::picker-icon,
+    & span.spinner {
+      mask-image: var(--spinner-content);
+      width: calc(var(--input-icon-size) * 0.8);
+      height: calc(var(--input-icon-size) * 0.8);
+    }
 
-  & select::picker-icon {
-    mask-image: var(--dropdown-arrow-content);
-    width: var(--input-icon-size);
-    height: var(--input-icon-size);
-    transition: rotate 200ms;
-    transform-origin: center center;
-    bottom: calc(var(--input-min-height) - 5px);
-  }
+    & select::picker-icon {
+      mask-image: var(--dropdown-arrow-content);
+      width: var(--input-icon-size);
+      height: var(--input-icon-size);
+      transition: rotate 200ms;
+      transform-origin: center center;
+      bottom: calc(var(--input-min-height) - 5px);
+    }
 
-  &.loading:has(input:not([type="checkbox"]))::before {
-    content: "";
-    mask-image: var(--spinner-content);
-    mask-size: contain;
-    mask-repeat: no-repeat;
-    mask-mode: alpha;
-    background-color: var(--input-primary-color);
-    width: calc(var(--input-icon-size) * 0.85);
-    height: calc(var(--input-icon-size) * 0.85);
-    position: absolute;
-    display: block;
-    visibility: hidden;
-    justify-self: right;
-    text-align: right;
-    z-index: 99;
-    right: 20px;
-    bottom: calc(var(--input-min-height) - 14px);
-  }
+    &.loading:has(input:not([type="checkbox"]))::before {
+      content: "";
+      mask-image: var(--spinner-content);
+      mask-size: contain;
+      mask-repeat: no-repeat;
+      mask-mode: alpha;
+      background-color: var(--input-primary-color);
+      width: calc(var(--input-icon-size) * 0.85);
+      height: calc(var(--input-icon-size) * 0.85);
+      position: absolute;
+      display: block;
+      visibility: hidden;
+      justify-self: right;
+      text-align: right;
+      z-index: 99;
+      right: 20px;
+      bottom: calc(var(--input-min-height) - 21px);
+    }
 
-  & select:open::picker-icon {
-    rotate: 90deg;
-  }
+    & select:open::picker-icon {
+      rotate: 90deg;
+    }
 
-  & select:is(.loading)::picker-icon,
-  &.loading > select::picker-icon {
-    bottom: calc(var(--input-min-height) - 8px);
-  }
+    & select:is(.loading)::picker-icon,
+    &.loading > select::picker-icon {
+      bottom: calc(var(--input-min-height) - 8px);
+    }
 
-  &.loading:has(input:not([type="checkbox"])) {
-    position: relative;
-  }
+    &.loading:has(input:not([type="checkbox"])) {
+      position: relative;
+    }
 
-  &.loading:has(input:not([type="checkbox"]))::before {
-    visibility: visible;
-  }
+    &.loading:has(input:not([type="checkbox"]))::before {
+      visibility: visible;
+    }
 
-  & input:not([type="checkbox"]) ~ span.spinner {
-    visibility: hidden;
-  }
+    & input:not([type="checkbox"]) ~ span.spinner {
+      visibility: hidden;
+    }
 
-  & input:not([type="checkbox"]).loading ~ span.spinner {
-    visibility: visible;
+    & input:not([type="checkbox"]).loading ~ span.spinner {
+      visibility: visible;
+    }
   }
 }
 
@@ -538,9 +543,10 @@ select:focus-visible {
 .form {
   &:is(.inline),
   & > fieldset:is(.inline-style) {
+    --input-label-size: var(--input-font-size);
     /* --input-min-height: 1.7lh; */
     font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 1.5rem;
+    font-size: var(--input-font-size);
     line-height: 1.6;
     color: var(--input-text-color);
     width: 100%;
@@ -572,6 +578,15 @@ select:focus-visible {
       line-height: calc(var(--input-line-height) * 1.4);
       align-content: center;
       height: max-content;
+
+      &:is(.loading)::before {
+        display: inline-block;
+        position: relative;
+        bottom: 10px !important;
+        transform: translate(180%, 40%) !important;
+        height: calc(var(--input-icon-size) * 0.9);
+        width: calc(var(--input-icon-size) * 0.9);
+      }
 
       /* 📖 PARAGRAF: label typewriter mengalir inline — kalimat:
        "teks judul [kontrol]" — .field tetap block sebagai jangkar
@@ -686,7 +701,7 @@ select:focus-visible {
         &:is([data-level].loading)::picker-icon {
           position: absolute;
           right: -18px !important;
-          bottom: 27%;
+          bottom: 21%;
           /* display: none; */
         }
         &:open::picker(select) {
@@ -811,10 +826,11 @@ select:focus-visible {
         transform: translateY(-80%) translateX(0) scaleY(1) scaleX(1);
         scrollbar-width: thin;
         box-shadow: 0 2px 3px 0 var(--input-primary-color);
+        background-color: var(--input-background-color);
       }
 
       & textarea {
-        min-height: 1.7lh;
+        min-height: var(--input-min-height);
         padding: 0.25em;
         line-height: 2rem;
         font-size: 1.8rem;
@@ -885,6 +901,8 @@ select:focus-visible {
     border-bottom: none;
     border-top-left-radius: calc(var(--input-border-radius) * 2);
     border-top-right-radius: calc(var(--input-border-radius) * 2);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
     /* Navigasi menempel di dasar langkah apa pun tinggi isinya */
   }
   & .buttons.set {

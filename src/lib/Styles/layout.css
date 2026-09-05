@@ -1,0 +1,61 @@
+/* ==============================================================
+  Global Layout System
+  Rule: clean one word classes, optional single dash modifier
+============================================================== */
+
+.container {
+  width: 100%;
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--app-padding-layout);
+  padding-right: var(--app-padding-layout);
+}
+
+.shell {
+  width: 100%;
+  max-width: 1040px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-gap);
+  align-items: center;
+  width: 100%;
+}
+
+.column {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.half {
+  flex: 0 0 calc(50% - (var(--app-gap) / 2));
+  max-width: calc(50% - (var(--app-gap) / 2));
+}
+
+.full {
+  width: 100%;
+  flex: 0 0 100%;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--app-gap);
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .half {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .row {
+    flex-direction: column;
+  }
+}

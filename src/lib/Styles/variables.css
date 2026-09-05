@@ -1,47 +1,135 @@
+/* ==============================================================
+    The place for global variable system.
+    note: the component variable will be inheriting to this
+    using their own specific variables
+    for example: `--input-text-color: var(--app-text-color);` 
+    so dont extend the component style directly unless you must,
+    instead change the value of the variable using the global vars 
+    prefixed with `--app`.
+    -----------------------------------------------
+    Warm, earthy craft aesthetic ("Rajutan" / Woven Heritage)
+  ============================================================== */
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family:
+    "Plus Jakarta Sans",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Spacing Hierarchy Engine */
-  --masonry-columns: 3;
-  --padding-layout: 2rem; /* Applied to columns for layout gutters */
-  --margin-layout: 1rem; /* Applied between macro layout sections */
+  /* Global Layout Spacing */
+  --app-padding-layout: clamp(1.25rem, 3vw, 2.5rem);
+  --app-margin-layout: clamp(1.5rem, 4vw, 3rem);
+  --app-padding-component: 1rem;
+  --app-margin-component: 0.85rem;
+  --app-gap: clamp(1rem, 2.5vw, 2rem);
+  --app-component-border-radius: 1rem;
+  --app-image-border-radius: 1.25rem;
 
-  --padding-component: calc(var(--padding-layout) / 3); /* 1/3 of column padding */
-  --margin-component: 1rem; /* Applied between inline items/buttons */
+  /* Theme: Warm Craft Light Mode (Clean, earthy, warm editorial feel) */
+  --app-primary-color: #925408; /* Warm terracotta amber / woven gold */
+  --app-primary-hover: #754103;
+  --app-accent-color: #b47828; /* Rich camel / ochre */
+  --app-accent-strong: #d9822b;
+  --app-accent-subtle: rgba(180, 120, 40, 0.12);
 
-  --gap: var(--padding-layout); /* Sync layout gap with layout padding */
-  --radius-component: 0.5em;
-  --radius-image: 18px;
+  --app-page-background: linear-gradient(175deg, #fdfbf7 0%, #f6f1e8 45%, #efe7d8 100%);
+  --app-surface-background-color: rgba(255, 255, 255, 0.82);
+  --app-surface-strong: #ffffff;
+  --app-surface-muted: rgba(244, 238, 226, 0.7);
 
-  /* Theme: Light Modes */
-  --page-background: linear-gradient(135deg, #fff8f2 0%, #f7f1ff 45%, #eef6ff 100%);
-  --surface-background: rgba(255, 255, 255, 0.84);
-  --surface-strong: rgba(255, 255, 255, 0.95);
-  --surface-muted: rgba(255, 255, 255, 0.72);
-  --text-main: #2f243d;
-  --text-muted: #55486a;
-  --text-heading: #3c2554;
-  --border-soft: rgba(183, 164, 216, 0.35);
-  --shadow-soft: 0 18px 40px rgba(92, 63, 134, 0.12);
-  --accent: rgba(91, 63, 134, 0.95);
-  --accent-strong: rgba(143, 126, 174, 1);
+  --app-text-color: #2c251e; /* Deep charcoal umber */
+  --app-text-accent-color: #6e5f51; /* Muted earthy taupe */
+  --app-text-heading-color: #1a140e; /* Solid contrast header */
+
+  --app-border-color: rgba(168, 137, 102, 0.28);
+  --app-border-focus: #925408;
+  --app-shadow-soft: 0 12px 35px -8px rgba(92, 60, 20, 0.08);
+  --app-shadow-elevated: 0 20px 48px -10px rgba(92, 60, 20, 0.16);
+
+  /* Form & Component overrides */
+  --input-primary-color: var(--app-primary-color);
+  --input-accent-color: var(--app-accent-color);
+  --input-border-color: var(--app-border-color);
+  --input-text-color: var(--app-text-color);
+  --input-label-color: var(--app-text-accent-color);
+  --input-placeholder-color: rgba(110, 95, 81, 0.55);
+  --input-background-color: transparent;
+  --input-picker-background: var(--app-surface-strong);
+  --input-popover-background-color: var(--app-surface-strong);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]) {
+    /* Theme: Atelier Dark Mode (Deep espresso noir & glowing amber) */
+    --app-primary-color: #e5a443; /* Radiant warm brass / golden thread */
+    --app-primary-hover: #f3be6d;
+    --app-accent-color: #c98a32;
+    --app-accent-strong: #f7ba5b;
+    --app-accent-subtle: rgba(229, 164, 67, 0.14);
+
+    --app-page-background: radial-gradient(circle at 50% 0%, #201913 0%, #14100b 60%, #0c0907 100%);
+    --app-surface-background-color: rgba(28, 22, 17, 0.78);
+    --app-surface-strong: #231b14;
+    --app-surface-muted: rgba(38, 30, 23, 0.65);
+
+    --app-text-color: #f3ede2; /* Linen ivory */
+    --app-text-accent-color: #bfaea0; /* Soft sand */
+    --app-text-heading-color: #fff9f0; /* Luminous warm cream */
+
+    --app-border-color: rgba(229, 164, 67, 0.22);
+    --app-border-focus: #e5a443;
+    --app-shadow-soft: 0 16px 40px -10px rgba(0, 0, 0, 0.55);
+    --app-shadow-elevated: 0 24px 50px -8px rgba(0, 0, 0, 0.75);
+
+    /* Form & Component overrides */
+    --input-primary-color: var(--app-primary-color);
+    --input-accent-color: var(--app-accent-color);
+    --input-border-color: var(--app-border-color);
+    --input-text-color: var(--app-text-color);
+    --input-label-color: var(--app-text-accent-color);
+    --input-placeholder-color: rgba(191, 174, 160, 0.5);
+    --input-background-color: transparent;
+    --input-picker-background: var(--app-surface-strong);
+    --input-popover-background-color: var(--app-surface-strong);
+  }
 }
 
 :root[data-mode="dark"] {
-  /* Theme: Dark Modes */
-  --page-background: linear-gradient(135deg, #07111f 0%, #142641 45%, #1c2340 100%);
-  --surface-background: rgba(17, 24, 39, 0.88);
-  --surface-strong: rgba(24, 33, 54, 0.95);
-  --surface-muted: rgba(24, 33, 54, 0.8);
-  --text-main: #f5edff;
-  --text-muted: #c3b6dd;
-  --text-heading: #ffffff;
-  --border-soft: rgba(145, 126, 190, 0.28);
-  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.35);
-  --accent: #b498ff;
-  --accent-strong: #8d70ff;
+  --app-primary-color: #e5a443;
+  --app-primary-hover: #f3be6d;
+  --app-accent-color: #c98a32;
+  --app-accent-strong: #f7ba5b;
+  --app-accent-subtle: rgba(229, 164, 67, 0.14);
+
+  --app-page-background: radial-gradient(circle at 50% 0%, #201913 0%, #14100b 60%, #0c0907 100%);
+  --app-surface-background-color: rgba(28, 22, 17, 0.78);
+  --app-surface-strong: #231b14;
+  --app-surface-muted: rgba(38, 30, 23, 0.65);
+
+  --app-text-color: #f3ede2;
+  --app-text-accent-color: #bfaea0;
+  --app-text-heading-color: #fff9f0;
+
+  --app-border-color: rgba(229, 164, 67, 0.22);
+  --app-border-focus: #e5a443;
+  --app-shadow-soft: 0 16px 40px -10px rgba(0, 0, 0, 0.55);
+  --app-shadow-elevated: 0 24px 50px -8px rgba(0, 0, 0, 0.75);
+
+  --input-primary-color: var(--app-primary-color);
+  --input-accent-color: var(--app-accent-color);
+  --input-border-color: var(--app-border-color);
+  --input-text-color: var(--app-text-color);
+  --input-label-color: var(--app-text-accent-color);
+  --input-placeholder-color: rgba(191, 174, 160, 0.5);
+  --input-background-color: transparent;
+  --input-picker-background: var(--app-surface-strong);
+  --input-popover-background-color: var(--app-surface-strong);
 }

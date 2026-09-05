@@ -310,7 +310,7 @@
     }
   }
 
-  & .row:not(.details) {
+  & .filerow:not(.details) {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -321,7 +321,7 @@
     column-gap: auto;
   }
 
-  & .row:is(.details) {
+  & .filerow:is(.details) {
     font-size: calc(var(--input-font-size) - 0.15rem);
     display: flex;
     flex-direction: column;
@@ -419,21 +419,22 @@
     position: relative;
     padding: 0 1em;
     vertical-align: middle;
+    align-content: center;
   }
   & input[type="file"]::file-selector-button {
     /* line-height: 0.75rem; */
     margin-right: 1em;
     position: relative;
-    bottom: 2px;
+    bottom: 5px;
     min-height: calc(var(--input-icon-size) * 0.85);
+    font-size: calc(var(--input-font-size) * 0.85);
     padding: 0em 0.7em;
     border-radius: var(--input-border-radius);
-    font-size: 0.85em;
     font-weight: 600;
     transition: 30ms;
     align-self: center;
     outline: none;
-    color: color-mix(in srgb, var(--input-text-color) 80%, white 50%);
+    color: color-mix(in srgb, var(--input-text-color) 30%, black 30%);
     border: 2px solid var(--input-accent-color);
     background-color: color-mix(in srgb, var(--input-primary-color) 50%, var(--input-accent-color) 5%);
     box-shadow: 0 2px 3px 0 color-mix(in srgb, var(--input-accent-color) 30%, var(--input-primary-color) 45%);

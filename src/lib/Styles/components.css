@@ -1,0 +1,323 @@
+/* ==============================================================
+  Global HTML Element Component Styling
+  Modern tactile craftsmanship for Nav, Buttons, Cards, Details
+============================================================== */
+
+/* ─── Navigation Header ─── */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem var(--app-padding-layout);
+  background: var(--app-surface-background-color);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--app-border-color);
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
+  & .brand {
+    font-size: clamp(1.2rem, 1.1rem + 0.5vw, 1.45rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--app-text-heading-color);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    &::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--app-primary-color);
+      box-shadow: 0 0 10px var(--app-primary-color);
+    }
+  }
+  & .navigations {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.75rem, 1.5vw, 1.75rem);
+  }
+
+  & .item {
+    color: var(--app-text-accent-color);
+    font-size: var(--app-font-size-sm);
+    font-weight: 500;
+    text-decoration: none;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.5rem;
+    transition:
+      color 0.2s ease,
+      background 0.2s ease;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--app-text-heading-color);
+      background: var(--app-accent-subtle);
+      text-decoration: none;
+    }
+  }
+}
+
+/* ─── Mobile Responsiveness for Nav ─── */
+@media (max-width: 768px) {
+  nav {
+    padding: 0.85rem 1rem;
+  }
+
+  nav .navigations {
+    display: none; /* Keep clean on small mobile */
+  }
+}
+
+/* ─── Buttons ─── */
+button {
+  &.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: inherit;
+    font-size: var(--app-font-size-base);
+    font-weight: 600;
+    line-height: 1.4;
+    padding: 0.75rem 1.6rem;
+    border-radius: 9999px; /* Modern pill button */
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    user-select: none;
+    white-space: nowrap;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08);
+    &:is(.primary) {
+      background: var(--app-primary-color);
+      color: #ffffff;
+      border-color: var(--app-primary-color);
+      &:hover {
+        background: var(--app-primary-hover);
+        border-color: var(--app-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--app-shadow-soft);
+      }
+      &:active {
+        transform: translateY(0);
+        box-shadow: none;
+      }
+
+      &:is(.small) {
+        padding: 0.5rem 1.15rem;
+        font-size: var(--app-font-size-sm);
+        border-radius: 9999px;
+      }
+    }
+  }
+}
+
+:root[data-mode="dark"] button.button.primary,
+:root:not([data-mode="light"]) button.button.primary {
+  color: #1a140e;
+  font-weight: 700;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]) button.button.primary {
+    color: #1a140e;
+    font-weight: 700;
+  }
+}
+/* ─── Sections ─── */
+section {
+  position: relative;
+  padding-top: clamp(3rem, 6vw, 5.5rem);
+  padding-bottom: clamp(3rem, 6vw, 5.5rem);
+  margin: auto;
+  & h2.title {
+    font-size: var(--app-font-size-2xl);
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* ─── Cards (Feature, Trust, Generic) ─── */
+.card {
+  position: relative;
+  background: var(--app-surface-background-color);
+  border: 1px solid var(--app-border-color);
+  border-radius: var(--app-component-border-radius);
+  padding: clamp(1.25rem, 2.5vw, 1.85rem);
+  box-shadow: var(--app-shadow-soft);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease;
+  &:hover {
+    transform: translateY(-4px);
+    border-color: var(--app-accent-strong);
+    box-shadow: var(--app-shadow-elevated);
+  }
+
+  & h5 {
+    font-size: var(--app-font-size-lg);
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  & p {
+    color: var(--app-text-accent-color);
+    font-size: var(--app-font-size-base);
+    margin-bottom: 0;
+    line-height: 1.6;
+  }
+}
+
+/* ─── Steps (Cara Kerja) ─── */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: var(--app-gap);
+  margin-top: 2rem;
+  & .step {
+    position: relative;
+    background: var(--app-surface-background-color);
+    border: 1px solid var(--app-border-color);
+    border-radius: var(--app-component-border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--app-shadow-soft);
+    transition: transform 0.2s ease;
+    &:hover {
+      transform: translateY(-3px);
+    }
+
+    & h5 {
+      margin-bottom: 0.5rem;
+    }
+
+    & p {
+      color: var(--app-text-accent-color);
+      font-size: var(--app-font-size-sm);
+      margin-bottom: 0;
+    }
+  }
+  & .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--app-accent-subtle);
+    color: var(--app-primary-color);
+    font-weight: 800;
+    font-size: var(--app-font-size-base);
+    margin-bottom: 1rem;
+    border: 1px solid var(--app-border-color);
+  }
+}
+
+/* ─── FAQ Accordion (Clean & Tactile) ─── */
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  max-width: 800px;
+}
+
+details {
+  background: var(--app-surface-background-color);
+  border: 1px solid var(--app-border-color);
+  border-radius: var(--app-component-border-radius);
+  box-shadow: var(--app-shadow-soft);
+  overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  &:hover {
+    border-color: var(--app-primary-color);
+  }
+  &[open] {
+    border-color: var(--app-border-focus);
+    box-shadow: var(--app-shadow-elevated);
+    & summary::after {
+      content: "−";
+    }
+  }
+  & summary {
+    padding: 1.15rem 1.4rem;
+    font-weight: 600;
+    font-size: var(--app-font-size-base);
+    color: var(--app-text-heading-color);
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+    transition: color 0.2s ease;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+    &::after {
+      content: "+";
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: var(--app-primary-color);
+      transition: transform 0.25s ease;
+      line-height: 1;
+    }
+  }
+  & p {
+    padding: 0 1.4rem 1.25rem 1.4rem;
+    margin: 0;
+    color: var(--app-text-accent-color);
+    font-size: var(--app-font-size-base);
+    line-height: 1.65;
+  }
+}
+
+/* ─── Footer ─── */
+footer {
+  padding: 4rem var(--app-padding-layout) 3rem;
+  /* margin-top: 4rem; */
+  background: var(--app-surface-muted);
+  border-top: 1px solid var(--app-border-color);
+  & .inner {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    & .brand {
+      font-size: var(--app-font-size-xl);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--app-text-heading-color);
+    }
+    & .tagline {
+      color: var(--app-text-accent-color);
+      font-size: var(--app-font-size-base);
+      max-width: 55ch;
+      line-height: 1.6;
+      margin: 0;
+    }
+    & .legal {
+      color: var(--app-text-accent-color);
+      font-size: var(--app-font-size-xs);
+      opacity: 0.8;
+      margin: 0;
+    }
+  }
+}

@@ -98,10 +98,17 @@ export class StaggerFadeBehaviour {
         }
       );
 
-      anim.finished.then(() => {
-        if (!el.isConnected) return;
-        onSegmentDone(el);
-      });
+      anim.finished
+        .then(() => {
+          if (!el.isConnected) return;
+          onSegmentDone(el);
+        })
+        .catch((error: unknown) => {
+          // cancel() rejects finished with AbortError during reset/stop.
+          if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+            console.error('[StaggerFadeBehaviour] Animation failed:', error);
+          }
+        });
     });
   }
 }

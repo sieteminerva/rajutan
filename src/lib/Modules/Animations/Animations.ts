@@ -22,6 +22,10 @@ export interface AnimationRecord {
   node: HTMLElement;
   type: string;
   chained: boolean;
+  /** animated-once="true" → elemen hanya boleh diputar sekali, tak pernah replay */
+  once: boolean;
+  /** true setelah node mulai diputar pertamakali (basis penentuan "sudah pernah dimainkan") */
+  played: boolean;
   scope: HTMLElement;
   state: AnimationState;
   snapshot: {
@@ -147,6 +151,7 @@ export class AnimationsService {
     }
 
     const chained = node.getAttribute('animation-chain') === 'true';
+    const once = node.getAttribute('animated-once') === 'true';
     const scope = this._scope(node);
 
     const snapshot = {
@@ -160,6 +165,8 @@ export class AnimationsService {
       node,
       type,
       chained,
+      once,
+      played: false,
       scope,
       state: chained ? 'waiting' : 'idle',
       snapshot,
@@ -246,11 +253,15 @@ export class AnimationsService {
     const rec = this.records.get(node);
     if (!rec) return;
 
+    // animated-once: elemen yang sudah pernah diputar TIDAK pernah diputar ulang.
+    if (rec.once && rec.played) return;
+
     if (rec.state === 'running') {
       this.stop(node);
     }
 
     rec.state = 'running';
+    rec.played = true;
     rec.controller = { shouldStop: false };
 
     // Release pre-hide suppression styles so element becomes visible
@@ -456,10 +467,9 @@ export class AnimationsService {
             this.trigger(target);
           }
         } else {
-          // Element or scope left viewport / became hidden: clear/reset for clean replay on revisit
-          if (this.scopes.has(target)) {
-            this.reset(target);
-          }
+          // Do not reset chained scopes while scrolling. Their children can
+          // still be typing, and resetting the whole section changes layout
+          // while the observer is processing the exit.
           if (this.records.has(target)) {
             this.reset(target);
           }
@@ -484,6 +494,10 @@ export class AnimationsService {
   private _resetNode(node: HTMLElement): void {
     const rec = this.records.get(node);
     if (!rec) return;
+
+    // animated-once: sekali diputar, jangan pernah di-reset (tak akan replay
+    // saat keluar-masuk viewport). State dipertahankan 'done' / selesai.
+    if (rec.once && rec.played) return;
 
     this.stop(node);
 

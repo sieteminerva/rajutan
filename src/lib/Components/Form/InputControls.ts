@@ -9,6 +9,7 @@ export type InputControlsElementType =
   | "@controls>save"
   | "@controls>edit"
   | "@controls>copy"
+  | "@controls>search"
   | "@controls>custom" // Tombol aksi kustom sesuai kebutuhan bisnis
 
 export interface iInputControlsConfig {
@@ -38,6 +39,7 @@ export class InputControlsBuilder extends Builder<InputControlsElementType> {
       "@controls>save": { tagName: "button", className: "save", icon: "icon checkmark" },
       "@controls>edit": { tagName: "button", className: "edit", icon: "icon edit" },
       "@controls>copy": { tagName: "button", className: "copy", icon: "icon copy file" },
+      "@controls>search": { tagName: "button", className: "search", icon: "icon search" },
       "@controls>custom": { tagName: "button", className: "custom" },
     };
 
@@ -160,6 +162,9 @@ export class InputControlsBuilder extends Builder<InputControlsElementType> {
         case "add":
           context.result = this.duplicate(parentElement, actions);
           break;
+        case "search":
+          context.result = this.search(element, context);
+          break;
         case "delete":
         case "remove":
           context.result = this.delete(parentElement);
@@ -195,7 +200,6 @@ export class InputControlsBuilder extends Builder<InputControlsElementType> {
   }
 
 
-
   protected emit(action: iActionType, context: iInputActionContext): void {
     this.config.emit?.("elementChanged", {
       builder: this.builderId,
@@ -204,7 +208,6 @@ export class InputControlsBuilder extends Builder<InputControlsElementType> {
       data: { action, value: context.value, input: context.input, result: context.result },
     });
   }
-
 
   protected async copy(payload: string | HTMLElement | Object) {
     try {
@@ -274,6 +277,32 @@ export class InputControlsBuilder extends Builder<InputControlsElementType> {
     return true;
   }
 
+  protected edit(element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null): boolean {
+    if (!element) return false;
+    this.#editableState.set(element, { readonly: element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement ? element.readOnly : false, disabled: element.disabled });
+    element.disabled = false;
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) element.readOnly = false;
+    return true;
+  }
+
+  protected update(element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null): boolean {
+    if (!element) return false;
+    const state = this.#editableState.get(element);
+    if (state) {
+      element.disabled = state.disabled;
+      if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) element.readOnly = state.readonly;
+      this.#editableState.delete(element);
+    }
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  }
+
+  // TODO make implementation
+  protected search(_element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null, _payload: any) {
+
+  }
+
+
   private _getDuplicateIndices(owner: HTMLElement): Set<number> {
     const existing = this.#duplicateIndices.get(owner);
     if (existing) return existing;
@@ -297,27 +326,6 @@ export class InputControlsBuilder extends Builder<InputControlsElementType> {
     while (usedIndices.has(index)) index += 1;
     return index;
   }
-
-  protected edit(element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null): boolean {
-    if (!element) return false;
-    this.#editableState.set(element, { readonly: element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement ? element.readOnly : false, disabled: element.disabled });
-    element.disabled = false;
-    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) element.readOnly = false;
-    return true;
-  }
-
-  protected update(element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null): boolean {
-    if (!element) return false;
-    const state = this.#editableState.get(element);
-    if (state) {
-      element.disabled = state.disabled;
-      if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) element.readOnly = state.readonly;
-      this.#editableState.delete(element);
-    }
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-    return true;
-  }
-
 
   private _getControl(parentElement: HTMLElement): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
     return parentElement.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(

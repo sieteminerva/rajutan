@@ -1,0 +1,71 @@
+/* ==============================================================
+  Global Typography System
+  Crafted for crystal clear readability on mobile and desktop
+  Rule: mobile-first, clamp() scales, high legibility for everyday users
+============================================================== */
+
+:root {
+  /* Fluid typographic scale with ergonomic line-heights */
+  --app-font-size-xs: clamp(0.75rem, 0.72rem + 0.15vw, 0.825rem);
+  --app-font-size-sm: clamp(0.85rem, 0.82rem + 0.2vw, 0.95rem);
+  --app-font-size-base: clamp(1rem, 0.95rem + 0.3vw, 1.125rem);
+  --app-font-size-lg: clamp(1.15rem, 1.05rem + 0.5vw, 1.35rem);
+  --app-font-size-xl: clamp(1.35rem, 1.2rem + 0.8vw, 1.75rem);
+  --app-font-size-2xl: clamp(1.65rem, 1.4rem + 1.2vw, 2.25rem);
+  --app-font-size-3xl: clamp(2.1rem, 1.7rem + 2vw, 3.25rem);
+}
+
+body {
+  font-size: var(--app-font-size-base);
+  color: var(--app-text-color);
+  line-height: 1.65;
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--app-text-heading-color);
+  font-family: inherit;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 0;
+  margin-bottom: 0.6em;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+h1 { font-size: var(--app-font-size-3xl); }
+h2 { font-size: var(--app-font-size-2xl); font-weight: 700; }
+h3 { font-size: var(--app-font-size-xl); font-weight: 650; }
+h4 { font-size: var(--app-font-size-lg); font-weight: 600; }
+h5 { font-size: var(--app-font-size-base); font-weight: 600; }
+h6 { font-size: var(--app-font-size-sm); font-weight: 600; }
+
+p {
+  margin-top: 0;
+  margin-bottom: 1.2em;
+  line-height: 1.7;
+}
+
+p.description {
+  font-size: var(--app-font-size-lg);
+  color: var(--app-text-accent-color);
+  line-height: 1.65;
+  max-width: 65ch;
+}
+
+a {
+  color: var(--app-primary-color);
+  text-decoration: none;
+  transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+a:hover {
+  color: var(--app-primary-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+strong, b {
+  font-weight: 600;
+  color: var(--app-text-heading-color);
+}

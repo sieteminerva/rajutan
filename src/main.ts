@@ -1,15 +1,35 @@
 import { HomepageContent } from './content';
 import type { iBuilderRegistry } from './lib/interface';
-import { ComponentRegistry } from './lib/Modules/ComponentRegistry2';
+import { ComponentRegistry } from '../draft/ComponentRegistry2';
 import { DOMRenderer } from './lib/Modules/DOMRenderer';
 import { AnimationsService } from './lib/Modules/Animations/Animations';
 
 import './lib/Styles/variables.css';
+import './lib/Styles/typography.css';
+import './lib/Styles/components.css';
+import './lib/Styles/layout.css';
 import './lib/Styles/icon.css';
 import './style.css';
 import { EventEmitter } from './lib/Modules/EventEmitter';
 
+// 🔐 Daftarkan Service Worker supaya id_token disimpan di variabel SW.
+// BASE_URL mengikuti base vite ("/rajutan/") agar cocok dengan scope GitHub Pages.
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+
+  const base = import.meta.env.BASE_URL || '/';
+  const swUrl = `${base}sw.js`;
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register(swUrl, { scope: base })
+      .then((reg) => console.log('[SW] registrasi aktif, scope:', reg.scope))
+      .catch((err) => console.warn('[SW] registrasi gagal:', err));
+  });
+}
+
 async function start(container: HTMLElement) {
+  registerServiceWorker();
   // @ts-ignore
   const emitter = new EventEmitter();
   const animation = new AnimationsService();

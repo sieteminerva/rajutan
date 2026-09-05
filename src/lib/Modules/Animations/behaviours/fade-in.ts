@@ -39,9 +39,16 @@ export class FadeInBehaviour {
     );
 
     // WAAPI memiliki Promise .finished bawaan yang sangat akurat
-    anim.finished.then(() => {
-      if (!node.isConnected) return;
-      onDone();
-    });
+    anim.finished
+      .then(() => {
+        if (!node.isConnected) return;
+        onDone();
+      })
+      .catch((error: unknown) => {
+        // cancel() rejects finished with AbortError during reset/stop.
+        if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+          console.error('[FadeInBehaviour] Animation failed:', error);
+        }
+      });
   }
 }

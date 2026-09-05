@@ -42,7 +42,7 @@ export type InputElementType =
   | "@field>file"
   | "@field>info";
 
-export type iActionType = "add" | "remove" | "delete" | "save" | "edit" | "copy" | "custom";
+export type iActionType = "add" | "remove" | "delete" | "save" | "edit" | "copy" | "search" | "custom";
 
 export interface iInputActionDefinition {
   type: iActionType;

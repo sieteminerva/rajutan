@@ -5,6 +5,7 @@ import { TableBuilder } from "../Table/Table";
 import { FileUploader } from "./FileUploader";
 import { FormCascade, type FormCascadeHost, type iCascadeEventDetail, FormCascadeHandler } from "./Handlers/Cascade";
 import { FormMultistepHandler, type FormMultistepHost } from "./Handlers/Multistep";
+import { FormValidationHandler } from "./Handlers/Validation";
 import { IdAddressBuilder } from "./IdAddress/id-address-builder";
 import { InputBuilder } from "./Input";
 import "./Dropdown.css";
@@ -61,6 +62,9 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
   // 🪜 Engine multistep: langkah ditahan sebagai placeholder dan baru
   // dilahirkan ke DOM saat tombol Next/Back menekannya (Multistep.ts).
   #multistep: FormMultistepHandler | null = null;
+
+  // 🧾 Validasi terpusat (native + kaskade): emit + toast. Lihat Handlers/Validation.ts.
+  #validation: FormValidationHandler | null = null;
 
   // Inisialisasi komponen (uploader, IdAddress, dsb.) untuk step yang baru
   // lahir — engine memanggil ini lewat host hook onStepMount.
@@ -126,6 +130,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
     // 🌊 Reset engine kaskade (siklus hidup baru per prepare)
     this.#cascade = null;
     this.#multistep = null;
+    this.#validation = null;
     this.#onStepMounted = null;
 
     // const wrapper = this.render("@container", inputs);
@@ -139,6 +144,14 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
 
     if (isCascading || this.config.autoDisableNextStep === true) this.#cascade = new FormCascade(this._buildCascadeHost());
     if (this.config.multistep) this.#multistep = new FormMultistepHandler(this._buildMultistepHost());
+
+    // 🧾 Jalur validasi terpusat: emit("formValidation") + CustomEvent di <form>
+    // + tampilkan info lewat createMessage(form, false, content).
+    this.#validation = new FormValidationHandler({
+      builder: this.builderId,
+      emit: typeof this.config.emit === "function" ? (this.config.emit as any) : null,
+      showMessage: (content) => this.createMessage(form, false, content),
+    });
 
     // Iterasi dan transformasikan setiap input secara murni
     for (const [index, input] of Object.entries(this.#inputs)) {
@@ -273,7 +286,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
           if (innerInput.id) nestedFieldset.id = innerInput.id;
           if (innerInput.table !== undefined) {
             console.log(innerInput.table.content)
-            const groupSubmitBtn = this.render("@form>actions>submit-group", { isGroupBtn: false, groupId: innerInput.id }) as HTMLButtonElement;
+            const groupSubmitBtn = this.render("@form>actions>submit", { isGroupBtn: false, groupId: innerInput.id }) as HTMLButtonElement;
             const table = new TableBuilder()
             const tableEl = table.create(innerInput.table.content)
 
@@ -346,6 +359,8 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       emit: typeof this.config.emit === "function" ? this.config.emit : null,
       renderGroup: (group, formId, path) => this.renderGroup(group, formId, path),
       refreshSteps: (form) => this.#multistep?.refresh(form),
+      // 🧾 Tombol next terkunci kondisi kaskade → jalur terpusat.
+      reportCascadeBlocked: (info) => this.#validation?.reportCascadeBlocked(info),
     };
   }
 
@@ -365,6 +380,8 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       // 🌊 Setiap perpindahan langkah melahirkan set tombol navigasi yang baru —
       // engine kaskade perlu menilai ulang gerbang next yang baru tersebut.
       onStepChange: () => this.#cascade?.gate(),
+      // 🧾 Next ditolak validasi native langkah → jalur terpusat.
+      reportNativeInvalid: (form, step) => this.#validation?.reportNative(form, step),
     };
   }
 
@@ -452,27 +469,6 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
           btn.id = payload.formId ? `btn-${payload.formId}` : `btn-group-${Math.random().toString(36).substring(7)}`;
         } else {
           btn.id = `btn-${payload?.formId || "default"}`;
-          // btn.style.marginTop = "1rem";
-          // btn.style.padding = "1rem";
-          // btn.style.float = "right";
-        }
-        break;
-      }
-
-      case "@form>actions>submit-group": {
-        const btn = el as HTMLButtonElement;
-        btn.className = `${this.config.buttonClass} ${btn.className || ""}`.trim();
-        btn.type = "button";
-        btn.textContent = "Submit Item";
-
-        const sIcon = document.createElement("i");
-        sIcon.className = "icon checkmark";
-        btn.appendChild(sIcon)
-
-        if (payload?.isGroupBtn) {
-          btn.id = payload.groupId ? `btn-${payload.groupId}` : `btn-group-${Math.random().toString(36).substring(7)}`;
-        } else {
-          btn.id = `btn-${payload?.groupId || "default"}`;
           // btn.style.marginTop = "1rem";
           // btn.style.padding = "1rem";
           // btn.style.float = "right";
@@ -654,6 +650,14 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      // 🧾 Gerbang validasi NATIVE sebelum memproses submit. (Khusus multistep,
+      // langkah aktif sudah divalidasi engine saat menekan Next; ini jaring
+      // pengaman untuk submit biasa / Enter / form.submit() programatik.)
+      if (!form.checkValidity()) {
+        this.#validation?.reportNative(form);
+        return;
+      }
+
       form.classList.add("loading");
       const formData = new FormData(form);
       const data = Object.fromEntries(formData as any);
@@ -704,6 +708,15 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       if (!button) return;
       if (!form.contains(button) && button.getAttribute("form") !== form.id) return;
       event.preventDefault();
+
+      // 🧾 Klik submit harus lolos validasi native dulu — bila tidak, laporkan
+      // (emit + toast) dan jangan teruskan ke requestSubmit. requestSubmit juga
+      // akan memblokir submit-event, jadinya tanpa pengecekan ini klik pada form
+      // tak valid diam-diam tidak melakukan apa-apa.
+      if (!form.checkValidity()) {
+        this.#validation?.reportNative(form);
+        return;
+      }
       form.requestSubmit(button);
     });
 

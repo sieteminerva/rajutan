@@ -694,9 +694,9 @@ export class FileUploader {
     const viewContainer = this.viewContainer;
     if (!viewContainer) return;
     const rowThumbs = document.createElement("div");
-    rowThumbs.classList.add("row");
+    rowThumbs.classList.add("filerow");
     const rowDetails = document.createElement("div");
-    rowDetails.classList.add("row", "details");
+    rowDetails.classList.add("filerow", "details");
     rowDetails.insertAdjacentHTML("afterbegin", `<div class="title">Details</div>`);
 
     // Step 1: Initialize a counter for files unallowed due to maxFileSize or notAccepted reasons.
