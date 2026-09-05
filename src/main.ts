@@ -1,6 +1,6 @@
 import { HomepageContent } from './content';
 import type { iBuilderRegistry } from './lib/interface';
-import { ComponentRegistry } from '../draft/ComponentRegistry2';
+import { ComponentRegistry } from './lib/Modules/ComponentRegistry';
 import { DOMRenderer } from './lib/Modules/DOMRenderer';
 import { AnimationsService } from './lib/Modules/Animations/Animations';
 
