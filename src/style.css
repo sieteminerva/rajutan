@@ -11,6 +11,8 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-primary-color) color-mix(in srgb, grey 10%, var(--app-primary-color) 5%);
 }
 
 body {
@@ -95,14 +97,10 @@ section#home {
       line-height: 1.6;
       text-align: left;
       &::first-letter {
-        font-size: 2.2em;
+        font-style: italic;
+        color: var(--app-primary-color);
         font-weight: 700;
         font-style: normal;
-        color: var(--app-primary-color);
-        float: left;
-        line-height: 0.9;
-        margin-right: 0.25rem;
-        margin-top: 0.1rem;
       }
     }
   }
@@ -127,7 +125,7 @@ section#home {
     font-weight: 700;
     letter-spacing: -0.01em;
     border-radius: 9999px;
-    color: #ffffff;
+    color: var(--app-surface-muted);
     background: var(--app-primary-color);
     border: 1px solid var(--app-primary-color);
     box-shadow: 0 4px 20px -2px rgba(146, 84, 8, 0.35);
@@ -158,10 +156,15 @@ section#home {
   }
 }
 
+section #wizard {
+  width: 100%;
+}
+
 /* ─── Embedded Wizard Form in #home ─── */
-section#home .form {
+section > #wizard > .form {
   width: 100%;
   max-width: 820px;
+  /* max-height: 100vh; */
   margin: 1.5rem auto 0;
   text-align: left;
   & fieldset:is(.inline-style) {
@@ -185,8 +188,28 @@ section#home .form {
   }
 }
 
+section > #wizard .table {
+  --table-primary-color: var(--app-primary-color);
+  --table-accent-color: var(--app-accent-color);
+  --table-background-color-darken: color-mix(in srgb, var(--app-primary-color) 30%, rgb(221, 205, 65) 30%);
+  --table-background-color-darken-row: color-mix(in srgb, var(--app-primary-color) 25%, rgb(172, 154, 54) 10%);
+  & tr:hover {
+    background: var(--table-background-color-darken-row);
+    color: color-mix(in srgb, var(--app-primary-color) 30%, rgb(221, 205, 65) 40%);
+  }
+}
+
 section#faq {
-  min-width: 80%;
+  & .shell {
+    min-width: 80%;
+    display: flex;
+    flex-direction: column;
+    /* justify-content: center; */
+    & .faq-list {
+      margin-top: 2rem;
+      width: 100%;
+    }
+  }
 }
 
 /* ─── Call to Action Section (#cta) ─── */
@@ -215,5 +238,38 @@ section#cta {
       padding: 1rem 2.6rem;
       font-size: var(--app-font-size-lg);
     }
+  }
+}
+
+section#assets {
+  padding-top: 1em;
+  & .details {
+    padding: 0.5em;
+    justify-content: center;
+    border: 2px solid var(--app-border-color);
+    border-radius: var(--app-component-border-radius);
+    width: 60%;
+    & .item {
+      width: 100%;
+      display: flex;
+      flex: 1 1 100%;
+      align-items: center;
+      padding: 2px 1em;
+      gap: 0.5em;
+      /* justify-content: start; */
+      & .link {
+        flex-grow: 1;
+        justify-self: right;
+        text-align: right;
+        padding-right: 0;
+      }
+    }
+  }
+  & .row {
+    gap: 0.5em;
+    padding: 1em;
+  }
+  & .row:first-child {
+    margin-bottom: 2em;
   }
 }

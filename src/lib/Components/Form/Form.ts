@@ -682,7 +682,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       }
 
       const dataWithFiles = Object.keys(files).length > 0 ? Object.assign({}, data, files) : data;
-      if (table) dataWithFiles.product = table.toJson();
+      if (table) dataWithFiles["detail-product"] = table.toJson();
       console.log({ dataWithFiles })
       form.dispatchEvent(
         new CustomEvent("formSubmit", {

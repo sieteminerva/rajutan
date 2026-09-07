@@ -1,8 +1,11 @@
-import { HomepageContent } from './content';
-import type { iBuilderRegistry } from './lib/interface';
+import type { iBuilderRegistry, iNodeContent } from './lib/interface';
 import { ComponentRegistry } from './lib/Modules/ComponentRegistry';
 import { DOMRenderer } from './lib/Modules/DOMRenderer';
 import { AnimationsService } from './lib/Modules/Animations/Animations';
+import { HashRouter, type iRouteState } from './lib/Modules/HashRouter';
+import { HomepageContent } from './content/home';
+import { BuildPageContent } from './content/wizard';
+import { ResultPageContent } from './content/result';
 
 import './lib/Styles/variables.css';
 import './lib/Styles/typography.css';
@@ -14,7 +17,7 @@ import { EventEmitter } from './lib/Modules/EventEmitter';
 
 // 🔐 Daftarkan Service Worker supaya id_token disimpan di variabel SW.
 // BASE_URL mengikuti base vite ("/rajutan/") agar cocok dengan scope GitHub Pages.
-function registerServiceWorker() {
+export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
 
   const base = import.meta.env.BASE_URL || '/';
@@ -28,11 +31,58 @@ function registerServiceWorker() {
   });
 }
 
+/** Peta rute → konten halaman. Unknown/`home` selalu jatuh ke HomepageContent. */
+function pageContentFor(route: string): iNodeContent {
+  const key = route.trim().toLowerCase().replace(/^#|\/+$/g, '') || 'home';
+  switch (key) {
+    case 'build': return BuildPageContent;
+    case 'result': return ResultPageContent;
+    default: return HomepageContent;
+  }
+}
+
+// Infrastruktur bersama (dibangun sekali di bootstrap)
+let renderer: DOMRenderer;
+let animation: AnimationsService;
+let buildBuilderFn: (name: keyof iBuilderRegistry, data: any) => HTMLElement | null;
+let renderFn: (node: any) => HTMLElement | null;
+let currentRoot: HTMLElement | null = null;
+
+/** Render satu halaman (rute) ke dalam #app — mengganti akar sebelumnya. */
+export function renderPage(route: string): void {
+  const page = pageContentFor(route);
+  const tree = renderer.render(page, renderFn, buildBuilderFn);
+  if (currentRoot && currentRoot.isConnected) {
+    currentRoot.replaceWith(tree);
+  } else {
+    const app = document.getElementById('app');
+    if (app) app.replaceWith(tree);
+  }
+  currentRoot = tree;
+  animation.init();
+}
+
+/** Pasang HashRouter + jalankan render awal sesuai hash URL. */
+function bootRouting(): void {
+  const router = new HashRouter(
+    "home",
+    "default",
+    ["home", "build", "result"],
+    (state: iRouteState) => renderPage(state.route)
+  );
+
+  // Render pertama mengikuti posisi hash saat ini.
+  renderPage(router.parseUrlHash().route);
+
+  // Ekspos ke konsol untuk debugging manual: `window.__router.navigate('build')`
+  (globalThis as any).__router = router;
+}
+
 async function start(container: HTMLElement) {
-  registerServiceWorker();
+  // registerServiceWorker();
   // @ts-ignore
   const emitter = new EventEmitter();
-  const animation = new AnimationsService();
+  animation = new AnimationsService();
   const components = new ComponentRegistry()
     .register("form", (data: any) => {
       return {
@@ -54,14 +104,15 @@ async function start(container: HTMLElement) {
 
   await components.preloadComponents(["form", "table"], [])
 
-  const renderer = new DOMRenderer();
-  const DomTree = renderer.render(
-    HomepageContent,
-    (node) => renderer.render(node, undefined, undefined),
-    (name: keyof iBuilderRegistry, data: any) => components.build(name, data)
-  )
-  container.replaceWith(DomTree);
-  animation.init()
+  renderer = new DOMRenderer();
+  renderFn = (node) => renderer.render(node, undefined, undefined);
+  buildBuilderFn = (name, data) => components.build(name, data);
+
+  bootRouting();
+
+  // `container` (asli #app dari index.html) akan diganti renderPage — pastikan
+  // referensi akar awal mengarah ke sana bila hash kosong.
+  if (!currentRoot && container) currentRoot = container;
 }
 
 const app = document.querySelector<HTMLDivElement>('#app')

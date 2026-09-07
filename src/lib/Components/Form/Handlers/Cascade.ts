@@ -192,11 +192,12 @@ export class FormCascade {
   private form: HTMLFormElement | null = null;
   private placeholders = new Map<string, HTMLElement>();
   private onChange: ((event: Event) => void) | null = null;
+  private onPress: ((event: PointerEvent) => void) | null = null;
 
-  // Status terakhir gerbang (untuk memancarkan reportCascadeBlocked HANYA saat
-  // status berubah — hindari spam emit/toast pada setiap ketukan tombol).
-  private lastGateBlocked = false;
-  private lastGateGuidance = "";
+  // Info gerbang kaskade SAAT INI yang terkunci. Disimpan agar bisa dilaporkan
+  // (toast) tepat ketika tombol next yang DISABLED ditekan — bukan otomatis
+  // tiap kali masuk langkah terkunci / status berubah.
+  private lastBlockedInfo: CascadeBlockedInfo | null = null;
 
   constructor(host: FormCascadeHost) {
     this.host = host;
@@ -216,7 +217,32 @@ export class FormCascade {
     this.onChange = () => this.sync();
     form.addEventListener("input", this.onChange);
     form.addEventListener("change", this.onChange);
+
+    // 🧾 Deteksi penekanan tombol next yang DISABLED (terkunci kondisi).
+    // Tombol disabled menelan event click, tapi pointerdown tetap meledak —
+    // jadi di sini kita tangkap & laporkan gerbangnya. Ini titik TEPAT untuk
+    // memunculkan toast, bukan setiap kali masuk langkah terkunci.
+    this.onPress = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      const button = target?.closest?.("button.next") as HTMLButtonElement | null;
+      if (!button || !button.disabled) return;
+      this.reportBlocked(form);
+    };
+    form.addEventListener("pointerdown", this.onPress as EventListener);
+
     this.sync();
+  }
+
+  /** Laporkan gerbang terkunci SEKARANG (dipicu penekanan tombol disabled). */
+  reportBlocked(form?: HTMLFormElement): void {
+    const target = form ?? this.form;
+    if (!target || !this.lastBlockedInfo) return;
+    this.lastBlockedInfo = { ...this.lastBlockedInfo, form: target };
+    try {
+      this.host.reportCascadeBlocked?.(this.lastBlockedInfo);
+    } catch (error) {
+      console.warn("[Form Cascade] reportCascadeBlocked failed:", error);
+    }
   }
 
   /** Set nilai programatik lalu picu evaluasi via event change */
@@ -396,23 +422,19 @@ export class FormCascade {
 
     apply(blocked, guidance);
 
-    // 🧾 Emisikan perubahan gerbang HANYA saat status (terkunci/perubahan pesan)
-    // berganti — tolak spam emit/toast pada setiap ketukan tombol.
-    const gateChanged = blocked !== this.lastGateBlocked || guidance !== this.lastGateGuidance;
-    this.lastGateBlocked = blocked;
-    this.lastGateGuidance = guidance;
-    if (gateChanged && blocked) {
-      try {
-        this.host.reportCascadeBlocked?.({
-          form: target,
-          guidance,
-          condition: blockedCondition,
-          step: currentIndex,
-          path: blockedPath,
-        });
-      } catch (error) {
-        console.warn("[Form Cascade] reportCascadeBlocked failed:", error);
-      }
+    // 🧾 Simpan info gerbang TERKUNCI agar bisa dilaporkan tepat saat tombol
+    // next (disabled) DITEKAN — lihat attach()/reportBlocked(). TIDAK lagi
+    // memancarkan toast otomatis setiap kali masuk langkah terkunci.
+    if (blocked) {
+      this.lastBlockedInfo = {
+        form: target,
+        guidance,
+        condition: blockedCondition,
+        step: currentIndex,
+        path: blockedPath,
+      };
+    } else {
+      this.lastBlockedInfo = null;
     }
   }
 
@@ -436,12 +458,19 @@ export class FormCascade {
 
   /** Lepas semua jejak: listener delegasi + placeholder */
   dispose(): void {
-    if (this.form && this.onChange) {
-      this.form.removeEventListener("input", this.onChange);
-      this.form.removeEventListener("change", this.onChange);
+    if (this.form) {
+      if (this.onChange) {
+        this.form.removeEventListener("input", this.onChange);
+        this.form.removeEventListener("change", this.onChange);
+      }
+      if (this.onPress) {
+        this.form.removeEventListener("pointerdown", this.onPress as EventListener);
+      }
     }
     this.form = null;
     this.onChange = null;
+    this.onPress = null;
+    this.lastBlockedInfo = null;
     this.placeholders.clear();
   }
 }

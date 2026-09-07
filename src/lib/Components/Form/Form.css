@@ -32,7 +32,7 @@
   --input-text-color: color-mix(in srgb, var(--input-accent-color) 30%, var(--input-primary-color) 45%);
   --input-label-color: var(--input-accent-color);
   --input-text-color-light: color-mix(in srgb, var(--input-primary-color) 40%, white 50%);
-  --input-text-hover-color: darkgoldenrod;
+  --input-text-color-hover: color-mix(in srgb, var(--input-primary-color) 40%, black 30%);
   --input-placeholder-color: color-mix(in srgb, grey 15%, var(--input-text-color) 30%);
 
   --input-background-color: color-mix(in srgb, var(--input-accent-color) 30%, #fff 100%);
@@ -382,7 +382,7 @@ select:focus-visible {
       bottom: calc(var(--input-min-height) - 5px);
     }
 
-    &.loading:has(input:not([type="checkbox"]))::before {
+    &.loading:has(input:not([type="checkbox"]))::after {
       content: "";
       mask-image: var(--spinner-content);
       mask-size: contain;
@@ -414,7 +414,7 @@ select:focus-visible {
       position: relative;
     }
 
-    &.loading:has(input:not([type="checkbox"]))::before {
+    &.loading:has(input:not([type="checkbox"])):after {
       visibility: visible;
     }
 
@@ -424,6 +424,24 @@ select:focus-visible {
 
     & input:not([type="checkbox"]).loading ~ span.spinner {
       visibility: visible;
+    }
+    &:is(.inline-style > .field) {
+      &:is(.loading)::after {
+        display: inline-block;
+        position: initial;
+        transform: translate(-7px, -2px);
+        vertical-align: middle;
+        height: calc(var(--input-icon-size) * 0.9);
+        width: calc(var(--input-icon-size) * 0.9);
+      }
+      & input:not([type="checkbox"]).loading ~ span.spinner {
+        display: inline-block;
+        position: relative;
+        bottom: 10px;
+        transform: translate(90%, 55%);
+        height: calc(var(--input-icon-size) * 0.9);
+        width: calc(var(--input-icon-size) * 0.9);
+      }
     }
   }
 }
@@ -569,7 +587,7 @@ select:focus-visible {
       }
     }
     & .field {
-      display: inline-block;
+      display: inline;
       position: relative;
       margin-bottom: 0;
       margin-right: 8px;
@@ -578,15 +596,6 @@ select:focus-visible {
       line-height: calc(var(--input-line-height) * 1.4);
       align-content: center;
       height: max-content;
-
-      &:is(.loading)::before {
-        display: inline-block;
-        position: relative;
-        bottom: 10px !important;
-        transform: translate(180%, 40%) !important;
-        height: calc(var(--input-icon-size) * 0.9);
-        width: calc(var(--input-icon-size) * 0.9);
-      }
 
       /* 📖 PARAGRAF: label typewriter mengalir inline — kalimat:
        "teks judul [kontrol]" — .field tetap block sebagai jangkar
@@ -598,14 +607,7 @@ select:focus-visible {
         width: auto;
         min-width: min(60%, 320px);
       }
-      & input:not([type="checkbox"]).loading ~ span.spinner {
-        display: inline-block;
-        position: relative;
-        bottom: 10px;
-        transform: translate(90%, 55%);
-        height: calc(var(--input-icon-size) * 0.9);
-        width: calc(var(--input-icon-size) * 0.9);
-      }
+
       /* 2. Tata Letak Wrapper dan Label */
       &.toggle-switch > label,
       & label {
@@ -821,6 +823,7 @@ select:focus-visible {
       overflow-x: hidden;
 
       &:popover-open {
+        z-index: 10;
         opacity: 1;
         transition-delay: var(--dropdown-transition-delay);
         transform: translateY(-80%) translateX(0) scaleY(1) scaleX(1);

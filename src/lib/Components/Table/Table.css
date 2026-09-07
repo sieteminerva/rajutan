@@ -32,7 +32,7 @@ table.table,
   --table-background-color: color-mix(in srgb, var(--table-accent-color) 30%, #fff 100%);
   --table-background-color-darken: color-mix(in srgb, var(--table-primary-color) 40%, black 40%);
   --table-background-color-lighten: color-mix(in srgb, var(--table-accent-color) 80%, #fff 20%);
-  --table-backgroung-color-darken-row: color-mix(in srgb, var(--table-accent-color) 40%, black 50%);
+  --table-background-color-darken-row: color-mix(in srgb, var(--table-accent-color) 40%, black 50%);
 
   /* sizing */
   --table-font-size: 0.95rem;
@@ -87,11 +87,11 @@ table.table,
     left: var(--current-left);
     z-index: var(--z-index);
     border-right: var(--border-width) solid var(--table-border-color);
-    background: color-mix(in srgb, currentColor 20%, black 52%);
+    background: color-mix(in srgb, currentColor 20%, #f3f3f3 50%);
     font-weight: 600;
     color: color-mix(in srgb, var(--table-text-color) 80%, white 25%);
-    backdrop-filter: blur(12px);
-    /* mix-blend-mode: darken; */
+    backdrop-filter: blur(6px);
+    /* mix-blend-mode: lighten; */
   }
 
   /* --- Header Cells --- */
@@ -127,8 +127,8 @@ table.table,
       background: color-mix(in srgb, var(--table-primary-color) 10%, var(--table-accent-color) 5%);
     }
     & tr:hover {
-      color: color-mix(in srgb, var(--table-text-color) 15%, rgb(212, 212, 212) 50%);
-      background: color-mix(in srgb, var(--table-primary-color) 40%, black 50%);
+      color: color-mix(in srgb, var(--table-text-color) 15%, white 80%);
+      background: color-mix(in srgb, #925408 50%, black 15%);
     }
     & tr {
       & td,
@@ -387,7 +387,7 @@ table.table,
           }
 
           &.active {
-            background: var(--table-backgroung-color-darken-row);
+            background: var(--table-background-color-darken-row);
             color: var(--table-text-color-light);
             border-color: var(--table-border-color);
           }

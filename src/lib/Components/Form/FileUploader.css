@@ -158,7 +158,15 @@
     }
 
     &:last-child:hover i.icon {
-      background: color-mix(in srgb, var(--input-accent-color) 100%, white 70%);
+      background: color-mix(in srgb, var(--input-accent-color) 100%, black 10%);
+    }
+
+    &:last-child:hover .label {
+      background: color-mix(in srgb, var(--input-accent-color) 100%, black 20%);
+    }
+
+    &:last-child:hover .close i {
+      background: var(--unallowed-color);
     }
 
     & .content {
@@ -168,7 +176,7 @@
         font-size: var(--input-font-size);
         font-weight: 500;
         font-style: normal;
-        color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+        color: color-mix(in srgb, var(--input-accent-color) 80%, rgb(245, 244, 244) 10%);
         & i.icon {
           margin-right: 0.25em;
         }
@@ -328,14 +336,14 @@
     flex-grow: 1;
     flex-wrap: wrap;
     padding: 0.5em;
-    color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+    color: color-mix(in srgb, var(--input-accent-color) 5%, rgb(245, 244, 244) 90%);
     & .title {
       font-size: calc(var(--input-font-size) * 0.7);
       line-height: 1.4;
       font-weight: 700;
       padding: 2px 0.5em;
       margin-bottom: 0.25em;
-      background: color-mix(in srgb, var(--input-accent-color) 80%, black 40%);
+      background: color-mix(in srgb, var(--input-accent-color) 80%, black 10%);
     }
     & .message {
       display: flex;
@@ -351,8 +359,10 @@
       & .filename {
         text-align: left;
         margin-left: 0.25em;
+        color: var(--input-primary-color);
         & i.icon {
           margin-right: 0.25em;
+          background-color: var(--input-text-color-hover);
         }
       }
     }

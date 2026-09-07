@@ -1456,25 +1456,34 @@ export class FileUploader {
             return;
           }
 
-          // 2. Break string text stream blocks down by structural line segments (supports CRLF / LF)
-          const lines = csvText.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-          if (lines.length === 0) {
-            resolve({ header: [], body: [], footer: null });
-            return;
-          }
-
-          const firstLine = lines[0];
-
-          // 3. Dynamic Delimiter detection engine matching standard comma configurations vs European/Excel semicolon presets
-          const delimiter = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
-
-          // Internal evaluation utility for stripping outer quote wrappers and converting data-types
-          const cleanCell = (cell: string): string | number => {
-            let value = cell.trim();
-            if (value.startsWith('"') && value.endsWith('"')) {
-              value = value.substring(1, value.length - 1).trim();
+          // 2. Ekstrak baris header (rekaman pertama, hormati kutip yang mungkin
+          // berisi baris-baru) untuk deteksi delimiter yang AKURAT.
+          const headerLine = (() => {
+            let inQuotes = false;
+            for (let i = 0; i < csvText.length; i++) {
+              const ch = csvText[i];
+              if (ch === '"') inQuotes = !inQuotes;
+              if (!inQuotes && (ch === '\n' || ch === '\r')) return csvText.slice(0, i);
             }
+            return csvText;
+          })();
 
+          // 3. Dynamic Delimiter detection: hitung koma vs semikolon HANYA di luar
+          // kutip, dan HANYA pada baris header — sel teks boleh mengandung ';' bebas.
+          const countOutsideQuotes = (text: string, target: string): number => {
+            let q = false, count = 0;
+            for (const ch of text) {
+              if (ch === '"') q = !q;
+              else if (!q && ch === target) count++;
+            }
+            return count;
+          };
+          const delimiter = countOutsideQuotes(headerLine, ';') > countOutsideQuotes(headerLine, ',') ? ';' : ',';
+
+          // Internal evaluation utility — setelah parser, kutip luar & ganda sudah
+          // dipecahkan, tinggal rapikan spasi & cast tipe numerik.
+          const cleanCell = (cell: string): string | number => {
+            const value = cell.trim();
             // Force cast plain valid digit fields into native JS number types
             if (value !== "" && !isNaN(Number(value))) {
               return Number(value);
@@ -1482,11 +1491,55 @@ export class FileUploader {
             return value;
           };
 
-          // 4. Transform structural raw segments into pure headers and 2D arrays matrix mapping
-          const headerRow = firstLine.split(delimiter).map(cell => cleanCell(cell));
-          const bodyRows = lines.slice(1).map(line => {
-            return line.split(delimiter).map(cell => cleanCell(cell));
-          });
+          // 4. 🧠 Proper CSV state-machine: memecah rekaman per delimiter DENGAN
+          // menghormati kutip ganda — sel berisi baris-baru embedded (CRLF/LF) dan
+          // delimiter dihitung sebagai SATU sel utuh, tidak dipecah sembarangan.
+          const parseCsvRows = (text: string, separator: string): string[][] => {
+            const rows: string[][] = [];
+            let row: string[] = [];
+            let cell = "";
+            let inQuotes = false;
+            let i = 0;
+            const len = text.length;
+
+            const pushCell = () => { row.push(cell); cell = ""; };
+            const pushRow = () => { pushCell(); if (row.some((c) => c.trim() !== "")) rows.push(row); row = []; };
+
+            while (i < len) {
+              const ch = text[i];
+
+              if (inQuotes) {
+                if (ch === '"') {
+                  // Kutip ganda "" = karakter kutip literal di dalam sel
+                  if (text[i + 1] === '"') { cell += '"'; i += 2; continue; }
+                  inQuotes = false; i++; continue;
+                }
+                // Baris-baru / delimiter di DALAM kutip: biarkan utuh dalam sel
+                cell += ch; i++; continue;
+              }
+
+              if (ch === '"') { inQuotes = true; i++; continue; }
+              if (ch === separator) { pushCell(); i++; continue; }
+              if (ch === '\n' || ch === '\r') {
+                if (ch === '\r' && text[i + 1] === '\n') i++; // lewati CRLF sebagai satu baris
+                pushRow(); i++; continue;
+              }
+              cell += ch; i++;
+            }
+
+            // Flush sisa sel/baris terakhir (bila belum ter-tutup baris-baru)
+            if (cell !== "" || row.length > 0) {
+              pushCell();
+              if (row.some((c) => c.trim() !== "")) rows.push(row);
+            }
+            return rows;
+          };
+
+          const rawRows = parseCsvRows(csvText, delimiter);
+
+          // 5. Transform structural raw segments into pure headers and 2D arrays matrix
+          const headerRow = (rawRows[0] ?? []).map(cell => cleanCell(cell));
+          const bodyRows = rawRows.slice(1).map(row => row.map(cell => cleanCell(cell)));
 
           resolve({
             header: headerRow,
@@ -1499,9 +1552,6 @@ export class FileUploader {
           resolve(toTable(JSON.parse(reader.result as string) as any[]))
         }
       }
-
-
-
 
       reader.onerror = (error) => {
         console.error(`[CSVParser] Critical failure while reading buffer stream from target context:`, error);

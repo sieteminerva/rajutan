@@ -99,6 +99,11 @@
     --input-background-color: transparent;
     --input-picker-background: var(--app-surface-strong);
     --input-popover-background-color: var(--app-surface-strong);
+
+    --table-primary-color: var(--app-primary-color);
+    --table-accent-color: var(--app-accent-color);
+    --table-background-color-darken: color-mix(in srgb, var(--app-primary-color) 10%, rgb(221, 205, 65) 40%);
+    --table-background-color-darken-row: color-mix(in srgb, var(--app-accent-color) 40%, rgb(116, 117, 15) 50%);
   }
 }
 
@@ -132,4 +137,7 @@
   --input-background-color: transparent;
   --input-picker-background: var(--app-surface-strong);
   --input-popover-background-color: var(--app-surface-strong);
+
+  --table-primary-color: var(--app-primary-color);
+  --table-accent-color: var(--app-accent-color);
 }

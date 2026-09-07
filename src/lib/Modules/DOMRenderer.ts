@@ -209,10 +209,7 @@ export class DOMRenderer<
 
       this.mountHandler(currentGlobalKey, currentElement, identity.tree);
 
-      // Phase 3: 🔒 LIFECYCLE MANAGER
-      this.lifecycleManager(currentElement, value, renderFn, builderFn);
-
-      // Phase 4: 🧙‍♂️ CONTENT EVALUATOR
+      // Phase 3: 🧙‍♂️ CONTENT EVALUATOR
       this.contentEvaluator(currentElement, value, renderFn, builderFn, {
         scopeId: context.scopeId,
         parentKey: currentGlobalKey,
@@ -255,6 +252,9 @@ export class DOMRenderer<
         // attachMetadata(currentElement, this.records, identity.tree!.key);
         currentElement.appendChild(subFragment);
       }
+
+      // Phase 4: 🔒 LIFECYCLE MANAGER
+      this.lifecycleManager(currentElement, value, renderFn, builderFn);
 
       // Jika bukan anak hierarki (alias root container), tempelkan ke parentNode utama
       parentNode.appendChild(currentElement);
