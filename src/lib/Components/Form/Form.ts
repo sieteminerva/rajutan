@@ -195,7 +195,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
         // 🪜 MULTISTEP: group pembawa langkah DITAHAN — placeholder <template>
         // ditanam di posisinya; fieldset sungguhan baru dibangun saat tombol
         // Next/Back menekannya (lihat FormMultistepHandler._mount).
-        if (_config.multistep) {
+        if (this.config.multistep) {
           this.#multistep?.hold(form, Number(index), input);
           continue;
         }
@@ -670,12 +670,28 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
       //   files = await FileUploader.getFiles(form.id);
       // }
       if (IdAddress && IdAddress.detail) {
+        /**
+         *  // example output `IdAddress.detail`
+         * {
+         *    "propinsi_id": 2,
+         *    "propinsi_name": "SUMATERA UTARA",
+         *    "kota_id": 28,
+         *    "kota_name": "TAPANULI UTARA",
+         *    "kecamatan_id": 358,
+         *    "kecamatan_name": "TARUTUNG",
+         *    "kelurahan_id": 8188,
+         *    "kelurahan_name": "HUTATORUAN III",
+         *    "kodepos_id": 8194,
+         *    "kodepos_name": 22414
+         * }
+         */
         // console.log("detail:", IdAddress.detail)
         Object.keys(IdAddress.detail).forEach((inputKey) => {
           if (inputKey.endsWith("_name")) {
             const outputKey = inputKey.replace("_name", "");
-            if (outputKey in data) {
-              data[outputKey] = String((IdAddress.detail as any)[inputKey]).toLowerCase();
+            const addressKey = "address-" + outputKey;
+            if (addressKey in data) {
+              data[addressKey] = String((IdAddress.detail as any)[inputKey]).toLowerCase();
             }
           }
         });
