@@ -184,7 +184,7 @@ export class ComponentRegistry {
             // (normalizeVitePath). Tanpa ini, build() menganggap style belum siap →
             // re-fetch + dobel-adoption sheet + jeda hold yang sia-sia.
             this._stylesReady.add(normCss);
-            if (DEV) console.info(`[ComponentRegistry] 🎨 stylesheet injected: ${normCss} (${rawCss.length} chars)`);
+            // if (DEV) console.info(`[ComponentRegistry] 🎨 stylesheet injected: ${normCss} (${rawCss.length} chars)`);
           } else if (DEV) {
             console.warn(`[ComponentRegistry] ⚠️ CSS loader returned non-string for ${normCss} (got: ${typeof rawCss}) — stylesheet skipped`);
           }
@@ -437,7 +437,7 @@ export class ComponentRegistry {
     this._injectedStyleTags.add(styleId);
 
     if (DEV) {
-      console.log(`[ComponentRegistry] 📦 <style id="${styleId}"> injected in <head> (${rawCss.length} chars)`);
+      // console.log(`[ComponentRegistry] 📦 <style id="${styleId}"> injected in <head> (${rawCss.length} chars)`);
     }
   }
 

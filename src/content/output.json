@@ -1,0 +1,78 @@
+{
+  "status": "success",
+  "meta": {
+    "currentPage": 1,
+    "perPage": 5,
+    "totalItems": 25,
+    "totalPages": 5,
+    "links": {
+      "first": "https://google.com",
+      "prev": null,
+      "self": "https://google.com",
+      "next": "https://google.com",
+      "last": "https://google.com"
+    }
+  },
+  "data": [
+    {
+      "uid": "art-001",
+      "slug": "tren-fashion-apparel-2026",
+      "title": "Tren Fashion Apparel Terkini di Tahun 2026",
+      "summary": "Menjelajahi revolusi gaya sandang minimalis-modern, perpaduan warna aksen neon, dan kebangkitan pakaian kustom pintar.",
+      "thumbnail": "https://placehold.co/300x300/4f3274/ffffff?text=Tren Fashion",
+      "largeCover": "https://placehold.co/600x600/4f3274/ffffff?text=Tren Fashion",
+      "author": "Garda internal Team",
+      "date": "24 Juli 2026",
+      "builder": "article",
+      "body": "<p>Tahun 2026 membawa angin segar bagi industri apparel global. Desain kaku purba resmi ditinggalkan oleh para perancang busana muda, beralih murni memeluk estetika minimalis dengan potongan pola geometri yang presisi.</p><p>Kombinasi kain berteknologi tinggi yang ringan namun kokoh, dipadukan dengan sentuhan warna aksen cerah di level detail, menjadi pilihan utama para eksekutif muda saat menjelajahi aktivitas harian mereka di ibu kota.</p>"
+    },
+    {
+      "uid": "art-002",
+      "slug": "rahasia-desain-kaos-retina-performa",
+      "title": "Rahasia Desain Kaos dengan Performa Visual 120fps",
+      "summary": "Bagaimana memanfaatkan trik bayangan semi-transparan (multiply shadow blend) untuk menciptakan visual produk e-commerce yang ultra-fluid.",
+      "thumbnail": "https://placehold.co/300x300/607d31/ffffff?text=Rahasia Desain Kaos",
+      "largeCover": "https://placehold.co/600x600/607d31/ffffff?text=Rahasia Desain Kaos",
+      "author": "Master Architect",
+      "date": "22 Juli 2026",
+      "builder": "article",
+      "body": "<p>Menampilkan visual produk pakaian di web sering kali terkendala ukuran bita gambar yang kembung. Melalui penerapan teknik mutakhir <i>multiply blend mode</i>, satu file bayangan hitam transparan kini legal dipakai bersama belasan varian warna latar belakang.</p><p>Hasilnya? Ukuran request HTTP terpangkas drastis, memori RAM browser tetap steril, dan transisi visual berjalan sehalus sutra di angka kecepatan penuh!</p>"
+    },
+    {
+      "uid": "art-003",
+      "slug": "arsitektur-headless-google-sheets-microservice",
+      "title": "Membangun Headless Microservice Berbasis Google Sheets",
+      "summary": "Panduan taktis menguras data spreadsheet menggunakan Google Apps Script REST API untuk platform mandiri satu pintu.",
+      "thumbnail": "https://placehold.co/300x300/25b298/ffffff?text=Arsitektur Headless",
+      "largeCover": "https://placehold.co/600x600/25b298/ffffff?text=Arsitektur Headless",
+      "author": "Systems Engineer",
+      "date": "18 Juli 2026",
+      "builder": "article",
+      "body": "<p>Deploy infrastruktur server database sering kali mahal dan melelahkan bagi tim kecil. Memanfaatkan Google Sheets sebagai database inti dan Apps Script sebagai gerbang RESTful API adalah solusi kedaulatan platform yang sangat matang.</p><p>Dengan penataan skema HATEOAS yang teratur di level meta links, frontend Anda mampu mengendalikan pergeseran halaman data secara otonom tanpa dependensi kaku luar.</p>"
+    },
+    {
+      "uid": "art-004",
+      "slug": "manajemen-ram-browser-anti-leak",
+      "title": "Manajemen Memori RAM Browser Bebas Kebocoran",
+      "summary": "Taktik mengunci rahim memori private field Map dan melikuidasi elemen usang dari live DOM tree secara tertib.",
+      "thumbnail": "https://placehold.co/300x300/d6ac23/ffffff?text=Manajemen Ram",
+      "largeCover": "https://placehold.co/600x600/d6ac23/ffffff?text=Manajemen Ram",
+      "author": "Master Architect",
+      "date": "15 Juli 2026",
+      "builder": "article",
+      "body": "<p>Aplikasi Single Page Application (SPA) sangat rawan mengalami kembung RAM jika sisa elemen hantu tidak dibersihkan saat pindah rute. Penerapan katup <code>this.remove(...keys)</code> satu pintu terbukti melumat habis detached DOM elements secara tuntas sebersih salju.</p>"
+    },
+    {
+      "uid": "art-005",
+      "slug": "panduan-trip-kepulauan-seribu-privat",
+      "title": "Panduan Lengkap Menyusun Private Trip Keluarga",
+      "summary": "Langkah menyusun itinerary pelesiran laut yang tenang, fasilitas nyaman, dan dukungan koordinasi tim lokal terpadu.",
+      "thumbnail": "https://placehold.co/300x300/fe2626/ffffff?text=Panduan Trip",
+      "largeCover": "https://placehold.co/600x600/fe2626/ffffff?text=Panduan Trip",
+      "author": "Travel Consultant",
+      "date": "10 Juli 2026",
+      "builder": "article",
+      "body": "<p>Liburan keluarga membutuhkan kepastian kenyamanan. Melalui integrasi modul form kustom hierarki wilayah Indonesia yang reaktif, pengumpulan data domisili peserta trip dapat terdokumentasi secara sangat bersih, rapi, dan tervalidasi otomatis sejak awal.</p>"
+    }
+  ]
+}

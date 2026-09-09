@@ -3,7 +3,9 @@ import { ComponentRegistry } from './lib/Modules/ComponentRegistry';
 import { DOMRenderer } from './lib/Modules/DOMRenderer';
 import { AnimationsService } from './lib/Modules/Animations/Animations';
 import { HashRouter, type iRouteState } from './lib/Modules/HashRouter';
+import { EventEmitter } from './lib/Modules/EventEmitter';
 import { HomepageContent } from './content/home';
+import { BlogPageContent } from './content/blog';
 import { BuildPageContent } from './content/wizard';
 import { ResultPageContent } from './content/result';
 
@@ -13,7 +15,6 @@ import './lib/Styles/components.css';
 import './lib/Styles/layout.css';
 import './lib/Styles/icon.css';
 import './style.css';
-import { EventEmitter } from './lib/Modules/EventEmitter';
 
 // 🔐 Daftarkan Service Worker supaya id_token disimpan di variabel SW.
 // BASE_URL mengikuti base vite ("/rajutan/") agar cocok dengan scope GitHub Pages.
@@ -37,6 +38,7 @@ function pageContentFor(route: string): iNodeContent {
   switch (key) {
     case 'build': return BuildPageContent;
     case 'result': return ResultPageContent;
+    case 'blog': return BlogPageContent;
     default: return HomepageContent;
   }
 }
@@ -67,7 +69,7 @@ function bootRouting(): void {
   const router = new HashRouter(
     "home",
     "default",
-    ["home", "build", "result"],
+    ["home", "build", "result", "blog"],
     (state: iRouteState) => renderPage(state.route)
   );
 
@@ -102,7 +104,16 @@ async function start(container: HTMLElement) {
       };
     })
 
-  await components.preloadComponents(["form", "table"], [])
+    .register("article", (data: any) => {
+      return {
+        path: "lib/Components/Article/Article.ts",
+        stylesheet: "lib/Components/Article/Article.css", // alternative style definition also didn't loaded
+        config: data?.config,
+        schema: data?.schema !== undefined ? data.schema : (data?.content !== undefined ? data.content : data),
+      };
+    })
+
+  await components.preloadComponents(["form", "table", "article"], [])
 
   renderer = new DOMRenderer();
   renderFn = (node) => renderer.render(node, undefined, undefined);

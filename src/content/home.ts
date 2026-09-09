@@ -220,6 +220,7 @@ export const HomepageContent: iNodeContent =
             "a.item#how-link": { attrs: { href: "#how" }, content: "Cara Kerja", onCreated: (el: HTMLElement) => el.addEventListener("click", navScroll("#how")) },
             "a.item#features-link": { attrs: { href: "#features" }, content: "Fitur", onCreated: (el: HTMLElement) => el.addEventListener("click", navScroll("#features")) },
             "a.item#faq-link": { attrs: { href: "#faq" }, content: "Tanya Jawab", onCreated: (el: HTMLElement) => el.addEventListener("click", navScroll("#faq")) },
+            "a.item#blog-link": { attrs: { href: "#blog" }, content: "Artikel", onCreated: (el: HTMLElement) => el.addEventListener("click", (_e: Event) => navigate("#blog")) },
           },
           "button.button.primary#start-link": {
             content: "Mulai",

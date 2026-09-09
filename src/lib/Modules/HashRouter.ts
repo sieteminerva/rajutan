@@ -183,7 +183,10 @@ export class HashRouter {
   }
 
   private _normalizeTheme(theme: string | null | undefined): string {
-    return (theme || "").trim().replace(/^#/, "");
+    // Tema tidak boleh mengandung "/" — nilai "default/panduan…/slug" adalah
+    // hasil polusi dari slug yang pernah menempel di query theme. Potong di
+    // "/" pertama agar localStorage lama yang terpolusi ikut ter-süheal.
+    return (theme || "").trim().replace(/^#/, "").split("/")[0];
   }
 
   private _buildHash(state: iRouteState): string {

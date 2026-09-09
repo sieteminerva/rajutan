@@ -1,0 +1,570 @@
+/* ==========================================================================
+   ARTICLE MODULE
+   Terinspirasi pola Form.css: satu blok variabel --article-* di akar,
+   warna turunan via color-mix dari accent, lalu semua slot memakainya.
+   ========================================================================== */
+section:is(.article) {
+  /* --- warna dasar (selaras accent darkgoldenrod milik form) --- */
+  --article-primary-color: darkgoldenrod;
+  --article-accent-color: rgba(184, 135, 11, 0.384);
+
+  --article-bg: #ffffff;
+  --article-surface: color-mix(in srgb, var(--article-accent-color) 14%, #ffffff);
+  --article-surface-strong: color-mix(in srgb, var(--article-accent-color) 24%, #ffffff);
+  --article-surface-hover: color-mix(in srgb, var(--article-accent-color) 32%, #ffffff);
+  --article-border: color-mix(in srgb, var(--article-primary-color) 18%, #e4e7ec);
+  --article-border-strong: color-mix(in srgb, var(--article-primary-color) 34%, #b9c0ca);
+  --article-divider: color-mix(in srgb, var(--article-primary-color) 12%, #eef1f5);
+
+  --article-text: #1d2733;
+  --article-text-soft: #445060;
+  --article-muted: #6b7686;
+  --article-inverse: #ffffff;
+
+  /* --- ukuran & bentuk --- */
+  --article-radius: 0.75rem;
+  --article-radius-lg: 1rem;
+  --article-radius-pill: 999px;
+  --article-gap: 1.5rem;
+  --article-gap-lg: 2.25rem;
+  --article-sidebar-width: minmax(230px, 300px);
+  --article-content-max: 1280px;
+  --article-detail-max: 740px;
+
+  /* --- bayangan & transisi --- */
+  --article-shadow-sm: 0 1px 2px rgb(29 39 51 / 0.05), 0 8px 20px rgb(29 39 51 / 0.05);
+  --article-shadow-hover: 0 12px 26px rgb(29 39 51 / 0.12);
+  --article-ease: 0.18s ease;
+  --article-ease-spring: 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+
+  position: static;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  align-items: start;
+  gap: var(--article-gap-lg);
+  max-width: var(--article-content-max);
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+
+  /* ====================================================================
+     KONTROL BAR (back / pagination / filter)
+     ==================================================================== */
+  & .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    padding: 0.6rem 0.9rem;
+    background: color-mix(in srgb, var(--article-surface) 80%, #ffffff);
+    border: 1px solid var(--article-border);
+    border-radius: var(--article-radius);
+    box-shadow: var(--article-shadow-sm);
+
+    & button.back,
+    & button.next {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.5rem 1.05rem;
+      font: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--article-text);
+      background: var(--article-bg);
+      border: 1px solid var(--article-border);
+      border-radius: var(--article-radius-pill);
+      cursor: pointer;
+      transition:
+        background var(--article-ease),
+        border-color var(--article-ease),
+        color var(--article-ease);
+
+      &:hover {
+        background: var(--article-surface-hover);
+        border-color: var(--article-border-strong);
+        color: var(--article-primary-color);
+      }
+      &:active {
+        transform: translateY(1px);
+      }
+
+      & i.icon.arrow {
+        width: 0.58em;
+        height: 0.58em;
+        border-left: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        display: inline-block;
+      }
+    }
+
+    & > .pagination {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+
+      & > .item {
+        min-width: 2.5rem;
+        padding: 0.42rem 0.85rem;
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--article-text-soft);
+        background: var(--article-bg);
+        border: 1px solid var(--article-border);
+        border-radius: var(--article-radius-pill);
+        cursor: pointer;
+        transition:
+          background var(--article-ease),
+          color var(--article-ease),
+          border-color var(--article-ease),
+          transform var(--article-ease);
+
+        &:hover {
+          background: var(--article-surface-strong);
+          border-color: var(--article-border-strong);
+          transform: translateY(-1px);
+        }
+
+        &.active-page {
+          color: var(--article-inverse);
+          background: var(--article-primary-color);
+          border-color: var(--article-primary-color);
+          cursor: default;
+          transform: none;
+        }
+      }
+    }
+
+    & > .filter {
+      width: 100%;
+      margin: 0 0 0.25rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--article-muted);
+    }
+  }
+
+  /* ====================================================================
+     ASIDE (sidebar rekomendasi, sticky, placement via position attr)
+     ==================================================================== */
+  /* --- PLACEMENT: aside[position] menentukan bentuk kolom root ---
+     Kolom utama (controls/list/detail) hanya diberi grid-column;
+     barisnya di-auto-place supaya menumpuk rapi, TIDAK dipaksa ke row 1. */
+  &:has(> aside.aside[position="right"]) {
+    grid-template-columns: minmax(0, 1fr) var(--article-sidebar-width);
+
+    & > .controls,
+    & > .row[data-slot="list"],
+    & > article.detail {
+      grid-column: 1;
+    }
+
+    & > aside.aside {
+      grid-column: 2;
+      grid-row: 1 / span 10;
+    }
+  }
+
+  &:has(> aside.aside[position="left"]) {
+    grid-template-columns: var(--article-sidebar-width) minmax(0, 1fr);
+
+    & > .controls,
+    & > .row[data-slot="list"],
+    & > article.detail {
+      grid-column: 2;
+    }
+
+    & > aside.aside {
+      grid-column: 1;
+      grid-row: 1 / span 10;
+    }
+  }
+
+  /* Tanpa aside → semua full-width otomatis (auto-place, 1 kolom). */
+  &:not(:has(> aside.aside)) {
+    & > .controls,
+    & > .row[data-slot="list"],
+    & > article.detail,
+    & > aside.aside {
+      grid-column: 1;
+    }
+  }
+
+  & aside.aside {
+    position: sticky;
+    top: 1.25rem;
+    align-self: start;
+    max-height: calc(100vh - 2.5rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    background: var(--article-surface);
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--article-primary-color) var(--article-divider);
+    direction: rtl;
+
+    & > .block.recommendations {
+      display: block;
+      direction: ltr;
+      & > .item {
+        /* Fixed the 'and' typo to '&' here as well */
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        width: 100%;
+        padding: 0.5em 0.5em;
+        /* height: 80px; */
+        background: var(--article-bg);
+        border: 1px solid var(--article-border);
+        cursor: pointer;
+        transition:
+          transform var(--article-ease),
+          box-shadow var(--article-ease),
+          border-color var(--article-ease);
+
+        &:not(:first-child) {
+          border-top: none;
+        }
+
+        & figure {
+          display: block;
+          width: 50px;
+          margin: 0 0.5em;
+          overflow: hidden;
+          flex-shrink: 0; /* FIX: Prevents the image container from squishing to 0px */
+          aspect-ratio: 1 / 1;
+          & img {
+            position: relative;
+            display: block;
+            height: 100%;
+            width: 100%;
+            object-fit: cover;
+          }
+        }
+
+        & > header {
+          display: flex;
+          flex-direction: column; /* FIX: Stacks your h4 and span vertically inside the header */
+          flex-grow: 1; /* Allows text area to safely fill the remaining width */
+          padding: 5px 1em 5px 0.5em;
+          justify-content: center;
+          align-items: flex-start;
+          text-align: left;
+          overflow: hidden;
+          & h4 {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+            margin: 0;
+            font-size: 0.95rem;
+            line-height: 1.35;
+            color: var(--article-text);
+            width: 100%;
+          }
+
+          & span.meta {
+            font-size: 0.78rem;
+            color: var(--article-muted);
+          }
+        }
+      }
+    }
+  }
+
+  /* ====================================================================
+     LIST GRID (kartu artikel)
+     ==================================================================== */
+  & .row[data-display="list"] {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--article-gap);
+
+    & > article.item {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--article-bg);
+      border: 1px solid var(--article-border);
+      border-radius: var(--article-radius-lg);
+      box-shadow: var(--article-shadow-sm);
+      cursor: pointer;
+      transition:
+        transform var(--article-ease-spring),
+        box-shadow var(--article-ease-spring),
+        border-color var(--article-ease);
+      text-align: left;
+      &:hover {
+        transform: translateY(-4px);
+        border-color: var(--article-border-strong);
+        box-shadow: var(--article-shadow-hover);
+      }
+
+      & > figure.thumbnail {
+        margin: 0;
+        aspect-ratio: 2 / 1.5;
+        overflow: hidden;
+        background: var(--article-surface);
+
+        & img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+          transition: transform 0.32s ease;
+        }
+      }
+
+      &:hover > figure.thumbnail > img {
+        transform: scale(1.05);
+      }
+
+      & h3.title {
+        text-wrap: auto;
+        margin: 1.05rem 1.15rem 0.5rem;
+        font-size: 1.05rem;
+        line-height: 1.35;
+        color: var(--article-text);
+      }
+
+      & p.caption {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        margin: 0 1.15rem 1.15rem;
+        font-size: 0.9rem;
+        line-height: 1.55;
+        color: var(--article-text-soft);
+      }
+
+      & .meta {
+        margin: auto 1.15rem 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px dashed var(--article-divider);
+        font-size: 0.8rem;
+        color: var(--article-muted);
+
+        & .meta-divider {
+          margin: 0 0.45rem;
+          color: var(--article-primary-color);
+        }
+      }
+    }
+  }
+
+  & .row[data-display="card"] {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--article-gap);
+
+    & > article.item {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--article-bg);
+      border: 1px solid var(--article-border);
+      border-radius: var(--article-radius-lg);
+      box-shadow: var(--article-shadow-sm);
+      cursor: pointer;
+      transition:
+        transform var(--article-ease-spring),
+        box-shadow var(--article-ease-spring),
+        border-color var(--article-ease);
+      &:hover {
+        transform: translateY(-4px);
+        border-color: var(--article-border-strong);
+        box-shadow: var(--article-shadow-hover);
+      }
+
+      & > figure.thumbnail {
+        margin: 0;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        background: var(--article-surface);
+
+        & img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+          transition: transform 0.32s ease;
+        }
+      }
+
+      &:hover > figure.thumbnail > img {
+        transform: scale(1.05);
+      }
+
+      & h3.title {
+        margin: 1.05rem 1.15rem 0.5rem;
+        font-size: 1.05rem;
+        line-height: 1.35;
+        color: var(--article-text);
+      }
+
+      & p.caption {
+        margin: 0 1.15rem 0.75rem;
+        font-size: 0.9rem;
+        line-height: 1.55;
+        color: var(--article-text-soft);
+      }
+
+      & .meta {
+        margin: auto 1.15rem 1.05rem;
+        padding-top: 0.75rem;
+        border-top: 1px dashed var(--article-divider);
+        font-size: 0.8rem;
+        color: var(--article-muted);
+
+        & .meta-divider {
+          margin: 0 0.45rem;
+          color: var(--article-primary-color);
+        }
+      }
+    }
+  }
+
+  /* ====================================================================
+     DETAIL VIEW (artikel tunggal)
+     ==================================================================== */
+  & article.detail {
+    max-width: var(--article-detail-max);
+    width: 100%;
+    margin: 0 auto;
+    animation: articleDetailFadeIn 0.35s ease both;
+
+    & > figure.cover {
+      margin: 0 0 1.6rem;
+      aspect-ratio: 21 / 9;
+      overflow: hidden;
+      border-radius: var(--article-radius-lg);
+      background: var(--article-surface);
+      box-shadow: var(--article-shadow-sm);
+
+      & img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+    }
+
+    & > header.header {
+      margin-bottom: 1.6rem;
+      padding-bottom: 1.2rem;
+      border-bottom: 1px solid var(--article-divider);
+
+      & h1.title {
+        margin: 0 0 0.6rem;
+        font-size: clamp(1.6rem, 3.5vw, 2.15rem);
+        line-height: 1.22;
+        color: var(--article-text);
+      }
+
+      & .meta {
+        font-size: 0.85rem;
+        color: var(--article-muted);
+
+        & .divider {
+          margin: 0 0.5rem;
+          color: var(--article-primary-color);
+        }
+      }
+    }
+
+    & .body {
+      font-size: 1.02rem;
+      line-height: 1.8;
+      color: var(--article-text-soft);
+      text-align: left;
+      & p {
+        margin: 0 0 1.15rem;
+      }
+      & img {
+        max-width: 100%;
+        border-radius: 0.6rem;
+      }
+      & a {
+        color: var(--article-primary-color);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+
+        &:hover {
+          color: var(--article-border-strong);
+        }
+      }
+    }
+  }
+}
+
+@keyframes articleDetailFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+@media (max-width: 900px) {
+  section:is(.article) {
+    &:has(> aside.aside) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    &:has(> aside.aside) > aside.aside,
+    &:has(> aside.aside[position="left"]) > .controls,
+    &:has(> aside.aside[position="left"]) > .row[data-slot="list"],
+    &:has(> aside.aside[position="left"]) > article.detail,
+    &:has(> aside.aside[position="right"]) > .controls,
+    &:has(> aside.aside[position="right"]) > .row[data-slot="list"],
+    &:has(> aside.aside[position="right"]) > article.detail {
+      grid-column: 1;
+    }
+
+    & > aside.aside {
+      position: static;
+      top: auto;
+      max-height: none;
+      overflow: visible;
+      grid-row: auto;
+
+      & > .block.recommendations {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      }
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  section:is(.article) {
+    gap: var(--article-gap);
+    padding: 1rem 0.75rem;
+
+    & .row[data-slot="list"] {
+      grid-template-columns: 1fr;
+    }
+
+    & .controls {
+      flex-direction: column;
+      align-items: stretch;
+      & > .pagination {
+        justify-content: flex-start;
+      }
+    }
+  }
+}
