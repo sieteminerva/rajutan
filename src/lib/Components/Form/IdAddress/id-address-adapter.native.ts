@@ -26,7 +26,7 @@ export const IdAddressAdapterNative: IAddressAdapter = {
     const level = el.dataset.level;
     const isAddressValue = el instanceof HTMLInputElement && el.type === "hidden" && !!level;
     const visibleInput = isAddressValue
-      ? el.parentElement?.querySelector("input.dropdown") as HTMLInputElement | null
+      ? el.parentElement?.querySelector(".dropdown input") as HTMLInputElement | null
       : el as HTMLInputElement;
     const { options = [], state = "complete", onLevelChange } = args;
     // console.log(`run [%s] > setOptions : <${state}>`, level, options);
@@ -39,7 +39,7 @@ export const IdAddressAdapterNative: IAddressAdapter = {
       el.add(placeholderEl, 1);
     }
 
-    const isCustomDropdown = isAddressValue || (el instanceof HTMLInputElement && el.classList.contains("dropdown"));
+    const isCustomDropdown = isAddressValue || (el instanceof HTMLInputElement && el.closest(".dropdown") !== null);
 
     if (isCustomDropdown) {
       const searchInput = visibleInput || el as HTMLInputElement;
@@ -93,15 +93,15 @@ export const IdAddressAdapterNative: IAddressAdapter = {
     // const level = el.dataset.level;
     // console.log("run %s > setSelectedOption", level, value, typeof value);
     if (el.classList.contains("error")) el.classList.remove("error");
-    if (el instanceof HTMLInputElement && (el.type === "hidden" || el.classList.contains("dropdown"))) {
+    if (el instanceof HTMLInputElement && (el.type === "hidden" || el.closest(".dropdown") !== null)) {
       const visibleInput = el.type === "hidden"
-        ? el.parentElement?.querySelector("input.dropdown") as HTMLInputElement | null
+        ? el.parentElement?.querySelector(".dropdown input") as HTMLInputElement | null
         : el;
       const listId = visibleInput?.getAttribute("list");
       const option = listId ? document.getElementById(listId)?.querySelector(`option[data-id="${CSS.escape(String(value))}"]`) : null;
       if (visibleInput) visibleInput.value = option?.getAttribute("value") || String(value);
       if (el.type !== "hidden") {
-        const hidden = el.parentElement?.querySelector("input[type='hidden']") as HTMLInputElement | null;
+        const hidden = el.closest(".dropdown")?.querySelector("input[type='hidden']") as HTMLInputElement | null;
         if (hidden) hidden.value = String(value);
       } else {
         el.value = String(value);
@@ -119,7 +119,7 @@ export const IdAddressAdapterNative: IAddressAdapter = {
   onLevelChange(el: HTMLSelectElement | HTMLInputElement) {
     const level = el.dataset.level;
 
-    if (el instanceof HTMLInputElement && (el.type === "hidden" || el.classList.contains("dropdown"))) {
+    if (el instanceof HTMLInputElement && (el.type === "hidden" || el.closest(".dropdown") !== null)) {
       return;
     }
 
@@ -165,9 +165,9 @@ export const IdAddressAdapterNative: IAddressAdapter = {
   },
 
   clear(el: HTMLSelectElement | HTMLInputElement) {
-    if (el instanceof HTMLInputElement && (el.type === "hidden" || el.classList.contains("dropdown"))) {
+    if (el instanceof HTMLInputElement && (el.type === "hidden" || el.closest(".dropdown") !== null)) {
       const visibleInput = el.type === "hidden"
-        ? el.parentElement?.querySelector("input.dropdown") as HTMLInputElement | null
+        ? el.parentElement?.querySelector(".dropdown input") as HTMLInputElement | null
         : el;
       if (visibleInput) visibleInput.value = "";
       if (el.type === "hidden") el.value = "";

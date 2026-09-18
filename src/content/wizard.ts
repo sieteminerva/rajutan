@@ -3,8 +3,8 @@
 // ================================================================
 
 import type { iNodeContent } from "../lib/interface";
-import { buildStore, mockBuildResult, navigate } from "../lib/Modules/BuildStore";
-import type { BuildApiResponse } from "../lib/Modules/BuildStore";
+import { buildStore, mockBuildResult, navigate } from "../lib/Components/BaseAdapters/BuildStore";
+import type { BuildApiResponse } from "../lib/Components/BaseAdapters/BuildStore";
 
 function createPopover(content: { info: string, placeholder: string }) {
   const popover = document.createElement("div");
@@ -139,7 +139,6 @@ function createDownloadLink(filename: string = "address.csv") {
   return downloadTemplateLink;
 
 }
-
 
 const DetailSetShop = {
   id: "ecommerce-detail-set",
@@ -400,18 +399,177 @@ const ConfirmationSet = {
     }
   ]
 }
+
+let isEditing = false;
+// @ts-ignore
+const TestSet = {
+  id: "test-set",
+  group: [
+    {
+      type: "text",
+      id: "test-1",
+      title: "Test Text",
+      placeholder: "Isi apa aja",
+      config: {
+        actions: [
+          {
+            type: "copy",
+            label: "copy",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! COPY", payload)
+            }
+          },
+          {
+            type: "delete",
+            label: "delete",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! delete", payload)
+            }
+          },
+          {
+            type: "add",
+            label: "new",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! ADD", payload)
+            }
+          },
+          {
+            type: "edit",
+            label: "edit",
+            onClick: (_e: Event, payload: any) => {
+              isEditing = !isEditing;
+              console.log("action!! EDIT", `isEditing: ${isEditing}`, payload)
+            }
+          }
+        ]
+      }
+    },
+    {
+      type: "select",
+      id: "test-2",
+      title: "Test Text",
+      placeholder: "Pilih mana saja",
+      config: {
+        options: [
+          "A", "B", "C", "D"
+        ],
+        actions: [
+          {
+            type: "copy",
+            label: "",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! COPY", payload)
+            }
+          },
+          {
+            type: "delete",
+            label: "",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! delete", payload)
+            }
+          },
+          {
+            type: "add",
+            label: "",
+            onClick: (_e: Event, payload: any) => {
+              console.log("action!! ADD", payload)
+            }
+          },
+          {
+            type: "edit",
+            label: "edit",
+            onClick: (_e: Event, payload: any) => {
+              isEditing = !isEditing;
+              console.log("action!! EDIT", `isEditing: ${isEditing}`, payload)
+            }
+          }
+        ]
+      }
+    },
+    // ══ Test bed: Dropdown mode select (Semantic-UI style) ──────────────
+    {
+      type: "dropdown",
+      id: "test-dropdown-single",
+      title: "Satu pilihan (style=select)",
+      placeholder: "Ketik atau pilih satu...",
+      config: {
+        style: "select",
+        min: 1,
+        max: 6,
+        options: [
+          { value: "jakarta", label: "Jakarta" },
+          { value: "bandung", label: "Bandung" },
+          { value: "surabaya", label: "Surabaya" },
+          { value: "yogyakarta", label: "Yogyakarta" },
+          { value: "bali", label: "Bali" },
+          { value: "makassar", label: "Makassar" }
+        ],
+        onSelect: (value: string, id: string | null) => {
+          console.log("[Dropdown single] onSelect", { value, id });
+        }
+      }
+    },
+    {
+      type: "dropdown",
+      id: "test-dropdown-multi",
+      title: "Banyak pilihan (style=select + isMultiple)",
+      placeholder: "Ketik lalu pilih banyak...",
+      config: {
+        style: "select",
+        isMultiple: true,
+        min: 1,
+        max: 15,
+        options: [
+          "Kopi",
+          "Teh",
+          "Jus Alpukat",
+          "Kue Lapis",
+          "Klepon",
+          "Wajik",
+          "Sekoteng",
+          "Semar Mendem",
+          "Jenang",
+          "Nasi Liwet",
+          "Tengkleng"
+        ],
+        onMultiChange: (items: any[]) => {
+          console.log("[Dropdown multi] onMultiChange", items);
+        }
+      }
+    },
+    {
+      type: "checkbox",
+      id: "confirmation",
+      // condition: { field: "kodepos", filled: true },
+      title: "Saya setuju dan bertanggung jawab sepenuhnya atas konten tersebut",
+      position: "left",
+      config: {
+        selectors: {
+          "@field": {
+            tagName: "div",
+            className: "field",
+            attrs: { "animation": "fade-in", "animation-chain": "true", "animeted-once": "true" }
+          }
+        },
+        style: "toggle",
+
+      }
+    }
+  ]
+}
 const formConfig = {
   id: "wizardo",
   multistep: true,
   cascading: true, // 🌊 setiap input dirantai condition ke input sebelumnya
   autoDisableNextStep: true,
-  selectors: {
-    "@form>group": { tagName: "fieldset", className: "inline-style" },
-  },
+  // className: "inline",
+  // selectors: {
+  //   "@form>group": { tagName: "fieldset", className: "inline-style" },
+  // },
   // submitButton: false,
 };
 const formContent = [
-  // TestSet,
+  TestSet,
   IntroSet,
   DetailSetShop,
   ContactSet,
@@ -423,6 +581,7 @@ const wizard = {
   config: formConfig,
   schema: formContent
 }
+
 function mountWizard(container: HTMLElement, builderFn: any): void {
   const form = builderFn("form", wizard);
   if (!form) return;

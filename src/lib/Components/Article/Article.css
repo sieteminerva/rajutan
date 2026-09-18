@@ -62,6 +62,7 @@ section:is(.article) {
     border-radius: var(--article-radius);
     box-shadow: var(--article-shadow-sm);
 
+    & button.view,
     & button.back,
     & button.next {
       display: inline-flex;
@@ -215,6 +216,7 @@ section:is(.article) {
       display: block;
       direction: ltr;
       & > .item {
+        text-decoration: none;
         /* Fixed the 'and' typo to '&' here as well */
         display: flex;
         flex-direction: row;
@@ -259,10 +261,12 @@ section:is(.article) {
           align-items: flex-start;
           text-align: left;
           overflow: hidden;
-          & h4 {
+          & h4,
+          & .title {
             display: -webkit-box;
             -webkit-box-orient: vertical;
             -webkit-line-clamp: 2;
+            line-clamp: 2;
             overflow: hidden;
             margin: 0;
             font-size: 0.95rem;
@@ -271,7 +275,7 @@ section:is(.article) {
             width: 100%;
           }
 
-          & span.meta {
+          & .meta {
             font-size: 0.78rem;
             color: var(--article-muted);
           }
@@ -283,7 +287,7 @@ section:is(.article) {
   /* ====================================================================
      LIST GRID (kartu artikel)
      ==================================================================== */
-  & .row[data-display="list"] {
+  & .row[data-display="card"] {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: var(--article-gap);
@@ -339,6 +343,7 @@ section:is(.article) {
         display: -webkit-box;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         overflow: hidden;
         margin: 0 1.15rem 1.15rem;
         font-size: 0.9rem;
@@ -361,7 +366,7 @@ section:is(.article) {
     }
   }
 
-  & .row[data-display="card"] {
+  & .row[data-display="list"] {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: var(--article-gap);

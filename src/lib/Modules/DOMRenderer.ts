@@ -1,6 +1,7 @@
 
 import type { DefaultSelectors, iBuilderRegistry, iNodeContent, iNodeRecordItem } from "../interface";
 import { ensureMetadataIdentity, setMetadata } from "../Utility/Metadata";
+import { applyAttrDictionary, applyAttributeList } from "../Utility/AttributeUtils";
 
 type BuildContext = {
   scopeId: string;
@@ -120,7 +121,6 @@ export class DOMRenderer<
     } else {
       rootElement = document.createElement('div');
       rootElement.appendChild(fragment);
-      rootElement = (rootElement.firstElementChild as HTMLElement) || rootElement;
     }
 
     setMetadata(rootElement, this.records, "");
@@ -425,6 +425,7 @@ export class DOMRenderer<
 
   /**
    * Phase 2: Stamps IDs, classNames list, and handles custom inline data attributes dictionary.
+   * Pair-stamping delegated to Utility/AttributeUtils.
    */
   private attributeProcessor(el: HTMLElement, value: any, id: string | undefined, classNames: string[], parsedAttrs: Record<string, string>): void {
     if (id && !el.id) el.id = id;
@@ -435,35 +436,12 @@ export class DOMRenderer<
       el.className = Array.from(combinedClasses).join(' ');
     }
 
-    // ====================================================
-    // 🔮 THE HYBRID BLENDING PIPELINE (PUNCAK EFEKTIVITAS SATU ATAP!)
-    // Melebur atribut hasil kupasan dari String Key DAN objek property 'attrs' deklaratif
-    // ====================================================
-
-    // 💡 Aliran A: Las atribut hantaran hasil kupasan dari kurung siku key string
-    Object.entries(parsedAttrs).forEach(([aName, aValue]) => {
-      el.setAttribute(aName, String(aValue));
-    });
-
-    // 💡 Aliran B: Las atribut dinamis dari properti 'attrs' bawaan Sheets (menimpa jika ada benturan kunci)
-    if (value.attrs && typeof value.attrs === 'object') {
-      Object.entries(value.attrs).forEach(([aName, aValue]) => {
-        el.setAttribute(aName, String(aValue));
-      });
-    }
-
-    // 💡 Aliran C: Las atribut dinamis dari properti 'attributes' selaras dengan input builder
-    if (value.attributes && Array.isArray(value.attributes)) {
-      for (const attr of value.attributes) {
-        if (typeof attr === 'object' && attr?.name) {
-          if (typeof attr.value === "function" && (attr.name as string).startsWith("on")) {
-            (el as any)[attr.name as string] = attr.value;
-          } else {
-            el.setAttribute(attr.name, attr.value);
-          }
-        }
-      }
-    }
+    // 🔮 THE HYBRID BLENDING PIPELINE — three declared-attribute flows:
+    // A. attrs culled from the bracketed key string · B. declarative `attrs`
+    // dict (wins on key clash) · C. `attributes` array (matches input builder).
+    applyAttrDictionary(el, parsedAttrs);
+    applyAttrDictionary(el, value.attrs);
+    applyAttributeList(el, value.attributes);
   }
 
   /**

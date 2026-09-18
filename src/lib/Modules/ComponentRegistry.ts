@@ -1,5 +1,6 @@
 import type { ComponentBuilderFn, iBasicNode, iBuilderRegistry } from "../interface";
 import { Builder } from "../Components/Base";
+import { HydrationGate } from "../Components/BaseAdapters/HydrationGate";
 
 
 // 💡 DEKLARASI KONTAK LAZY LOAD UNTUK MODEL METADATA (STYLE 3)
@@ -76,7 +77,7 @@ export class ComponentRegistry {
   /**
    * 🚀 POST-LAUNCH FLIPPER (O(1) RELEASE VIA POINTER data-loaded)
    * Dipanggil SETELAH promise style lazy terselesaikan (sukses/gagal).
-   * Pelepasan didelegasikan ke instance.releaseHydration(actualElement):
+   * Pelepasan didelegasikan ke HydrationGate (instance.hydration.release(actualElement)):
    * satu penulis marker di Base — `--is-loading: 0` + hapus `data-hydrating`
    * + pasang `data-loaded="true"` pada elemen puncak yang memang dipegang
    * registry. Rule CSS `[data-loaded="true"] *` lalu memaksa SELURUH
@@ -91,13 +92,12 @@ export class ComponentRegistry {
     // agar konten tidak mati selamanya di balik shimmer.
     stylePending.catch(() => null).finally(() => {
       try {
-        if (typeof instance.releaseHydration === "function") {
-          instance.releaseHydration(actualElement);
+        if (instance.hydration instanceof HydrationGate) {
+          // Builder instance → delegate to its gate (releases its held root too).
+          instance.hydration.release(actualElement);
         } else {
-          // 🛟 Instance eksotis tanpa releaseHydration: tulis marker langsung.
-          actualElement?.style?.setProperty("--is-loading", "0");
-          actualElement?.removeAttribute?.("data-hydrating");
-          actualElement?.setAttribute?.("data-loaded", "true");
+          // 🛟 Instance eksotis tanpa gate: tulis marker langsung.
+          if (actualElement instanceof HTMLElement) HydrationGate.releaseMarkers(actualElement);
         }
       } catch (releaseError) {
         console.warn("[ComponentRegistry] Hydration release skipped:", releaseError);
@@ -205,10 +205,10 @@ export class ComponentRegistry {
    * 🧙‍♂️ THE PRE-LOAD HYDRATOR
    */
   public async preloadComponents(componentNames: string[], pagesData: any[]): Promise<void> {
-    const promises = componentNames.map(async (nameKey) => {
+    for (const nameKey of componentNames) {
       const name = nameKey as keyof iBuilderRegistry;
       const fn = this.builders.get(name);
-      if (!fn) return;
+      if (!fn) continue;
 
       // @ts-ignore (Mempertahankan fungsionalitas pencarian framework bawaan Anda)
       const matchedData = this.getBuilderNode(pagesData as iBasicNode[], name as string);
@@ -236,11 +236,11 @@ export class ComponentRegistry {
             }
           }
         }
-      } catch (_err) {
-        // Silently swallow errors
+      } catch (err) {
+        console.error(`[ComponentRegistry] preload failed for "${String(nameKey)}":`, err);
+        throw err;
       }
-    });
-    await Promise.all(promises);
+    }
   }
 
   /**
@@ -248,9 +248,11 @@ export class ComponentRegistry {
    */
 
 
-  public build<K extends keyof iBuilderRegistry>(name: K, data: any): HTMLElement | null {
+  public build<K extends keyof iBuilderRegistry>(name: K, data: any): HTMLElement {
     const fn = this.builders.get(name);
-    if (!fn) return null;
+    if (!fn) {
+      throw new Error(`[ComponentRegistry] No builder registered for "${String(name)}".`);
+    }
 
     // 1. Panggil fn() dulu untuk menangkap Manifest (Style 3) + path CSS tersembunyi
     // @ts-ignore
@@ -350,12 +352,17 @@ export class ComponentRegistry {
           // create() menempel marker hold pada SATU elemen puncaknya saja.
           instance.isLoaded = false;
           const builtElement = instance.create(contentPayload, finalMergedConfig);
-          // ✅ STYLE MATANG → releaseHydration(): --is-loading 0 + hapus
+          if (!builtElement) {
+            throw new Error(`[ComponentRegistry] Builder "${String(name)}" created a null element. Check prepare()/create() or selector definitions.`);
+          }
+          // ✅ STYLE MATANG → HydrationGate.release(): --is-loading 0 + hapus
           // data-hydrating + data-loaded="true" (pointer pelepasan subtree).
           this._launchPostLoadInstance(instance, stylePending, builtElement);
           return builtElement;
         }
-      } catch { /* fall through */ }
+      } catch (error) {
+        throw error instanceof Error ? error : new Error(`[ComponentRegistry] Failed to instantiate "${String(name)}": ${String(error)}`);
+      }
     }
 
     if (result && typeof result === "object" && !(result instanceof Promise)) {
@@ -366,6 +373,9 @@ export class ComponentRegistry {
         // 🧊 Fase jalur instansi dari manifest: protokol tahan-rilis yang sama.
         instance.isLoaded = false;
         const builtInstanceElement = instance.create(contentPayload, finalMergedConfig);
+        if (!builtInstanceElement) {
+          throw new Error(`[ComponentRegistry] Manifest builder "${String(name)}" created a null element.`);
+        }
         this._launchPostLoadInstance(instance, stylePending, builtInstanceElement);
         return builtInstanceElement;
       }
@@ -376,6 +386,9 @@ export class ComponentRegistry {
     if (PreloadedBuilderClass) {
       if (typeof PreloadedBuilderClass.create === "function") {
         const actualElement = PreloadedBuilderClass.create(contentPayload, finalMergedConfig);
+        if (!actualElement) {
+          throw new Error(`[ComponentRegistry] Preloaded builder "${String(name)}" created a null element.`);
+        }
         if (PreloadedBuilderClass.isLoaded) {
           actualElement?.style?.removeProperty("--is-loading");
           actualElement?.removeAttribute?.("data-hydrating");
@@ -385,7 +398,7 @@ export class ComponentRegistry {
       }
     }
 
-    return null;
+    throw new Error(`[ComponentRegistry] Builder "${String(name)}" could not produce a DOM element. Inspect the component factory, prepare(), or config selectors.`);
   }
 
   private injectStyle(sheet: CSSStyleSheet): void {

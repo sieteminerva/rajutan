@@ -9,7 +9,8 @@
   box-sizing: border-box;
 }
 
-html {
+html,
+html * {
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: var(--app-primary-color) color-mix(in srgb, grey 10%, var(--app-primary-color) 5%);

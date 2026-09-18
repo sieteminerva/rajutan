@@ -391,6 +391,10 @@ table.table,
             color: var(--table-text-color-light);
             border-color: var(--table-border-color);
           }
+
+          & i.icon {
+            margin-right: 0;
+          }
         }
       }
     }

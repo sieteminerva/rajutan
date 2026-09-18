@@ -1,5 +1,6 @@
 import type { iActionProperty, iBuilderConfig, iBuilderRegistry } from "../../interface";
 import { Builder } from "../Base";
+import { applyAttributeList } from "../../Utility/AttributeUtils";
 import { DropdownBuilder, type iDropdownConfig, type iDropdownContent } from "./Dropdown";
 import { InputControlsBuilder, type InputControlsElementType } from "./InputControls";
 
@@ -236,18 +237,17 @@ export class InputBuilder extends Builder<InputElementType> {
         break;
     }
 
+    if (this.#input.title && this.#input.config?.useLabel && this.#input.type === "dropdown") {
+      const label = this.render("@field>label", {
+        text: this.#input.title,
+        position: this.#input.position,
+        id: this.#input.id
+      })!;
+      wrapper.append(label);
+    }
+
     if (inputEl) {
       this.applyAttributes(inputEl, this.#input);
-
-      if (this.#input.type === "dropdown" && inputEl.classList.contains("field")) {
-        inputEl.classList.forEach((className) => {
-          if (className !== "field") wrapper.classList.add(className);
-        });
-        Object.entries(inputEl.dataset).forEach(([key, value]) => {
-          wrapper.dataset[key] = value;
-        });
-        wrapper.append(...Array.from(inputEl.childNodes));
-      }
     }
 
     // C. Render Info Tambahan di bagian bawah jika ada
@@ -257,7 +257,9 @@ export class InputBuilder extends Builder<InputElementType> {
     }
 
 
-    inputEl.__outer ? wrapper.appendChild(inputEl.__outer) : wrapper.appendChild(inputEl);
+    if (inputEl) {
+      inputEl.__outer ? wrapper.appendChild(inputEl.__outer) : wrapper.appendChild(inputEl);
+    }
 
     if (cfg?.actions && inputEl) {
       const actions = this._renderActions(wrapper, this.#input);
@@ -384,19 +386,9 @@ export class InputBuilder extends Builder<InputElementType> {
     if (payload.disabled) el.setAttribute("disabled", "");
     if (payload.readonly) el.setAttribute("readonly", "readonly");
     if (payload.required) el.setAttribute("required", "");
-    // Tancapkan custom inline attributes bawaan array schema Anda (jika ada)
-    if (cfg?.attributes && Array.isArray(cfg.attributes)) {
-      cfg.attributes.forEach((attr: any) => {
-        if (attr?.name) {
-          if (typeof attr.value === "function" && (attr.name as string).startsWith("on")) {
-            (el as any)[attr.name as string] = attr.value;
-          } else {
-            el.setAttribute(attr.name, attr.value);
-          }
-        }
-      });
-    }
 
+    // Tancapkan custom inline attributes bawaan array schema (shared util)
+    applyAttributeList(el, cfg?.attributes);
   }
 
 

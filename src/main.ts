@@ -16,6 +16,22 @@ import './lib/Styles/layout.css';
 import './lib/Styles/icon.css';
 import './style.css';
 
+
+import formResult from './payload.json';
+import { GeneratorPageContent } from './content/generator';
+
+
+function toTable(obj: any, keyName: string) {
+  return {
+    header: Object.keys(obj[keyName][0]),
+    body: obj[keyName].map((v: any) => {
+      return Object.values(v)
+    })
+  }
+}
+
+toTable(formResult, 'detail-product');
+
 // 🔐 Daftarkan Service Worker supaya id_token disimpan di variabel SW.
 // BASE_URL mengikuti base vite ("/rajutan/") agar cocok dengan scope GitHub Pages.
 export function registerServiceWorker() {
@@ -39,6 +55,7 @@ function pageContentFor(route: string): iNodeContent {
     case 'build': return BuildPageContent;
     case 'result': return ResultPageContent;
     case 'blog': return BlogPageContent;
+    case 'generator': return GeneratorPageContent;
     default: return HomepageContent;
   }
 }
@@ -46,12 +63,27 @@ function pageContentFor(route: string): iNodeContent {
 // Infrastruktur bersama (dibangun sekali di bootstrap)
 let renderer: DOMRenderer;
 let animation: AnimationsService;
+let components: ComponentRegistry;
 let buildBuilderFn: (name: keyof iBuilderRegistry, data: any) => HTMLElement | null;
 let renderFn: (node: any) => HTMLElement | null;
 let currentRoot: HTMLElement | null = null;
+let renderSequence = 0;
+
+function buildersForRoute(route: string): string[] {
+  switch (route.trim().toLowerCase().replace(/^#|\/+$/g, '')) {
+    case 'build': return ['form'];
+    case 'blog': return ['article'];
+    case 'generator': return ['form', 'color-theme'];
+    default: return [];
+  }
+}
 
 /** Render satu halaman (rute) ke dalam #app — mengganti akar sebelumnya. */
-export function renderPage(route: string): void {
+export async function renderPage(route: string): Promise<void> {
+  const sequence = ++renderSequence;
+  await components.preloadComponents(buildersForRoute(route), []);
+  if (sequence !== renderSequence) return;
+
   const page = pageContentFor(route);
   const tree = renderer.render(page, renderFn, buildBuilderFn);
   if (currentRoot && currentRoot.isConnected) {
@@ -69,7 +101,7 @@ function bootRouting(): void {
   const router = new HashRouter(
     "home",
     "default",
-    ["home", "build", "result", "blog"],
+    ["home", "build", "result", "blog", "generator", "generator2"],
     (state: iRouteState) => renderPage(state.route)
   );
 
@@ -85,7 +117,7 @@ async function start(container: HTMLElement) {
   // @ts-ignore
   const emitter = new EventEmitter();
   animation = new AnimationsService();
-  const components = new ComponentRegistry()
+  components = new ComponentRegistry()
     .register("form", (data: any) => {
       return {
         path: "lib/Components/Form/Form.ts",
@@ -113,7 +145,14 @@ async function start(container: HTMLElement) {
       };
     })
 
-  await components.preloadComponents(["form", "table", "article"], [])
+    .register("color-theme", (data: any) => {
+      return {
+        path: "lib/Components/ColorTheme/ColorTheme.ts",
+        stylesheet: "lib/Components/ColorTheme/ColorTheme.css", // alternative style definition also didn't loaded
+        config: data?.config,
+        schema: data?.schema !== undefined ? data.schema : (data?.content !== undefined ? data.content : data),
+      };
+    })
 
   renderer = new DOMRenderer();
   renderFn = (node) => renderer.render(node, undefined, undefined);

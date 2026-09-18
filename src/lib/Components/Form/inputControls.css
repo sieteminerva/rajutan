@@ -5,40 +5,36 @@
   & .field {
     &:is(.actions) {
       display: flex !important;
-      flex-wrap: wrap; /* Agar label tetap di atas jika dibutuhkan */
-      align-items: stretch; /* Memaksa input dan tombol sama tinggi secara alami */
+      flex-wrap: wrap;
+      align-items: stretch;
       margin-bottom: var(--input-margin-bottom);
 
-      /* Label memenuhi 100% lebar agar input turun ke bawahnya */
       & label {
         flex: 0 0 100%;
         margin-bottom: 0.35em;
       }
 
-      /* Input mengambil sisa ruang yang tersedia */
-      & input,
-      & select {
-        flex: 1;
-        /* Style input Anda lainnya di sini */
+      &:has(.controls) {
+        & input,
+        & select {
+          flex: 1;
+          outline: none;
+          border-width: 1px;
+          border-style: solid;
+          border-color: var(--input-border-color);
+        }
+        & input:hover,
+        & select:hover {
+          outline: none;
+          border-right-color: transparent;
+        }
       }
 
-      /* 2. Kondisi Modifikator Posisi menggunakan :has() */
-      &:has(.controls[position="right"]) {
+      &:has(.controls[position]) {
         & input,
         & select {
           border-top-right-radius: 0;
           border-bottom-right-radius: 0;
-          border-right: none;
-        }
-      }
-
-      &:has(.controls[position="left"]) {
-        flex-direction: row-reverse; /* Membalik urutan visual tanpa ubah HTML */
-        & input,
-        & select {
-          border-top-left-radius: 0;
-          border-bottom-left-radius: 0;
-          border-left: none;
         }
       }
     }
@@ -48,12 +44,9 @@
   & .controls {
     display: inline-flex;
     align-items: stretch;
-
-    /* Hilangkan float dan top/bottom hacks */
     float: none;
     position: static;
 
-    /* Pengaturan Border Radius untuk Posisi Kanan */
     &[position="right"] {
       & button:last-child {
         border-top-right-radius: var(--input-border-radius);
@@ -64,18 +57,16 @@
       }
     }
 
-    /* Pengaturan Border Radius untuk Posisi Kiri */
     &[position="left"] {
       & button:first-child {
         border-top-left-radius: var(--input-border-radius);
         border-bottom-left-radius: var(--input-border-radius);
       }
       & button:not(:first-child) {
-        border-left: none; /* Perbaikan dari border-right */
+        border-left: none;
       }
     }
 
-    /* 4. Styling Tombol di dalam Controls */
     & button {
       padding: 6px 1em;
       font-size: var(--input-font-size);
@@ -91,8 +82,8 @@
       gap: 0.35em;
       border-radius: 0; /* Reset default radius */
 
-      color: color-mix(in srgb, var(--input-text-color) 80%, white 50%);
-      border: 2px solid var(--input-accent-color);
+      color: color-mix(in srgb, var(--input-primary-color) 50%, black 20%);
+      border: 1px solid var(--input-accent-color);
       background-color: color-mix(in srgb, var(--input-primary-color) 50%, var(--input-accent-color) 5%);
 
       &:hover {

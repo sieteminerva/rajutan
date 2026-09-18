@@ -3,7 +3,7 @@
 // ================================================================
 
 import type { iNodeContent } from "../lib/interface";
-import { navigate } from "../lib/Modules/BuildStore";
+import { navigate } from "../lib/Components/BaseAdapters/BuildStore";
 
 // =====================================================================
 // HELPERS LANDING — presentasi & memulai wizard
@@ -204,6 +204,8 @@ const FooterSection = {
     }
   }
 };
+
+
 export const HomepageContent: iNodeContent =
 {
   "#app": {
@@ -224,7 +226,7 @@ export const HomepageContent: iNodeContent =
           },
           "button.button.primary#start-link": {
             content: "Mulai",
-            onCreated: (el: HTMLElement) => el.addEventListener("click", () => requestStart()),
+            onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("generator")),
           },
         }
       },

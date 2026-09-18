@@ -8,7 +8,6 @@ import { FormMultistepHandler, type FormMultistepHost } from "./Handlers/Multist
 import { FormValidationHandler } from "./Handlers/Validation";
 import { IdAddressBuilder } from "./IdAddress/id-address-builder";
 import { InputBuilder } from "./Input";
-import "./Dropdown.css";
 import "./inputControls.css";
 
 export type FormElementType =
@@ -415,7 +414,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
         const form = el as HTMLFormElement;
         const randomSuffix = Math.random().toString(36).substring(7);
         form.id = this.config.id ? `form-${this.config.id}`.replace(/\s+/g, "-") : `form-${randomSuffix}`;
-        form.className = `${this.config.className} ${this.config.multistep ? "multistep" : ""} ${form.className || ""}`.trim();
+        form.className = `${form.className || ""} ${this.config.className} ${this.config.multistep ? "multistep" : ""}`.trim();
         form.method = this.config.method;
         if (this.config.action) form.action = this.config.action;
         break;
