@@ -30,21 +30,36 @@ export type ColorThemeElementType =
   | "@colorizer>configurator>colors"
   | "@colorizer>configurator>mixer"
   | "@colorizer>configurator>mixer>item"
+  | "@colorizer>configurator>mixer>slider"
+  | "@colorizer>configurator>mixer>selector"
 
   | "@colorizer>output"
   | "@colorizer>output>report"
   | "@colorizer>output>codeblock"
   | "@colorizer>output>copy"
   | "@colorizer>output>reset"
+  | "@colorizer>output>save"
   ;
+
+export interface iColorThemePreset {
+  label: string;
+  primary: string;
+  accent: string;
+  mode: ThemeMode;
+  mixer: MixerSettings;
+  overrides: ThemeOverrides;
+}
 
 export interface iColorThemeConfig extends iBuilderConfig<ColorThemeElementType> {
   primary: string; // Default primary color
   accent: string; // Default accent color,
   styles: String | Function; // Default css variables,
   mode: "light" | "dark"
+  disableValidation?: boolean;
   validations?: Record<string, ThemeValidationRule>;
   items?: Record<string, ThemeItemConfig>;
+  textContent?: Record<string, string>;
+  presets?: Record<string, iColorThemePreset>;
 }
 
 export interface iColorThemeContent {
@@ -83,6 +98,25 @@ const MIX_TARGET_OPTIONS: Record<MixTarget, { label: string; title: string }> = 
  */
 const MIX_SHIFT_LIMIT = 180;
 
+export const DEFAULT_TEXT_CONTENT: Record<string, string> = {
+  title: "Color Theme Generator",
+  description: "Pick two base colors — every other token is derived with color-mix() and checked for WCAG contrast.",
+  configurator: "Configurator",
+  primaryLabel: "Primary Color",
+  accentLabel: "Accent Color",
+  rampsHeader: "primary color ramps",
+  paletteHeader: "color palette",
+  mixerTitle: "Color Mixer",
+  reportTitle: "WCAG Contrast Score",
+  codeTitle: "Generated Token",
+  copy: "Copy CSS",
+  reset: "Reset",
+  save: "Save preset",
+  modeLabel: "light",
+};
+
+export const DEFAULT_PRESETS: Record<string, iColorThemePreset> = {};
+
 export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThemeConfig> {
   readonly builderId: keyof iBuilderRegistry = "color-theme";
   readonly name: keyof iBuilderRegistry = "color-theme";
@@ -90,6 +124,8 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
 
   /** Reactive state: bases + mode + shared mixer settings + per-item overrides. */
   #state: { bases: BaseColors; mode: ThemeMode; mixer: MixerSettings; overrides: ThemeOverrides };
+  /** Preset store lives on the instance because Builder.config is frozen at runtime. */
+  #presets: Record<string, iColorThemePreset>;
   /** Abort controller for cleaning up event listeners on destroy. */
   #abort = new AbortController();
   /** 🧲 Unwatch functions for the reactive root sync registered in initialize(). */
@@ -101,7 +137,7 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       "@colorizer": { tagName: "main", className: "colorizer" },
 
       "@colorizer>header": { tagName: "section", className: "header" },
-      "@colorizer>title": { tagName: "h3", className: "title" },
+      "@colorizer>title": { tagName: "h4", className: "title" },
       "@colorizer>description": { tagName: "p", className: "description" },
       "@colorizer>mode": { tagName: "div", className: "control", wrapper: ".field.toggle-switch" },
 
@@ -110,18 +146,24 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       "@colorizer>configurator>colors": { tagName: "div", className: "strip", wrapper: ".scales" },
       "@colorizer>configurator>mixer": { tagName: "div", className: "mixer" },
       "@colorizer>configurator>mixer>item": { tagName: "div", className: "mixer-item" },
+      "@colorizer>configurator>mixer>slider": { tagName: "input", attrs: { type: "range" }, className: "mixer-slider", wrapper: ".field" },
+      "@colorizer>configurator>mixer>selector": { tagName: "select", className: "mixer-selector", wrapper: ".field" },
 
       "@colorizer>output": { tagName: "section", className: "output" },
       "@colorizer>output>report": { tagName: "div", className: "report-item" },
       "@colorizer>output>codeblock": { tagName: "pre", className: "codeblock" },
       "@colorizer>output>copy": { tagName: "button", className: "copy" },
-      "@colorizer>output>reset": { tagName: "button", className: "reset" }
+      "@colorizer>output>reset": { tagName: "button", className: "reset" },
+      "@colorizer>output>save": { tagName: "button", className: "save" }
     }
 
     const mergedConfig: Partial<iColorThemeConfig> = {
       ...config,
+      disableValidation: config?.disableValidation ?? false,
       validations: { ...DEFAULT_VALIDATIONS, ...(config?.validations ?? {}) },
       items: { ...DEFAULT_THEME_ITEMS, ...(config?.items ?? {}) },
+      textContent: { ...DEFAULT_TEXT_CONTENT, ...(config?.textContent ?? {}) },
+      presets: { ...DEFAULT_PRESETS, ...(config?.presets ?? {}) },
     };
 
     const defaultConfig: Required<iColorThemeConfig> = {
@@ -133,11 +175,15 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       accent: ColorThemeEngine.DEFAULT_BASES.accent,
       styles: () => { },
       mode: "light",
+      disableValidation: false,
       validations: { ...DEFAULT_VALIDATIONS },
       items: { ...DEFAULT_THEME_ITEMS },
+      textContent: { ...DEFAULT_TEXT_CONTENT },
+      presets: { ...DEFAULT_PRESETS },
     }
 
     this.config = this.resolveConfig(defaultConfig, mergedConfig)
+    this.#presets = { ...this.config.presets };
 
     this.#state = {
       bases: { primary: this.config.primary, accent: this.config.accent },
@@ -183,31 +229,41 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         break;
 
       case "@colorizer>configurator":
-        const titleCfg = this.render("@colorizer>title", "Configurator")!;
+        const titleCfg = this.render("@colorizer>title", this.config.textContent?.configurator ?? DEFAULT_TEXT_CONTENT.configurator)!;
 
         const pickerContainer = document.createElement("div");
         pickerContainer.className = "field group";
         pickerContainer.dataset.display = "inline";
 
-        const primary = this.render("@colorizer>configurator>picker", { label: "Primary Color", slot: "primary", color: this.#state.bases.primary })!;
-        const accent = this.render("@colorizer>configurator>picker", { label: "Accent Color", slot: "accent", color: this.#state.bases.accent })!;
+        const primary = this.render("@colorizer>configurator>picker", {
+          label: this.config.textContent?.primaryLabel ?? DEFAULT_TEXT_CONTENT.primaryLabel,
+          slot: "primary",
+          color: this.#state.bases.primary,
+        })!;
+        const accent = this.render("@colorizer>configurator>picker", {
+          label: this.config.textContent?.accentLabel ?? DEFAULT_TEXT_CONTENT.accentLabel,
+          slot: "accent",
+          color: this.#state.bases.accent,
+        })!;
 
         pickerContainer.append(primary.__outer, accent.__outer)
 
         const ramps = this.render("@colorizer>configurator>colors", {
           title: "ramps",
+          header: this.config.textContent?.rampsHeader ?? DEFAULT_TEXT_CONTENT.rampsHeader,
           theme: payload,
         })!;
 
         const palette = this.render("@colorizer>configurator>colors", {
           title: "palette",
+          header: this.config.textContent?.paletteHeader ?? DEFAULT_TEXT_CONTENT.paletteHeader,
           theme: payload,
         })!;
 
         const mixerContainer = document.createElement("div");
         const lcm = document.createElement("h5");
         lcm.className = "title";
-        lcm.textContent = `Color Mixer`;
+        lcm.textContent = this.config.textContent?.mixerTitle ?? DEFAULT_TEXT_CONTENT.mixerTitle;
 
         mixerContainer.prepend(lcm);
         mixerContainer.className = "color-mixer";
@@ -225,7 +281,7 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         break;
 
       case "@colorizer>output":
-        const titleReport = this.render("@colorizer>title", "WCAG Contrast Score")!;
+        const titleReport = this.render("@colorizer>title", this.config.textContent?.reportTitle ?? DEFAULT_TEXT_CONTENT.reportTitle)!;
         const reportContainer = document.createElement("div")
         reportContainer.className = "report";
 
@@ -233,26 +289,26 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
           reportContainer.append(this.render("@colorizer>output>report", report)!)
         }
 
-        const titleGen = this.render("@colorizer>title", "Generated Token")!;
+        const titleGen = this.render("@colorizer>title", this.config.textContent?.codeTitle ?? DEFAULT_TEXT_CONTENT.codeTitle)!;
         const codeblock = this.render("@colorizer>output>codeblock")!;
 
         const actions = document.createElement("div");
         actions.className = "actions";
         const copy = this.render("@colorizer>output>copy")!;
         const reset = this.render("@colorizer>output>reset")!;
-        actions.append(copy, reset)
+        const save = this.render("@colorizer>output>save")!;
+        actions.append(copy, reset, save)
 
         el.append(titleReport, reportContainer, titleGen, codeblock, actions);
         break;
 
       case "@colorizer>title":
-        el.textContent = payload ?? "Color Theme Generator";
+        el.textContent = payload ?? this.config.textContent?.title ?? DEFAULT_TEXT_CONTENT.title;
         break;
 
 
       case "@colorizer>description":
-        el.textContent = payload ??
-          "Pick two base colors — every other token is derived with color-mix() and checked for WCAG contrast.";
+        el.textContent = payload ?? this.config.textContent?.description ?? DEFAULT_TEXT_CONTENT.description;
         break;
 
       case "@colorizer>mode":
@@ -300,10 +356,10 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
 
         const lc = document.createElement("h5");
         lc.className = "title";
-        lc.textContent = `Color ${payload.title}`;
+        lc.textContent = payload.header;
 
         el.__outer.prepend(lc);
-        el.__outer.classList.add(payload.title);
+        el.__outer.classList.add(payload.title.split(" ").join(","));
 
         break;
 
@@ -314,28 +370,23 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         const sharedLabel = document.createElement("label");
         sharedLabel.textContent = "Mix Mode";
 
-        const sField = document.createElement("div");
-        sField.className = "field";
-        const modeSelect = document.createElement("select");
-        modeSelect.dataset.control = "mode";
-        modeSelect.ariaLabel = "interpolation mode";
-        modeSelect.title = "Interpolation mode — color space and hue path";
+        const { field: sField, select: modeSelect } = this.createSelectControl({
+          value: this.#state.mixer.mode,
+          bind: "mixer.mode",
+          control: "mode",
+          ariaLabel: "interpolation mode",
+          title: "Interpolation mode — color space and hue path",
+          options: Object.fromEntries(
+            Object.entries(MIX_MODE_OPTIONS).map(([key, option]) => [key, {
+              label: option.label,
+              title: key.includes("advanced")
+                ? `${key} — polar hue path, travels the long way round the hue wheel`
+                : `${key} — interpolation only, no hue path`,
+            }])
+          ),
+        });
+
         modeSelect.name = "mode";
-        modeSelect.dataset.bind = "mixer.mode";
-
-        for (const m in MIX_MODE_OPTIONS) {
-          if (!Object.hasOwn(MIX_MODE_OPTIONS, m)) continue;
-          const option = document.createElement("option");
-          option.value = m;
-          option.label = (MIX_MODE_OPTIONS as any)[m]["label"];
-          option.title = m.includes("advanced")
-            ? `${m} — polar hue path, travels the long way round the hue wheel`
-            : `${m} — interpolation only, no hue path`;
-          modeSelect.append(option);
-        }
-
-        sField.append(modeSelect);
-
         el.append(sharedLabel, sField);
         break;
 
@@ -354,65 +405,43 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
           const itemLabel = document.createElement("label");
           itemLabel.textContent = payload.label;
 
-          const itemField = document.createElement("div");
-          itemField.className = "field";
-          const slider = document.createElement("input");
-          slider.type = "range";
-          slider.dataset.control = "amount";
-          slider.min = "0";
-          slider.max = "100";
-          slider.step = "1";
-          slider.dataset.bind = `overrides.${payload.label}.amount`;
-          slider.value = String(fallback);
-          slider.ariaLabel = `${payload.label} mix amount`;
-          slider.title = "Mix amount — how much of the source color survives the mix";
+          const amountControl = this.createRangeControl({
+            value: fallback,
+            min: 0,
+            max: 100,
+            bind: `overrides.${payload.label}.amount`,
+            ariaLabel: `${payload.label} mix amount`,
+            title: "Mix amount — how much of the source color survives the mix",
+            outputSuffix: "%",
+            control: "amount",
+          });
+          amountControl.input.dataset.control = "amount";
 
-          const itemOutput = document.createElement("output");
-          itemOutput.dataset.control = 'value';
-          itemOutput.value = `${fallback}%`;
-          itemOutput.textContent = `${fallback}%`;
-          itemField.append(slider, itemOutput);
+          const shiftControl = this.createRangeControl({
+            value: fallbackHue,
+            min: -MIX_SHIFT_LIMIT,
+            max: MIX_SHIFT_LIMIT,
+            bind: `overrides.${payload.label}.shift`,
+            ariaLabel: `${payload.label} hue rotation`,
+            title: "Hue rotation — rotates the source color's hue before mixing",
+            outputSuffix: "°",
+            control: "shift",
+          });
+          shiftControl.output.dataset.control = "shift-value";
 
-          const itemShiftField = document.createElement("div");
-          itemShiftField.className = "field";
-          const hueSlider = document.createElement("input");
-          hueSlider.type = "range";
-          hueSlider.dataset.control = "shift";
-          hueSlider.min = String(-MIX_SHIFT_LIMIT);
-          hueSlider.max = String(MIX_SHIFT_LIMIT);
-          hueSlider.step = "1";
-          hueSlider.dataset.bind = `overrides.${payload.label}.shift`;
-          hueSlider.value = String(fallbackHue);
-          hueSlider.ariaLabel = `${payload.label} hue rotation`;
-          hueSlider.title = "Hue rotation — rotates the source color's hue before mixing";
+          const targetControl = this.createSelectControl({
+            value: fallbackTarget,
+            bind: `overrides.${payload.label}.target`,
+            control: "target",
+            ariaLabel: `${payload.label} mix counterpart`,
+            title: "Counterpart — what the source color blends into",
+            options: Object.fromEntries(
+              Object.entries(MIX_TARGET_OPTIONS).map(([key, option]) => [key, { label: option.label, title: option.title }])
+            ),
+          });
+          targetControl.select.dataset.control = "target";
 
-          const hueOutput = document.createElement("output");
-          hueOutput.dataset.control = 'shift-value';
-          hueOutput.value = `${fallbackHue}°`;
-          hueOutput.textContent = `${fallbackHue}°`;
-          itemShiftField.append(hueSlider, hueOutput);
-
-          const itemTargetField = document.createElement("div");
-          itemTargetField.className = "field";
-          const targetSelect = document.createElement("select");
-          targetSelect.dataset.control = "target";
-          targetSelect.ariaLabel = `${payload.label} mix counterpart`;
-          targetSelect.title = "Counterpart — what the source color blends into";
-          targetSelect.dataset.bind = `overrides.${payload.label}.target`;
-
-          for (const t in MIX_TARGET_OPTIONS) {
-            if (!Object.hasOwn(MIX_TARGET_OPTIONS, t)) continue;
-            const option = document.createElement("option");
-            option.value = t;
-            option.label = (MIX_TARGET_OPTIONS as any)[t]["label"];
-            option.title = (MIX_TARGET_OPTIONS as any)[t]["title"];
-            option.selected = t === fallbackTarget;
-            targetSelect.append(option);
-          }
-
-          itemTargetField.append(targetSelect);
-
-          el.append(itemLabel, itemTargetField, itemField, itemShiftField);
+          el.append(itemLabel, targetControl.field, amountControl.field, shiftControl.field);
           break;
         }
 
@@ -437,13 +466,155 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         break;
 
       case "@colorizer>output>copy":
-        el.textContent = "Copy CSS";
+        el.textContent = this.config.textContent?.copy ?? DEFAULT_TEXT_CONTENT.copy;
         break;
 
       case "@colorizer>output>reset":
-        el.textContent = "Reset";
+        el.textContent = this.config.textContent?.reset ?? DEFAULT_TEXT_CONTENT.reset;
         break;
+
+      case "@colorizer>output>save":
+        el.textContent = this.config.textContent?.save ?? DEFAULT_TEXT_CONTENT.save;
+        break;
+
+      case "@colorizer>configurator>mixer>slider": {
+        const range = el as HTMLInputElement;
+        range.type = "range";
+        range.value = String(payload.value ?? 0);
+        range.min = String(payload.min ?? 0);
+        range.max = String(payload.max ?? 100);
+        range.step = String(payload.step ?? 1);
+        range.name = payload.name ?? "range";
+        range.dataset.bind = payload.bind ?? "";
+        range.dataset.control = payload.control ?? "range";
+        range.ariaLabel = payload.ariaLabel ?? "mixer slider";
+        range.title = payload.title ?? "mixer slider";
+        break;
+      }
+
+      case "@colorizer>configurator>mixer>selector": {
+        const select = el as HTMLSelectElement;
+        select.name = payload.name ?? "select";
+        select.dataset.bind = payload.bind ?? "";
+        select.dataset.control = payload.control ?? "select";
+        select.ariaLabel = payload.ariaLabel ?? "mixer selector";
+        select.title = payload.title ?? "mixer selector";
+
+        const options = (payload.options ?? {}) as Record<string, { label: string; title: string }>;
+        for (const [key, option] of Object.entries(options)) {
+          const optionEl = document.createElement("option");
+          optionEl.value = key;
+          optionEl.label = option.label;
+          optionEl.title = option.title;
+          optionEl.selected = key === payload.value;
+          select.append(optionEl);
+        }
+        break;
+      }
     }
+  }
+
+  private createRangeControl(config: {
+    value: number;
+    min: number;
+    max: number;
+    step?: number;
+    bind: string;
+    ariaLabel: string;
+    title: string;
+    outputSuffix?: string;
+    control?: string;
+  }): { field: HTMLDivElement; input: HTMLInputElement; output: HTMLOutputElement } {
+    const field = document.createElement("div");
+    field.className = "field";
+
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = String(config.min);
+    input.max = String(config.max);
+    input.step = String(config.step ?? 1);
+    input.value = String(config.value);
+    input.dataset.bind = config.bind;
+    input.dataset.control = config.control ?? "range";
+    input.ariaLabel = config.ariaLabel;
+    input.title = config.title;
+
+    const output = document.createElement("output");
+    output.dataset.control = config.control ?? "value";
+    output.value = `${config.value}${config.outputSuffix ?? ""}`;
+    output.textContent = `${config.value}${config.outputSuffix ?? ""}`;
+
+    field.append(input, output);
+
+    requestAnimationFrame(() => {
+      // Menggunakan setTimeout 50ms agar browser sempat menggambar frame posisi awal (min)
+      setTimeout(() => {
+        let current = config.min;
+        const target = config.value;
+        // Tentukan kecepatan naik (semakin besar angkanya, semakin cepat animasinya)
+        const increment = (target - current) / 10 || 1;
+
+        function stepAnimate() {
+          if (current < target) {
+            current = Math.min(target, current + increment);
+            // Bulatkan sesuai step jika diperlukan (opsional)
+            input.value = String(config.step ? Math.round(current / config.step) * config.step : Math.round(current));
+            requestAnimationFrame(stepAnimate);
+          }
+        }
+        stepAnimate();
+      }, 50);
+    });
+
+    return { field, input, output };
+  }
+
+  private createSelectControl(config: {
+    value: string;
+    bind: string;
+    options: Record<string, { label: string; title: string }>;
+    ariaLabel: string;
+    title: string;
+    control?: string;
+  }): { field: HTMLDivElement; select: HTMLSelectElement } {
+    const field = document.createElement("div");
+    field.className = "field";
+
+    const select = document.createElement("select");
+    select.dataset.bind = config.bind;
+    select.dataset.control = config.control ?? "select";
+    select.ariaLabel = config.ariaLabel;
+    select.title = config.title;
+
+    for (const [key, option] of Object.entries(config.options)) {
+      const optionEl = document.createElement("option");
+      optionEl.value = key;
+      optionEl.label = option.label;
+      optionEl.title = option.title;
+      optionEl.selected = key === config.value;
+      select.append(optionEl);
+    }
+
+    field.append(select);
+    return { field, select };
+  }
+
+  public createPreset(label: string): iColorThemePreset {
+    const snapshot = {
+      label,
+      primary: this.#state.bases.primary,
+      accent: this.#state.bases.accent,
+      mode: this.#state.mode,
+      mixer: { ...this.#state.mixer },
+      overrides: Object.fromEntries(
+        Object.entries(this.#state.overrides).map(([key, value]) => [key, { ...value }]),
+      ),
+    };
+
+    this.#presets = { ...this.#presets, [label]: snapshot };
+    this.setConfig({ presets: this.#presets });
+    console.log({ snapshot })
+    return snapshot;
   }
 
   private deriveTheme(): DerivedTheme {
@@ -466,8 +637,12 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
     ColorThemeKit.syncThemeStrips(root, theme, this.config.items ?? DEFAULT_THEME_ITEMS);
     ColorThemeKit.syncMixerSettings(root, this.#state.mixer);
     ColorThemeKit.syncMixerControls(root, this.#state.overrides);
-    ColorThemeKit.syncHarmonyNotice(root, this.#state.overrides);
-    ColorThemeKit.syncBaseColorWarning(root, this.#state.bases, this.config.validations ?? DEFAULT_VALIDATIONS, theme);
+
+    if (!this.config.disableValidation) {
+      ColorThemeKit.syncHarmonyNotice(root, this.#state.overrides);
+      ColorThemeKit.syncBaseColorWarning(root, this.#state.bases, this.#state.mode, this.config.validations ?? DEFAULT_VALIDATIONS, theme);
+    }
+
     ColorThemeKit.syncModeControl(root, this.#state.mode);
   }
 
@@ -487,6 +662,7 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
   private initializeActions(root: HTMLElement): void {
     const copyBtn = root.querySelector<HTMLButtonElement>("button.copy")!;
     const resetBtn = root.querySelector<HTMLButtonElement>("button.reset")!;
+    const saveBtn = root.querySelector<HTMLButtonElement>("button.save")!;
     const codeEl = this.load("@colorizer>output>codeblock")?.querySelector("code");
     const opts = { signal: this.#abort.signal };
 
@@ -510,6 +686,13 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       for (const [key, value] of Object.entries(this.config.items ?? DEFAULT_THEME_ITEMS)) {
         this.#state.overrides[key] = { ...value.default };
       }
+    }, opts);
+
+    saveBtn.addEventListener("click", () => {
+      const label = window.prompt("Preset name", `preset-${Object.keys(this.#presets).length + 1}`) ?? `preset-${Date.now()}`;
+      const preset = this.createPreset(label.trim() || `preset-${Date.now()}`);
+      saveBtn.textContent = `Saved: ${preset.label}`;
+      setTimeout(() => (saveBtn.textContent = this.config.textContent?.save ?? DEFAULT_TEXT_CONTENT.save), 1500);
     }, opts);
   }
 

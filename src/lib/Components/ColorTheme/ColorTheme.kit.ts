@@ -22,7 +22,7 @@ export const DEFAULT_THEME_ITEMS: Record<string, ThemeItemConfig> = {
 export const DEFAULT_VALIDATIONS: Record<string, ThemeValidationRule> = {
   // Signed percent delta: negative = accent darker than primary, positive = accent lighter.
   // `minContrast` is a hard readability guard for accent against the generated backgrounds.
-  relativeLightnessDelta: { min: -50, max: 12, minContrast: 2 },
+  relativeLightnessDelta: { min: -20, max: 20, minContrast: 2 },
 };
 
 export class ColorThemeKit {
@@ -120,12 +120,14 @@ export class ColorThemeKit {
   static syncBaseColorWarning(
     root: HTMLElement,
     bases: BaseColors,
+    mode: ThemeMode,
     validations: Record<string, ThemeValidationRule> = DEFAULT_VALIDATIONS,
     theme?: DerivedTheme,
   ): void {
     const picker = root.querySelector<HTMLElement>(".field.group");
     if (!picker) return;
 
+    // 1. Ambil rule dari konfigurasi framework
     const rule =
       validations["relativeLightnessDelta"] ??
       validations["primaryAccentLightness"] ??
@@ -133,16 +135,17 @@ export class ColorThemeKit {
       validations["baseLightnessDelta"] ??
       DEFAULT_VALIDATIONS.relativeLightnessDelta;
 
-    const delta = ColorThemeEngine.relativeLightnessDeltaPercent(bases.primary, bases.accent);
-    const min = ColorThemeEngine.normalizeLightnessDeltaLimit(rule.min, Number.NEGATIVE_INFINITY);
-    const max = ColorThemeEngine.normalizeLightnessDeltaLimit(rule.max, Number.POSITIVE_INFINITY);
-    const minContrast = typeof rule.minContrast === "number" ? rule.minContrast : 3;
     const existing = picker.querySelector<HTMLElement>(".warning");
-    const accentOnSurface = theme ? ColorThemeEngine.contrast(bases.accent, ColorThemeEngine.toRgba(theme.probes.surface)) : Number.POSITIVE_INFINITY;
-    const accentOnPage = theme ? ColorThemeEngine.contrast(bases.accent, ColorThemeEngine.toRgba(theme.probes.page)) : Number.POSITIVE_INFINITY;
-    const failsReadability = Math.min(accentOnSurface, accentOnPage) < minContrast;
 
-    const isOutOfRange = delta < min || delta > max || failsReadability;
+    // 2. Langsung panggil metode tunggal baru dari engine
+    // Metode ini mengembalikan teks deskripsi JIKA lolos, atau teks peringatan JIKA melanggar.
+    const message = ColorThemeEngine.describeLightnessDelta(bases.primary, bases.accent, mode, rule, theme);
+
+    // 3. Deteksi apakah statusnya melanggar aturan (out of range / low contrast)
+    // Trik cerdas: Jika string teks diawali kata "⚠️" atau "Accent color is too", berarti statusnya ERROR/WARNING.
+    const isOutOfRange = message.includes("too") || message.includes("⚠️");
+
+    // 4. Update DOM secara efisien
     if (!isOutOfRange) {
       existing?.remove();
       return;
@@ -150,13 +153,12 @@ export class ColorThemeKit {
 
     const next = existing ?? document.createElement("small");
     next.className = "warning";
-    next.textContent = failsReadability
-      ? `Accent Color is not readable enough on the generated background (${Math.min(accentOnSurface, accentOnPage).toFixed(2)}:1, minimum ${minContrast}:1).`
-      : ColorThemeEngine.describeLightnessDelta(bases.primary, bases.accent, rule);
+    next.textContent = message; // Langsung pakai pesan presisi yang dihasilkan engine
     next.title = "Keep the accent within the configured lightness band so it stays related to the primary color without becoming too faint on the background.";
 
     if (!existing) picker.appendChild(next);
   }
+
 
   static syncHarmonyNotice(root: HTMLElement, overrides: ThemeOverrides): void {
     const mixers = root.querySelectorAll<HTMLElement>(".mixer-item[data-mixer]");
@@ -174,7 +176,7 @@ export class ColorThemeKit {
       const amountBias = Math.abs(amount - 50);
       const severeAmount = amount < 12 || amount > 88;
       const severeShift = absShift > 90;
-      const combinedRisk = amountBias > 28 && absShift > 48; // TODO need reworks
+      const combinedRisk = amountBias > 28 && absShift > 48;
 
       const flags: string[] = [];
       if (severeAmount) {

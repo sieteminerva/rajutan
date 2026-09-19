@@ -16,6 +16,7 @@
   justify-content: center;
   background: var(--app-page-background, transparent);
   overflow: hidden;
+
   .field {
     --input-primary-color: var(--app-primary-color);
     --input-accent-color: var(--app-accent-color);
@@ -76,8 +77,8 @@
 
   & select {
     --input-border-radius: 5px;
-    text-transform: capitalize;
     --input-border-color: var(--app-primary-color);
+    text-transform: capitalize;
     width: 100%;
     &::picker(select) {
       max-height: calc((var(--input-min-height) * 2) + 14px) !important;
@@ -118,6 +119,7 @@
     justify-content: space-between;
 
     .field:is(.group[data-display="inline"]) {
+      --input-label-color: var(--app-text-color);
       margin-bottom: 0;
       & input[type="color"] {
         padding: 0;

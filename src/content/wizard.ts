@@ -28,7 +28,6 @@ const selectors = { "@field>label": { tagName: "label", attrs: { "animation": "t
 const IntroSet = {
   id: "intro-set",
   group: [
-    // `<span class="label" animation="typewriter" animation-chain="true">Kategory website yang ingin kamu buat dan tunjukkan kepada dunia adalah website</span>`,
     {
       type: "select",
       id: "web-type",
@@ -48,16 +47,9 @@ const IntroSet = {
           { name: "animation", value: "fade-in" },
           { name: "animation-chain", value: "true" },
           { name: "animated-once", value: "true" },
-          // {
-          //   name: "onchange", value: (e: Event) => {
-          //     console.log("wow its changed!", (e.target as any).value)
-          //     console.log("parentElement!", (e.target as any).closest("fieldset"))
-          //   }
-          // }
         ]
       }
     },
-    // `<span class="label" animation="typewriter" animation-chain="true">Kamu akan meluncurkannya dengan alamat nama digital</span>`,
     {
       type: "text",
       id: "web-name",
@@ -77,7 +69,6 @@ const IntroSet = {
         })
       }
     },
-    // `<span class="label" animation="typewriter" animation-chain="true">Apa alasan singkat dibalik kenapa kamu ingin membuat website ini, dan beritahu alasan kenapa orang lain harus mendatangi dan jangan sampai melewatkan website mu ini</span>`,
     {
       type: "textarea",
       id: "web-reason",
@@ -97,7 +88,6 @@ const IntroSet = {
         })
       }
     },
-    // `<span class="label" animation="typewriter" animation-chain="true">Situs web ini dirancang secara personal, dan dirajut oleh</span>`,
     {
       type: "text",
       id: "web-author",
@@ -144,7 +134,6 @@ const DetailSetShop = {
   id: "ecommerce-detail-set",
   // condition: { field: "web-type", filled: true },
   group: [
-    // `<span class="label" animation="typewriter" animation-chain="true">Untuk mengisi seluruh isi etalase data tokonya secara instan, silakan unggah baris berkas CSV</span>`,
     {
       type: "file",
       id: "detail-product",
@@ -169,7 +158,6 @@ const DetailSetShop = {
 const ContactSet = {
   id: "contact-set",
   group: [
-    // `<span class="label" animation="typewriter" animation-chain="true">Jika ada pengunjung atau calon pembeli yang ingin menyapa melalu surat elektronik mereka akan ditermia di</span>`,
     {
       type: "email",
       id: "contact-email",
@@ -189,7 +177,6 @@ const ContactSet = {
         })
       }
     },
-    // `<span class="label" animation="typewriter" animation-chain="true">Seluruh hak cipta dan kepemilikan operasional website ini bernaung di bawah</span>`,
     {
       type: "text",
       id: "contact-company",
@@ -209,7 +196,6 @@ const ContactSet = {
         })
       }
     },
-    // `<span class="label" animation="typewriter" animation-chain="true">Dan sebagai penanda identitas visual yang khas, mari sematkan gambar logo usahamu</span>`,
     {
       type: "file",
       id: "contact-logo",
@@ -233,7 +219,6 @@ const AddressSet = {
   id: "address-set",
   // condition: { field: "contact-company", filled: true },
   group: [
-    // `<span class="label" animation="typewriter" animation-chain="true">Pusat workshop atau rumah tempat kerja mu ini beralamat di</span>`,
     {
       type: "textarea",
       id: "address-jalan",
@@ -253,7 +238,6 @@ const AddressSet = {
         })
       }
     },
-    // `<span class="label" animation="typewriter" animation-chain="true">Tepatnya, wilayah tersebut berada di cakupan wilayah</span>`,
     {
       type: "select",
       id: "address-propinsi",
@@ -271,7 +255,6 @@ const AddressSet = {
         ]
       }
     },
-    // `<span class="label" animation="typewriter" animation-chain="true">pada wilayah administrasi daerah</span>`,
     {
       type: "select",
       id: "address-kota",
@@ -288,7 +271,7 @@ const AddressSet = {
         ]
       }
     },
-    // `<span class="label" animation="typewriter" animation-chain="true">meluas ke area wilayah tingkat</span>`,
+
     {
       type: "select",
       id: "address-kecamatan",
@@ -560,7 +543,7 @@ const TestSet = {
 const formConfig = {
   id: "wizardo",
   multistep: true,
-  cascading: true, // 🌊 setiap input dirantai condition ke input sebelumnya
+  cascading: true,
   autoDisableNextStep: true,
   // className: "inline",
   // selectors: {

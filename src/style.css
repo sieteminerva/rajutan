@@ -13,7 +13,7 @@ html,
 html * {
   scroll-behavior: smooth;
   scrollbar-width: thin;
-  scrollbar-color: var(--app-primary-color) color-mix(in srgb, grey 10%, var(--app-primary-color) 5%);
+  scrollbar-color: var(--app-accent-color) color-mix(in srgb, grey 10%, var(--app-primary-color) 5%);
 }
 
 body {
