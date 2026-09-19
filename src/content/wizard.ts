@@ -288,7 +288,7 @@ const AddressSet = {
         ]
       }
     },
-    // `<span class="label" animation="typewriter" animation-chain="true">hingga menyentuh batas terkecil di</span>`,
+
     {
       type: "select",
       id: "address-kelurahan",
@@ -305,7 +305,7 @@ const AddressSet = {
         ]
       }
     },
-    // `<span class="label" animation="typewriter" animation-chain="true">dengan penguncian kode pos resmi</span>`,
+
     {
       type: "text",
       id: "address-kodepos",
@@ -545,14 +545,14 @@ const formConfig = {
   multistep: true,
   cascading: true,
   autoDisableNextStep: true,
-  // className: "inline",
-  // selectors: {
-  //   "@form>group": { tagName: "fieldset", className: "inline-style" },
-  // },
+  className: "inline",
+  selectors: {
+    "@form>group": { tagName: "fieldset", className: "inline-style" },
+  },
   // submitButton: false,
 };
 const formContent = [
-  TestSet,
+  // TestSet,
   IntroSet,
   DetailSetShop,
   ContactSet,

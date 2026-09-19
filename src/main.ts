@@ -71,7 +71,7 @@ let renderSequence = 0;
 
 function buildersForRoute(route: string): string[] {
   switch (route.trim().toLowerCase().replace(/^#|\/+$/g, '')) {
-    case 'build': return ['form'];
+    case 'build': return ['form', 'table'];
     case 'blog': return ['article'];
     case 'generator': return ['form', 'color-theme'];
     default: return [];
