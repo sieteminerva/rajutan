@@ -216,7 +216,7 @@ section#faq {
 /* ─── Call to Action Section (#cta) ─── */
 section#cta {
   text-align: center;
-  background: var(--app-surface-muted);
+  /* background: var(--app-surface-muted); */
   border-top: 1px solid var(--app-border-color);
   border-bottom: 1px solid var(--app-border-color);
   & .shell {
@@ -277,18 +277,39 @@ section#assets {
 
 .editor-mode[id] {
   position: relative;
+  cursor: pointer;
   &:hover {
-    outline: 2px dashed var(--app-accent-color) !important;
-    outline-offset: -2px;
     &::before {
+      /* Mengubah warna outline saat hover */
+      outline-color: var(--app-accent-color);
+    }
+    &::after {
       visibility: visible;
     }
   }
 }
 
-.editor-mode[id]::before {
-  content: attr(id);
+.editor-mode[id]::before,
+.editor-mode[id]::after {
   position: absolute;
+  top: 0;
+  right: 0;
+  top: 0px;
+  right: 0;
+}
+/* PERBAIKAN PADA ::BEFORE */
+.editor-mode[id]::before {
+  content: ""; /* WAJIB: Tanpa ini, ::before tidak akan muncul */
+  left: 0;
+  bottom: 0;
+  outline: 2px dashed transparent; /* Mulai dari transparan agar bisa di-transition jika mau */
+  outline-offset: -2px;
+  pointer-events: none; /* Agar tidak mengganggu klik pada elemen di dalamnya */
+  z-index: 2; /* Di bawah ::after (z-index: 3) tapi di atas konten asli */
+}
+
+.editor-mode[id]::after {
+  content: attr(id);
   visibility: hidden;
   top: 0px;
   right: 0;
