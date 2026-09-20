@@ -3,6 +3,7 @@ import { ComponentRegistry } from './lib/Modules/ComponentRegistry';
 import { DOMRenderer } from './lib/Modules/DOMRenderer';
 import { AnimationsService } from './lib/Modules/Animations/Animations';
 import { HashRouter, type iRouteState } from './lib/Modules/HashRouter';
+import { installThemeBridge, CANVAS_MOUNT_SELECTOR } from './lib/Components/ColorTheme/ColorTheme.preview';
 import { EventEmitter } from './lib/Modules/EventEmitter';
 import { HomepageContent } from './content/home';
 import { BlogPageContent } from './content/blog';
@@ -56,6 +57,9 @@ function pageContentFor(route: string): iNodeContent {
     case 'result': return ResultPageContent;
     case 'blog': return BlogPageContent;
     case 'generator': return GeneratorPageContent;
+    // 🖼 Live-preview canvas: an empty mount root; ColorThemeBuilder pushes
+    // builder output here via the bridge (RENDER_BUILDER, see ColorTheme.preview.ts).
+    case 'canvas': return { "#app": { attrs: { id: "app", "data-canvas": "" } } };
     default: return HomepageContent;
   }
 }
@@ -74,6 +78,8 @@ function buildersForRoute(route: string): string[] {
     case 'build': return ['form', 'table'];
     case 'blog': return ['article'];
     case 'generator': return ['form', 'color-theme'];
+    // Canvas builders are preloaded on demand by the bridge's renderBuilder hook.
+    case 'canvas': return [];
     default: return [];
   }
 }
@@ -101,7 +107,7 @@ function bootRouting(): void {
   const router = new HashRouter(
     "home",
     "default",
-    ["home", "build", "result", "blog", "generator", "generator2"],
+    ["home", "build", "result", "blog", "generator", "canvas"],
     (state: iRouteState) => renderPage(state.route)
   );
 
@@ -114,6 +120,16 @@ function bootRouting(): void {
 
 async function start(container: HTMLElement) {
   // registerServiceWorker();
+  // 🖼 Live-preview bridge: this app instance accepts token + builder pushes
+  // from a ColorThemeBuilder parent iframe (see ColorTheme.preview.ts).
+  installThemeBridge({
+    renderBuilder: async (builderId, schema) => {
+      await components.preloadComponents([builderId], []);
+      const element = buildBuilderFn(builderId as keyof iBuilderRegistry, schema);
+      const canvas = document.querySelector(CANVAS_MOUNT_SELECTOR);
+      if (element && canvas) canvas.replaceChildren(element);
+    },
+  });
   // @ts-ignore
   const emitter = new EventEmitter();
   animation = new AnimationsService();

@@ -17,9 +17,15 @@ import {
   type ThemeMode,
   type ThemeOverrides,
 } from "./ColorTheme.engine";
+import { ColorThemePresets, type iColorThemePreset } from "./ColorTheme.presets";
+import { THEME_BRIDGE_EVENT, type iThemeBridgeMessage } from "./ColorTheme.preview";
 
 export type ColorThemeElementType =
   | "@colorizer"
+
+  | "@colorizer>preview"
+  | "@colorizer>preview>menu"
+
   | "@colorizer>header"
   | "@colorizer>title"
   | "@colorizer>description"
@@ -41,25 +47,19 @@ export type ColorThemeElementType =
   | "@colorizer>output>save"
   ;
 
-export interface iColorThemePreset {
-  label: string;
-  primary: string;
-  accent: string;
-  mode: ThemeMode;
-  mixer: MixerSettings;
-  overrides: ThemeOverrides;
-}
 
 export interface iColorThemeConfig extends iBuilderConfig<ColorThemeElementType> {
   primary: string; // Default primary color
   accent: string; // Default accent color,
   styles: String | Function; // Default css variables,
   mode: "light" | "dark"
-  disableValidation?: boolean;
+  disableValidation?: boolean | undefined;
   validations?: Record<string, ThemeValidationRule>;
   items?: Record<string, ThemeItemConfig>;
   textContent?: Record<string, string>;
-  presets?: Record<string, iColorThemePreset>;
+  presets?: iColorThemePreset[];
+  /** Routes offered in the preview iframe menu. */
+  previewRoutes?: string[];
 }
 
 export interface iColorThemeContent {
@@ -115,7 +115,7 @@ export const DEFAULT_TEXT_CONTENT: Record<string, string> = {
   modeLabel: "light",
 };
 
-export const DEFAULT_PRESETS: Record<string, iColorThemePreset> = {};
+
 
 export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThemeConfig> {
   readonly builderId: keyof iBuilderRegistry = "color-theme";
@@ -123,18 +123,22 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
   readonly stylesheet: string = "./ColorTheme.css";
 
   /** Reactive state: bases + mode + shared mixer settings + per-item overrides. */
-  #state: { bases: BaseColors; mode: ThemeMode; mixer: MixerSettings; overrides: ThemeOverrides };
-  /** Preset store lives on the instance because Builder.config is frozen at runtime. */
-  #presets: Record<string, iColorThemePreset>;
+  #state: { bases: BaseColors; preview: string; mode: ThemeMode; mixer: MixerSettings; overrides: ThemeOverrides; preset: string };
+
   /** Abort controller for cleaning up event listeners on destroy. */
   #abort = new AbortController();
   /** 🧲 Unwatch functions for the reactive root sync registered in initialize(). */
   #unwatch: Array<() => void> = [];
+  /** Live preview iframe (routes rendered inside via hash, outer URL untouched). */
+  #previewFrame: HTMLIFrameElement | null = null;
 
   constructor(config: Partial<iColorThemeConfig>) {
     super();
     const defaultSelector = {
       "@colorizer": { tagName: "main", className: "colorizer" },
+
+      "@colorizer>preview": { tagName: "iframe", className: "display", wrapper: "section.preview" },
+      "@colorizer>preview>menu": { tagName: "nav", className: "menu" },
 
       "@colorizer>header": { tagName: "section", className: "header" },
       "@colorizer>title": { tagName: "h4", className: "title" },
@@ -146,8 +150,8 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       "@colorizer>configurator>colors": { tagName: "div", className: "strip", wrapper: ".scales" },
       "@colorizer>configurator>mixer": { tagName: "div", className: "mixer" },
       "@colorizer>configurator>mixer>item": { tagName: "div", className: "mixer-item" },
-      "@colorizer>configurator>mixer>slider": { tagName: "input", attrs: { type: "range" }, className: "mixer-slider", wrapper: ".field" },
-      "@colorizer>configurator>mixer>selector": { tagName: "select", className: "mixer-selector", wrapper: ".field" },
+      "@colorizer>configurator>mixer>slider": { tagName: "input", attrs: { type: "range" }, wrapper: ".field" },
+      "@colorizer>configurator>mixer>selector": { tagName: "select", wrapper: ".field" },
 
       "@colorizer>output": { tagName: "section", className: "output" },
       "@colorizer>output>report": { tagName: "div", className: "report-item" },
@@ -157,38 +161,34 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       "@colorizer>output>save": { tagName: "button", className: "save" }
     }
 
-    const mergedConfig: Partial<iColorThemeConfig> = {
-      ...config,
-      disableValidation: config?.disableValidation ?? false,
-      validations: { ...DEFAULT_VALIDATIONS, ...(config?.validations ?? {}) },
-      items: { ...DEFAULT_THEME_ITEMS, ...(config?.items ?? {}) },
-      textContent: { ...DEFAULT_TEXT_CONTENT, ...(config?.textContent ?? {}) },
-      presets: { ...DEFAULT_PRESETS, ...(config?.presets ?? {}) },
-    };
-
     const defaultConfig: Required<iColorThemeConfig> = {
       themeId: "default",
       namespace: "",
       emit: null,
       selectors: defaultSelector,
+      styles: () => { },
+      // specific to color theme
       primary: ColorThemeEngine.DEFAULT_BASES.primary,
       accent: ColorThemeEngine.DEFAULT_BASES.accent,
-      styles: () => { },
       mode: "light",
-      disableValidation: false,
-      validations: { ...DEFAULT_VALIDATIONS },
-      items: { ...DEFAULT_THEME_ITEMS },
-      textContent: { ...DEFAULT_TEXT_CONTENT },
-      presets: { ...DEFAULT_PRESETS },
+      disableValidation: config?.disableValidation ?? false,
+      validations: { ...DEFAULT_VALIDATIONS, ...(config?.validations ?? {}) },
+      items: { ...DEFAULT_THEME_ITEMS, ...(config?.items ?? {}) },
+      textContent: { ...DEFAULT_TEXT_CONTENT, ...(config?.textContent ?? {}) },
+      presets: [...ColorThemePresets, ...(config?.presets ?? [])],
+      previewRoutes: config?.previewRoutes ?? ["home", "build", "blog"],
     }
 
-    this.config = this.resolveConfig(defaultConfig, mergedConfig)
-    this.#presets = { ...this.config.presets };
+    this.config = this.resolveConfig(defaultConfig, config)
+    // this.#presets = [...this.config.presets];
+    // this.#previewRoutes = [...this.config.previewRoutes];
 
     this.#state = {
       bases: { primary: this.config.primary, accent: this.config.accent },
       mode: this.config.mode,
       mixer: { ...ColorThemeEngine.DEFAULT_MIXER },
+      preset: "",
+      preview: this.config.previewRoutes[0],
       overrides: Object.fromEntries(
         Object.entries(this.config.items).map(([key, value]) => [key, { ...value.default }])
       ),
@@ -201,6 +201,8 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       bases: { primary: this.config.primary, accent: this.config.accent },
       mode: this.config.mode,
       mixer: { ...ColorThemeEngine.DEFAULT_MIXER },
+      preset: "",
+      preview: this.config.previewRoutes[0],
       overrides: Object.fromEntries(
         Object.entries(resolvedItems).map(([key, value]) => [key, { ...value.default }])
       ),
@@ -216,9 +218,37 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
     switch (typeKey) {
       case "@colorizer":
         const header = this.render("@colorizer>header")!;
+
+        const preview = this.render("@colorizer>preview")!;
+
         const configurator = this.render("@colorizer>configurator", payload)!;
         const result = this.render("@colorizer>output", payload)!;
-        el.append(header, configurator, result)
+        el.append(header, preview.__outer, configurator, result)
+        break;
+
+      case "@colorizer>preview":
+        this.#previewFrame = el as HTMLIFrameElement;
+        const menu = this.render("@colorizer>preview>menu")!;
+        el.__outer.prepend(menu)
+        // Tokens are wiped whenever the iframe reloads (route switch) —
+        // re-push the current theme once the fresh document is ready.
+        // (load fires after main.ts's module scripts ran, so the receiver
+        // listener inside the frame is guaranteed to be installed.)
+        this.#previewFrame.addEventListener("load", () => {
+          this.syncPreview(this.deriveTheme());
+        }, { signal: this.#abort.signal });
+        break;
+
+      case "@colorizer>preview>menu":
+        for (const route of this.config.previewRoutes) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "item";
+          btn.textContent = route;
+          btn.dataset.route = route;
+          if (route === this.#state.preview) btn.dataset.active = "";
+          el.append(btn);
+        }
         break;
 
       case "@colorizer>header":
@@ -231,6 +261,22 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       case "@colorizer>configurator":
         const titleCfg = this.render("@colorizer>title", this.config.textContent?.configurator ?? DEFAULT_TEXT_CONTENT.configurator)!;
 
+        const preset = this.render("@colorizer>configurator>mixer>selector", {
+          // ⚠️ No data-bind/name here: preset selection is a COMMAND (applies
+          // derived state in applyPreset), not a plain value binding. Binding
+          // it would add a second change listener that double-writes
+          // `state.preset`. `name: ""` avoids the render helper's `?? "select"`
+          // default, which would bind to a bogus `state.select` path.
+          value: this.#state.preset,
+          name: "preset",
+          // bind: "preset",
+          control: "preset",
+          ariaLabel: "preset selector",
+          title: "select preset color",
+          placeholder: "Select Presets",
+          options: this.config.presets
+        })!;
+
         const pickerContainer = document.createElement("div");
         pickerContainer.className = "field group";
         pickerContainer.dataset.display = "inline";
@@ -240,6 +286,7 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
           slot: "primary",
           color: this.#state.bases.primary,
         })!;
+
         const accent = this.render("@colorizer>configurator>picker", {
           label: this.config.textContent?.accentLabel ?? DEFAULT_TEXT_CONTENT.accentLabel,
           slot: "accent",
@@ -277,7 +324,7 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
           mixerContainer.appendChild(item);
         }
 
-        el.append(titleCfg, pickerContainer, ramps.__outer, palette.__outer, mixerContainer);
+        el.append(titleCfg, preset?.__outer, pickerContainer, ramps.__outer, palette.__outer, mixerContainer);
         break;
 
       case "@colorizer>output":
@@ -306,7 +353,6 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         el.textContent = payload ?? this.config.textContent?.title ?? DEFAULT_TEXT_CONTENT.title;
         break;
 
-
       case "@colorizer>description":
         el.textContent = payload ?? this.config.textContent?.description ?? DEFAULT_TEXT_CONTENT.description;
         break;
@@ -326,11 +372,11 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         checkbox.value = "dark";
         checkbox.checked = this.#state.mode === "dark";
 
-        const slider2 = document.createElement("div");
-        slider2.className = "slider";
-        slider2.dataset.shape = "round";
+        const sliderKnob = document.createElement("div");
+        sliderKnob.className = "slider";
+        sliderKnob.dataset.shape = "round";
 
-        el.append(checkbox, slider2);
+        el.append(checkbox, sliderKnob);
         el.__outer.append(l);
 
         break;
@@ -370,7 +416,7 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         const sharedLabel = document.createElement("label");
         sharedLabel.textContent = "Mix Mode";
 
-        const { field: sField, select: modeSelect } = this.createSelectControl({
+        const modeSelect = this.render("@colorizer>configurator>mixer>selector", {
           value: this.#state.mixer.mode,
           bind: "mixer.mode",
           control: "mode",
@@ -384,66 +430,66 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
                 : `${key} — interpolation only, no hue path`,
             }])
           ),
-        });
+        }) as HTMLSelectElement;
 
         modeSelect.name = "mode";
-        el.append(sharedLabel, sField);
+        el.append(sharedLabel, modeSelect.__outer);
         break;
 
       case "@colorizer>configurator>mixer>item":
-        {
-          const itemConfig = this.config.items?.[payload.label] ?? DEFAULT_THEME_ITEMS[payload.label] ?? {
-            default: { amount: 50, shift: 0, target: "auto" }
-          };
-          const fallback = itemConfig.default.amount ?? 50;
-          const fallbackHue = itemConfig.default.shift ?? 0;
-          const fallbackTarget = itemConfig.default.target ?? "auto";
 
-          el.classList.add("mixer-item");
-          el.dataset.mixer = payload.label;
+        const itemConfig = this.config.items?.[payload.label] ?? DEFAULT_THEME_ITEMS[payload.label] ?? {
+          default: { amount: 50, shift: 0, target: "auto" }
+        };
 
-          const itemLabel = document.createElement("label");
-          itemLabel.textContent = payload.label;
+        const fallback = itemConfig.default.amount ?? 50;
+        const fallbackHue = itemConfig.default.shift ?? 0;
+        const fallbackTarget = itemConfig.default.target ?? "auto";
 
-          const amountControl = this.createRangeControl({
-            value: fallback,
-            min: 0,
-            max: 100,
-            bind: `overrides.${payload.label}.amount`,
-            ariaLabel: `${payload.label} mix amount`,
-            title: "Mix amount — how much of the source color survives the mix",
-            outputSuffix: "%",
-            control: "amount",
-          });
-          amountControl.input.dataset.control = "amount";
+        el.classList.add("mixer-item");
+        el.dataset.mixer = payload.label;
 
-          const shiftControl = this.createRangeControl({
-            value: fallbackHue,
-            min: -MIX_SHIFT_LIMIT,
-            max: MIX_SHIFT_LIMIT,
-            bind: `overrides.${payload.label}.shift`,
-            ariaLabel: `${payload.label} hue rotation`,
-            title: "Hue rotation — rotates the source color's hue before mixing",
-            outputSuffix: "°",
-            control: "shift",
-          });
-          shiftControl.output.dataset.control = "shift-value";
+        const itemLabel = document.createElement("label");
+        itemLabel.textContent = payload.label;
 
-          const targetControl = this.createSelectControl({
-            value: fallbackTarget,
-            bind: `overrides.${payload.label}.target`,
-            control: "target",
-            ariaLabel: `${payload.label} mix counterpart`,
-            title: "Counterpart — what the source color blends into",
-            options: Object.fromEntries(
-              Object.entries(MIX_TARGET_OPTIONS).map(([key, option]) => [key, { label: option.label, title: option.title }])
-            ),
-          });
-          targetControl.select.dataset.control = "target";
+        const amountControl = this.render("@colorizer>configurator>mixer>slider", {
+          value: fallback,
+          min: 0,
+          max: 100,
+          bind: `overrides.${payload.label}.amount`,
+          ariaLabel: `${payload.label} mix amount`,
+          title: "Mix amount — how much of the source color survives the mix",
+          outputSuffix: "%",
+          control: "amount",
+        }) as HTMLInputElement;
 
-          el.append(itemLabel, targetControl.field, amountControl.field, shiftControl.field);
-          break;
-        }
+        const shiftControl = this.render("@colorizer>configurator>mixer>slider", {
+          value: fallbackHue,
+          min: -MIX_SHIFT_LIMIT,
+          max: MIX_SHIFT_LIMIT,
+          bind: `overrides.${payload.label}.shift`,
+          ariaLabel: `${payload.label} hue rotation`,
+          title: "Hue rotation — rotates the source color's hue before mixing",
+          outputSuffix: "°",
+          control: "shift",
+        }) as HTMLInputElement;
+
+        const targetControl = this.render("@colorizer>configurator>mixer>selector", {
+          value: fallbackTarget,
+          bind: `overrides.${payload.label}.target`,
+          control: "target",
+          ariaLabel: `${payload.label} mix counterpart`,
+          title: "Counterpart — what the source color blends into",
+          options: Object.fromEntries(
+            Object.entries(MIX_TARGET_OPTIONS).map(([key, option]) => [key, { label: option.label, title: option.title }])
+          ),
+        }) as HTMLSelectElement
+
+        targetControl.dataset.control = "target";
+
+        el.append(itemLabel, targetControl.__outer, amountControl.__outer, shiftControl.__outer);
+        break;
+
 
       case "@colorizer>output>report":
 
@@ -477,22 +523,34 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         el.textContent = this.config.textContent?.save ?? DEFAULT_TEXT_CONTENT.save;
         break;
 
-      case "@colorizer>configurator>mixer>slider": {
+      case "@colorizer>configurator>mixer>slider":
         const range = el as HTMLInputElement;
         range.type = "range";
-        range.value = String(payload.value ?? 0);
         range.min = String(payload.min ?? 0);
         range.max = String(payload.max ?? 100);
         range.step = String(payload.step ?? 1);
+        range.value = String(payload.value ?? 0);
         range.name = payload.name ?? "range";
         range.dataset.bind = payload.bind ?? "";
         range.dataset.control = payload.control ?? "range";
         range.ariaLabel = payload.ariaLabel ?? "mixer slider";
         range.title = payload.title ?? "mixer slider";
-        break;
-      }
 
-      case "@colorizer>configurator>mixer>selector": {
+        const output = document.createElement("output");
+        output.dataset.control = `${payload.control}-value`;
+        output.value = `${payload.value}${payload.outputSuffix ?? ""}`;
+        output.textContent = `${payload.value}${payload.outputSuffix ?? ""}`;
+
+        el.__outer.append(output);
+
+        // 🎞 The min → value entrance animation lives in
+        // ColorThemeKit.syncMixerControls (runs inside the reactive sync
+        // effect), so preset applies get animated too — not just first render.
+
+        break;
+
+
+      case "@colorizer>configurator>mixer>selector":
         const select = el as HTMLSelectElement;
         select.name = payload.name ?? "select";
         select.dataset.bind = payload.bind ?? "";
@@ -500,8 +558,21 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         select.ariaLabel = payload.ariaLabel ?? "mixer selector";
         select.title = payload.title ?? "mixer selector";
 
-        const options = (payload.options ?? {}) as Record<string, { label: string; title: string }>;
-        for (const [key, option] of Object.entries(options)) {
+        if (payload.placeholder) {
+          const placeholderEl = document.createElement("option");
+          placeholderEl.textContent = payload.placeholder;
+          placeholderEl.value = "";
+          placeholderEl.disabled = true;
+          placeholderEl.selected = true;
+          select.append(placeholderEl)
+        }
+
+        const options = payload.options ?? {};
+        const entries = Array.isArray(options)
+          ? options.map((option: iColorThemePreset) => [option.label, { label: option.label, title: option.label }] as const)
+          : Object.entries(options) as Array<[string, { label: string; title: string }]>;
+
+        for (const [key, option] of entries) {
           const optionEl = document.createElement("option");
           optionEl.value = key;
           optionEl.label = option.label;
@@ -510,93 +581,8 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
           select.append(optionEl);
         }
         break;
-      }
+
     }
-  }
-
-  private createRangeControl(config: {
-    value: number;
-    min: number;
-    max: number;
-    step?: number;
-    bind: string;
-    ariaLabel: string;
-    title: string;
-    outputSuffix?: string;
-    control?: string;
-  }): { field: HTMLDivElement; input: HTMLInputElement; output: HTMLOutputElement } {
-    const field = document.createElement("div");
-    field.className = "field";
-
-    const input = document.createElement("input");
-    input.type = "range";
-    input.min = String(config.min);
-    input.max = String(config.max);
-    input.step = String(config.step ?? 1);
-    input.value = String(config.value);
-    input.dataset.bind = config.bind;
-    input.dataset.control = config.control ?? "range";
-    input.ariaLabel = config.ariaLabel;
-    input.title = config.title;
-
-    const output = document.createElement("output");
-    output.dataset.control = config.control ?? "value";
-    output.value = `${config.value}${config.outputSuffix ?? ""}`;
-    output.textContent = `${config.value}${config.outputSuffix ?? ""}`;
-
-    field.append(input, output);
-
-    requestAnimationFrame(() => {
-      // Menggunakan setTimeout 50ms agar browser sempat menggambar frame posisi awal (min)
-      setTimeout(() => {
-        let current = config.min;
-        const target = config.value;
-        // Tentukan kecepatan naik (semakin besar angkanya, semakin cepat animasinya)
-        const increment = (target - current) / 10 || 1;
-
-        function stepAnimate() {
-          if (current < target) {
-            current = Math.min(target, current + increment);
-            // Bulatkan sesuai step jika diperlukan (opsional)
-            input.value = String(config.step ? Math.round(current / config.step) * config.step : Math.round(current));
-            requestAnimationFrame(stepAnimate);
-          }
-        }
-        stepAnimate();
-      }, 50);
-    });
-
-    return { field, input, output };
-  }
-
-  private createSelectControl(config: {
-    value: string;
-    bind: string;
-    options: Record<string, { label: string; title: string }>;
-    ariaLabel: string;
-    title: string;
-    control?: string;
-  }): { field: HTMLDivElement; select: HTMLSelectElement } {
-    const field = document.createElement("div");
-    field.className = "field";
-
-    const select = document.createElement("select");
-    select.dataset.bind = config.bind;
-    select.dataset.control = config.control ?? "select";
-    select.ariaLabel = config.ariaLabel;
-    select.title = config.title;
-
-    for (const [key, option] of Object.entries(config.options)) {
-      const optionEl = document.createElement("option");
-      optionEl.value = key;
-      optionEl.label = option.label;
-      optionEl.title = option.title;
-      optionEl.selected = key === config.value;
-      select.append(optionEl);
-    }
-
-    field.append(select);
-    return { field, select };
   }
 
   public createPreset(label: string): iColorThemePreset {
@@ -611,14 +597,79 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       ),
     };
 
-    this.#presets = { ...this.#presets, [label]: snapshot };
-    this.setConfig({ presets: this.#presets });
-    console.log({ snapshot })
+    const existingIndex = this.config.presets.findIndex((preset) => preset.label === label);
+    const presets = existingIndex >= 0
+      ? this.config.presets.map((preset, index) => index === existingIndex ? snapshot : preset)
+      : [...this.config.presets, snapshot];
+    this.setConfig({ presets: presets });
     return snapshot;
+  }
+
+  /**
+   * UI → state: selecting a preview route is just a reactive state write.
+   * syncPreview() (inside the sync effect) mirrors the tab, reloads the
+   * iframe with the fresh route hash and pushes the live tokens.
+   */
+  public setPreviewRoute(route: string): void {
+    if (!route || route === this.#state.preview) return;
+    this.#state.preview = route;
+  }
+
+  private applyPreset(label: string): void {
+    const preset = this.config.presets.find((item) => item.label === label);
+    if (!preset) return;
+
+    this.#state.preset = preset.label;
+    this.#state.bases.primary = preset.primary;
+    this.#state.bases.accent = preset.accent;
+    this.#state.mode = preset.mode;
+    this.#state.mixer = { ...preset.mixer };
+
+    const items = this.config.items ?? DEFAULT_THEME_ITEMS;
+    for (const [key, value] of Object.entries(items)) {
+      this.#state.overrides[key] = { ...(preset.overrides[key] ?? value.default) };
+    }
   }
 
   private deriveTheme(): DerivedTheme {
     return ColorThemeEngine.colorSchema(this.#state.bases, this.#state.mode, this.#state.overrides, this.#state.mixer);
+  }
+
+  /**
+   * State → UI: point the iframe at the selected route and push the live
+   * token map into it. The real app inside the frame re-themes itself via
+   * the CSS cascade (receiver: ThemeBridge.installThemeBridge in main.ts).
+   */
+  private syncPreview(theme: DerivedTheme): void {
+    const frame = this.#previewFrame;
+    if (!frame) return;
+
+    const route = this.#state.preview ?? this.config.previewRoutes[0] ?? "home";
+    if (frame.dataset.route !== route) {
+      frame.dataset.route = route;
+      const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
+      // Assigning src reloads the frame with the fresh route hash; the
+      // outer page URL stays untouched (navigation is only simulated).
+      // `?editor=true` opts the embedded app into editor mode: its router
+      // stays silent in localStorage/session-history (HashRouter._isEmbedded).
+      frame.src = `${window.location.origin}${base}#${route}?editor=true`;
+    }
+
+    // Mirror the active tab from state (single writer: this effect).
+    const menu = this.load("@colorizer>preview>menu");
+    if (menu) {
+      for (const tab of menu.querySelectorAll<HTMLButtonElement>(".item")) {
+        if (tab.dataset.route === route) tab.dataset.active = "";
+        else delete tab.dataset.active;
+      }
+      (menu.parentElement as HTMLElement | null)?.setAttribute("data-route", route);
+    }
+
+    // 🖼 Push the live theme into the iframe's real document.
+    frame.contentWindow?.postMessage(
+      { type: THEME_BRIDGE_EVENT, tokens: theme.tokens, mode: this.#state.mode } satisfies iThemeBridgeMessage,
+      window.location.origin,
+    );
   }
 
   private sync(root: HTMLElement): void {
@@ -627,6 +678,8 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
     for (const [key, value] of Object.entries(theme.tokens)) {
       root.style.setProperty(key, value);
     }
+
+    this.syncPreview(theme);
 
     const codeEl = root.querySelector<HTMLElement>("code");
     if (codeEl) {
@@ -637,6 +690,8 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
     ColorThemeKit.syncThemeStrips(root, theme, this.config.items ?? DEFAULT_THEME_ITEMS);
     ColorThemeKit.syncMixerSettings(root, this.#state.mixer);
     ColorThemeKit.syncMixerControls(root, this.#state.overrides);
+    ColorThemeKit.syncBaseColorPickers(root, this.#state.bases);
+    ColorThemeKit.syncPresetOptions(root, this.#state.preset, this.config.presets);
 
     if (!this.config.disableValidation) {
       ColorThemeKit.syncHarmonyNotice(root, this.#state.overrides);
@@ -663,6 +718,7 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
     const copyBtn = root.querySelector<HTMLButtonElement>("button.copy")!;
     const resetBtn = root.querySelector<HTMLButtonElement>("button.reset")!;
     const saveBtn = root.querySelector<HTMLButtonElement>("button.save")!;
+    const menuButton = root.querySelector<HTMLButtonElement>("nav.menu");
     const codeEl = this.load("@colorizer>output>codeblock")?.querySelector("code");
     const opts = { signal: this.#abort.signal };
 
@@ -682,18 +738,34 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       this.#state.bases.accent = this.config.accent;
       this.#state.mode = this.config.mode;
       this.#state.mixer = { ...ColorThemeEngine.DEFAULT_MIXER };
+      this.#state.preset = "";
 
       for (const [key, value] of Object.entries(this.config.items ?? DEFAULT_THEME_ITEMS)) {
         this.#state.overrides[key] = { ...value.default };
       }
     }, opts);
 
+    const presetSelect = root.querySelector<HTMLSelectElement>("select[data-control='preset']");
+    presetSelect?.addEventListener("change", () => {
+      this.applyPreset(presetSelect.value);
+    }, opts);
+
     saveBtn.addEventListener("click", () => {
-      const label = window.prompt("Preset name", `preset-${Object.keys(this.#presets).length + 1}`) ?? `preset-${Date.now()}`;
+      const label = window.prompt("Preset name", `preset-${this.config.presets.length + 1}`) ?? `preset-${Date.now()}`;
       const preset = this.createPreset(label.trim() || `preset-${Date.now()}`);
+      // 🔔 Writing `state.preset` notifies the sync effect, which rebuilds the
+      // select's options (syncPresetOptions) — no manual DOM sync here.
+      this.#state.preset = preset.label;
       saveBtn.textContent = `Saved: ${preset.label}`;
       setTimeout(() => (saveBtn.textContent = this.config.textContent?.save ?? DEFAULT_TEXT_CONTENT.save), 1500);
     }, opts);
+
+    menuButton?.addEventListener("click", (e: any) => {
+      const route = (e.target as HTMLElement)?.dataset?.route;
+      if (!route) return;
+      // 🔔 Pure state write — syncPreview() mirrors tabs & reloads the frame.
+      this.setPreviewRoute(route);
+    }, { signal: this.#abort.signal });
   }
 
   public destroy(): void {

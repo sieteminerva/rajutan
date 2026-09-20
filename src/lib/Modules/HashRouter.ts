@@ -2,6 +2,8 @@ export interface iRouteState {
   route: string;
   theme: string | null;
   fragment: string;
+  /** Opt-in editor/preview mode, set via ?editor=true in the hash query. */
+  editor: boolean;
 }
 
 export class HashRouter {
@@ -9,6 +11,8 @@ export class HashRouter {
   private currentThemeId: string;
   public onRouteChanged: (state: iRouteState) => void | Promise<void>;
   private validRoutes: string[] = [];
+  /** Sticky editor flag — latches true once any parsed hash carries ?editor=true. */
+  private editorMode = false;
 
   constructor(
     defaultRoute: string,
@@ -24,6 +28,22 @@ export class HashRouter {
     window.addEventListener("hashchange", this._handleHashChange);
   }
 
+  /**
+   * Embedded/editor mode. Opt-in via ?editor=true in the frame's hash
+   * (the preview canvas the editor launches), OR structurally when the
+   * document is iframed (belt-and-suspenders for unofficial embeds).
+   * Editor-mode documents must not leak into the parent page: no
+   * localStorage writes and no pushState history pollution.
+   */
+  private _isEmbedded(): boolean {
+    if (this.editorMode) return true;
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true; // Cross-origin access to window.top threw → embedded.
+    }
+  }
+
   public redirect(targetRoute: string, themeId?: string | null, fragmentId: string = ""): iRouteState {
     const activeTheme = this._normalizeTheme(themeId || this.currentThemeId);
     const cleanRoute = this._normalizeRoute(targetRoute);
@@ -31,12 +51,14 @@ export class HashRouter {
     const redirectState: iRouteState = {
       route: cleanRoute,
       theme: activeTheme,
-      fragment: fragmentId.trim().replace(/^#/, "")
+      fragment: fragmentId.trim().replace(/^#/, ""),
+      editor: this.editorMode
     };
 
-    // Update state internal dan storage
+    // Update state internal dan storage (top-level only — embedded frames
+    // share the parent's localStorage and must not write into it).
     this.currentThemeId = activeTheme;
-    localStorage.setItem("active_theme", activeTheme);
+    if (!this._isEmbedded()) localStorage.setItem("active_theme", activeTheme);
 
     // 🔒 REAKTIF SINKRONISASI: Tulis ulang URL address bar secara diam-diam (replaceState)
     // Ini mengunci agar browser tidak merekam halaman cacat ke dalam tumpukan tombol Back!
@@ -67,15 +89,18 @@ export class HashRouter {
     const normalizedState: iRouteState = {
       route: targetRoute,
       theme: activeTheme,
-      fragment: targetFragment
+      fragment: targetFragment,
+      editor: this.editorMode
     };
 
 
     // Gunakan pushState murni, browser blocked to trigger event hashchange!
-    window.history.pushState(null, "", this._buildHash(normalizedState));
+    // Embedded frames use replaceState instead: pushState would append to the
+    // JOINT session history and pollute the parent editor page's Back button.
+    window.history.replaceState(null, "", this._buildHash(normalizedState));
 
     this.currentThemeId = activeTheme;
-    localStorage.setItem("active_theme", activeTheme);
+    if (!this._isEmbedded()) localStorage.setItem("active_theme", activeTheme);
 
     // Jalankan callback satu pintu menuju LandingPageBuilder secara sinkron kilat secepat cahaya!
     this.onRouteChanged(normalizedState);
@@ -84,7 +109,9 @@ export class HashRouter {
 
   public parseUrlHash(): iRouteState {
     const rawHash = window.location.hash.trim().replace(/^#/, "");
-    const persistedTheme = this._normalizeTheme(localStorage.getItem("active_theme"));
+    // Embedded frames read nothing from storage (shared with the parent);
+    // the theme arrives via the ?theme= query or the bridge instead.
+    const persistedTheme = this._isEmbedded() ? "" : this._normalizeTheme(localStorage.getItem("active_theme"));
 
     if (!rawHash) {
       console.log("[Router] Empty URL hash. Executing central auto-redirect to home launcher...");
@@ -96,6 +123,11 @@ export class HashRouter {
     const pathPart = rawPathPart.trim().replace(/^\/+/, "");
     const query = new URLSearchParams(queryString);
     const queryTheme = query.get("theme");
+
+    // Opt-in editor mode: ?editor=true in the hash query. Sticky for this
+    // router instance so it survives fragment-only hash changes.
+    const queryEditor = query.get("editor");
+    if (queryEditor === "true" || queryEditor === "1") this.editorMode = true;
 
     let extractedTheme: string | null = queryTheme ? this._normalizeTheme(queryTheme) : null;
     let targetRoute = "";
@@ -140,11 +172,12 @@ export class HashRouter {
     const resolvedState: iRouteState = {
       route: finalRoute,
       theme: extractedTheme || persistedTheme || this.currentThemeId || "default",
-      fragment: finalFragment
+      fragment: finalFragment,
+      editor: this.editorMode
     };
 
     this.currentThemeId = resolvedState.theme || this.currentThemeId;
-    if (resolvedState.theme) localStorage.setItem("active_theme", resolvedState.theme);
+    if (resolvedState.theme && !this._isEmbedded()) localStorage.setItem("active_theme", resolvedState.theme);
 
     this._syncAddressBar(resolvedState, true);
 
@@ -193,7 +226,8 @@ export class HashRouter {
     const route = this._normalizeRoute(state.route);
     const theme = this._normalizeTheme(state.theme || this.currentThemeId) || "default";
     const fragment = state.fragment?.trim().replace(/^#/, "");
-    const query = `?theme=${encodeURIComponent(theme)}`;
+    const editor = (state.editor || this.editorMode) ? "&editor=true" : "";
+    const query = `?theme=${encodeURIComponent(theme)}${editor}`;
     const fragmentHash = fragment ? `/${fragment}` : "";
     return `#${route}${fragmentHash}${query}`;
   }

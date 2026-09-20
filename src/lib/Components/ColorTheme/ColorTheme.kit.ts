@@ -7,6 +7,7 @@ import {
   type ThemeMode,
   type ThemeOverrides,
 } from "./ColorTheme.engine";
+import type { iColorThemePreset } from "./ColorTheme.presets";
 
 export type ThemeValidationRule = { min?: number; max?: number; minContrast?: number };
 export type ThemeItemConfig = { variable: string; default: { amount: number; shift: number; target: MixTarget } };
@@ -117,6 +118,14 @@ export class ColorThemeKit {
     if (modeLabel) modeLabel.textContent = mode;
   }
 
+  static syncBaseColorPickers(root: HTMLElement, bases: BaseColors): void {
+    const primary = root.querySelector<HTMLInputElement>("input[data-slot='primary']");
+    const accent = root.querySelector<HTMLInputElement>("input[data-slot='accent']");
+
+    if (primary && primary.value !== bases.primary) primary.value = bases.primary;
+    if (accent && accent.value !== bases.accent) accent.value = bases.accent;
+  }
+
   static syncBaseColorWarning(
     root: HTMLElement,
     bases: BaseColors,
@@ -157,6 +166,43 @@ export class ColorThemeKit {
     next.title = "Keep the accent within the configured lightness band so it stays related to the primary color without becoming too faint on the background.";
 
     if (!existing) picker.appendChild(next);
+  }
+
+  /**
+   * State → UI for the preset select, called from the reactive `sync()` effect
+   * (same family as syncModeControl / syncMixerControls). Idempotent: options
+   * are only rebuilt when the label set actually changed; the selection always
+   * follows state — empty/unknown resets to the placeholder (this is what
+   * makes the Reset button visually reset the select).
+   */
+  static syncPresetOptions(root: HTMLElement, selectedPreset: string, presets: iColorThemePreset[]): void {
+    const select = root.querySelector<HTMLSelectElement>("select[data-control='preset']");
+    if (!select) return;
+
+    const labels = presets.map((preset) => preset.label);
+    const existing = Array.from(select.options)
+      .filter((option) => option.value !== "")
+      .map((option) => option.value);
+    const unchanged = existing.length === labels.length && labels.every((label, index) => label === existing[index]);
+
+    if (!unchanged) {
+      const placeholder = select.querySelector<HTMLOptionElement>("option[value='']");
+      const placeholderClone = placeholder?.cloneNode(true) as HTMLOptionElement | null;
+
+      select.replaceChildren();
+      if (placeholderClone) select.append(placeholderClone);
+
+      for (const preset of presets) {
+        const option = document.createElement("option");
+        for (const prop of ["value", "label", "title"]) {
+          (option as any)[prop] = preset.label;
+        }
+        select.append(option);
+      }
+    }
+
+    // State is the single source of truth — never read the DOM as fallback.
+    select.value = presets.some((preset) => preset.label === selectedPreset) ? selectedPreset : "";
   }
 
 
@@ -261,6 +307,65 @@ export class ColorThemeKit {
     if (mode) mode.value = mixer.mode ?? ColorThemeEngine.DEFAULT_MIXER.mode;
   }
 
+  /** 🎞 One animation token per slider — newer syncs supersede stale frames. */
+  static #sliderAnimations = new WeakMap<HTMLInputElement, number>();
+  /** Sliders that already ran (or skipped) their entrance animation. */
+  static #animatedSliders = new WeakMap<HTMLInputElement, boolean>();
+
+  /**
+   * Ramps a mixer slider from its `min` up to the target value. Called from
+   * the reactive `sync()` effect (via syncMixerControls), so it also animates
+   * programmatic changes (e.g. preset apply) — but never fights the user:
+   * a focused slider (being dragged / keyboard-stepped) is written directly.
+   */
+  static #animateSlider(input: HTMLInputElement, target: number): void {
+    // User is interacting with this slider — write directly, skip the ramp.
+    if (document.activeElement === input) {
+      this.#animatedSliders.set(input, true);
+      input.value = String(target);
+      return;
+    }
+
+    const firstRun = !this.#animatedSliders.get(input);
+    const changed = Number(input.value) !== target;
+    if (!firstRun && !changed) return; // repeat syncs with no change: no-op
+    this.#animatedSliders.set(input, true);
+
+    // Supersede any running animation on this slider.
+    const token = (this.#sliderAnimations.get(input) ?? 0) + 1;
+    this.#sliderAnimations.set(input, token);
+
+    const from = Number(input.min) || 0;
+    const step = Number.parseFloat(input.step) || 1;
+    // Kecepatan naik — semakin besar jaraknya, semakin cepat animasinya.
+    const increment = (target - from) / 10 || 1;
+
+    requestAnimationFrame(() => {
+      // Delay kecil agar browser sempat menggambar frame posisi awal (min).
+      setTimeout(() => {
+        let current = from;
+
+        const stepAnimate = () => {
+          if (this.#sliderAnimations.get(input) !== token) return; // superseded
+          if (document.activeElement === input) { // user grabbed it mid-ramp
+            input.value = String(target);
+            return;
+          }
+
+          if (current < target) {
+            current = Math.min(target, current + increment);
+            // Bulatkan sesuai step jika diperlukan.
+            input.value = String(Math.round(current / step) * step);
+            requestAnimationFrame(stepAnimate);
+          } else {
+            input.value = String(target);
+          }
+        };
+        stepAnimate();
+      }, 50);
+    });
+  }
+
   /** Per-ITEM controls: amount + hue sliders and their read-outs. */
   static syncMixerControls(root: HTMLElement, overrides: ThemeOverrides): void {
     const mixers = root.querySelectorAll<HTMLElement>(".mixer-item[data-mixer]");
@@ -270,23 +375,23 @@ export class ColorThemeKit {
       if (!entry) return;
 
       const amount = mixer.querySelector<HTMLInputElement>("input[data-control='amount']");
-      const output = mixer.querySelector<HTMLOutputElement>("output[data-control='value']");
+      const output = mixer.querySelector<HTMLOutputElement>("output[data-control='amount-value']");
       const shift = mixer.querySelector<HTMLInputElement>("input[data-control='shift']");
       const shiftOutput = mixer.querySelector<HTMLOutputElement>("output[data-control='shift-value']");
       const target = mixer.querySelector<HTMLSelectElement>("select[data-control='target']");
 
-      if (amount) amount.value = String(entry.amount);
+      // Read-outs always show the final value; only the slider position ramps.
       if (output) {
         output.value = `${entry.amount}%`;
         output.textContent = `${entry.amount}%`;
       }
-
-      const rotation = entry.shift ?? 0;
-      if (shift) shift.value = String(rotation);
       if (shiftOutput) {
-        shiftOutput.value = `${rotation}°`;
-        shiftOutput.textContent = `${rotation}°`;
+        shiftOutput.value = `${entry.shift ?? 0}°`;
+        shiftOutput.textContent = `${entry.shift ?? 0}°`;
       }
+
+      if (amount) ColorThemeKit.#animateSlider(amount, Number(entry.amount ?? 0));
+      if (shift) ColorThemeKit.#animateSlider(shift, Number(entry.shift ?? 0));
 
       if (target) target.value = (entry.target ?? "auto") as string;
     });
