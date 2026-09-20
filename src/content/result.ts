@@ -3,8 +3,8 @@
 // ================================================================
 
 import type { iNodeContent } from "../lib/interface";
-import { buildStore, navigate } from "../lib/Components/BaseAdapters/BuildStore";
-import type { SiteBuildResult } from "../lib/Components/BaseAdapters/BuildStore";
+import { buildStore, navigate } from "./BuildStore";
+import type { SiteBuildResult } from "./BuildStore";
 
 function buildResultLinks(data: SiteBuildResult | null, container: HTMLElement): HTMLElement {
   // console.log({ data })

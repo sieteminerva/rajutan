@@ -1,5 +1,5 @@
-import type { iActionProperty, iBuilderConfig, iBuilderRegistry } from "../../interface";
-import { Builder, } from "../Base";
+import type { iActionProperty, iBuilderConfig, iBuilderRegistry } from "../../../interface";
+import { BuilderR2, } from "../BaseR2";
 import {
   ColorThemeKit,
   DEFAULT_THEME_ITEMS,
@@ -18,13 +18,10 @@ import {
   type ThemeOverrides,
 } from "./ColorTheme.engine";
 import { ColorThemePresets, type iColorThemePreset } from "./ColorTheme.presets";
-import { THEME_BRIDGE_EVENT, type iThemeBridgeMessage } from "./ColorTheme.preview";
+import { THEME_TOKENS_EVENT, type iThemeTokensDetail } from "../Editor.preview";
 
 export type ColorThemeElementType =
   | "@colorizer"
-
-  | "@colorizer>preview"
-  | "@colorizer>preview>menu"
 
   | "@colorizer>header"
   | "@colorizer>title"
@@ -58,8 +55,6 @@ export interface iColorThemeConfig extends iBuilderConfig<ColorThemeElementType>
   items?: Record<string, ThemeItemConfig>;
   textContent?: Record<string, string>;
   presets?: iColorThemePreset[];
-  /** Routes offered in the preview iframe menu. */
-  previewRoutes?: string[];
 }
 
 export interface iColorThemeContent {
@@ -116,36 +111,54 @@ export const DEFAULT_TEXT_CONTENT: Record<string, string> = {
 };
 
 
+type iColorizerState = {
+  bases: BaseColors;
+  mode: ThemeMode;
+  mixer: MixerSettings;
+  overrides: ThemeOverrides;
+  preset: string;
+};
 
-export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThemeConfig> {
+
+
+export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorThemeConfig> {
   readonly builderId: keyof iBuilderRegistry = "color-theme";
   readonly name: keyof iBuilderRegistry = "color-theme";
   readonly stylesheet: string = "./ColorTheme.css";
 
-  /** Reactive state: bases + mode + shared mixer settings + per-item overrides. */
-  #state: { bases: BaseColors; preview: string; mode: ThemeMode; mixer: MixerSettings; overrides: ThemeOverrides; preset: string };
+  /** 🧩 Reactive state, built lazily on first access: `create()` reaches it
+   *  through prepare(), an attach()-only builder reaches it through its
+   *  template/initialize — either way it is ALWAYS the proxy (never a plain
+   *  object), so watchEffect/bindState work on both paths. */
+  #reactiveState: iColorizerState | null = null;
+  get #state(): iColorizerState {
+    return (this.#reactiveState ??= this.setProxy("@colorizer", {
+      bases: { primary: this.config.primary, accent: this.config.accent },
+      mode: this.config.mode,
+      mixer: { ...ColorThemeEngine.DEFAULT_MIXER },
+      preset: "",
+      overrides: Object.fromEntries(
+        Object.entries(this.config.items ?? DEFAULT_THEME_ITEMS).map(([key, value]) => [key, { ...value.default }])
+      ),
+    })) as iColorizerState;
+  }
 
   /** Abort controller for cleaning up event listeners on destroy. */
   #abort = new AbortController();
   /** 🧲 Unwatch functions for the reactive root sync registered in initialize(). */
   #unwatch: Array<() => void> = [];
-  /** Live preview iframe (routes rendered inside via hash, outer URL untouched). */
-  #previewFrame: HTMLIFrameElement | null = null;
 
   constructor(config: Partial<iColorThemeConfig>) {
     super();
     const defaultSelector = {
       "@colorizer": { tagName: "main", className: "colorizer" },
 
-      "@colorizer>preview": { tagName: "iframe", className: "display", wrapper: "section.preview" },
-      "@colorizer>preview>menu": { tagName: "nav", className: "menu" },
-
       "@colorizer>header": { tagName: "section", className: "header" },
       "@colorizer>title": { tagName: "h4", className: "title" },
       "@colorizer>description": { tagName: "p", className: "description" },
       "@colorizer>mode": { tagName: "div", className: "control", wrapper: ".field.toggle-switch" },
 
-      "@colorizer>configurator": { tagName: "section", className: "configurator" },
+      "@colorizer>configurator": { tagName: "aside", className: "configurator" },
       "@colorizer>configurator>picker": { tagName: "input", attrs: { type: "color" }, className: "picker", wrapper: ".field" },
       "@colorizer>configurator>colors": { tagName: "div", className: "strip", wrapper: ".scales" },
       "@colorizer>configurator>mixer": { tagName: "div", className: "mixer" },
@@ -153,7 +166,7 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       "@colorizer>configurator>mixer>slider": { tagName: "input", attrs: { type: "range" }, wrapper: ".field" },
       "@colorizer>configurator>mixer>selector": { tagName: "select", wrapper: ".field" },
 
-      "@colorizer>output": { tagName: "section", className: "output" },
+      "@colorizer>output": { tagName: "aside", className: "output" },
       "@colorizer>output>report": { tagName: "div", className: "report-item" },
       "@colorizer>output>codeblock": { tagName: "pre", className: "codeblock" },
       "@colorizer>output>copy": { tagName: "button", className: "copy" },
@@ -176,40 +189,17 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       items: { ...DEFAULT_THEME_ITEMS, ...(config?.items ?? {}) },
       textContent: { ...DEFAULT_TEXT_CONTENT, ...(config?.textContent ?? {}) },
       presets: [...ColorThemePresets, ...(config?.presets ?? [])],
-      previewRoutes: config?.previewRoutes ?? ["home", "build", "blog"],
     }
 
     this.config = this.resolveConfig(defaultConfig, config)
-    // this.#presets = [...this.config.presets];
-    // this.#previewRoutes = [...this.config.previewRoutes];
-
-    this.#state = {
-      bases: { primary: this.config.primary, accent: this.config.accent },
-      mode: this.config.mode,
-      mixer: { ...ColorThemeEngine.DEFAULT_MIXER },
-      preset: "",
-      preview: this.config.previewRoutes[0],
-      overrides: Object.fromEntries(
-        Object.entries(this.config.items).map(([key, value]) => [key, { ...value.default }])
-      ),
-    };
   }
 
   public prepare(_content: any, _config?: Required<iBuilderConfig<ColorThemeElementType>> | undefined): HTMLElement | Record<string, any | HTMLElement> {
-    const resolvedItems = { ...DEFAULT_THEME_ITEMS, ...(this.config.items ?? {}) };
-    this.#state = this.setProxy("@colorizer", {
-      bases: { primary: this.config.primary, accent: this.config.accent },
-      mode: this.config.mode,
-      mixer: { ...ColorThemeEngine.DEFAULT_MIXER },
-      preset: "",
-      preview: this.config.previewRoutes[0],
-      overrides: Object.fromEntries(
-        Object.entries(resolvedItems).map(([key, value]) => [key, { ...value.default }])
-      ),
-    });
-
-    const theme = ColorThemeEngine.colorSchema(this.#state.bases, this.#state.mode, this.#state.overrides, this.#state.mixer);
+    const theme = this.deriveTheme();
     // Token vars are applied reactively inside template("@colorizer").
+    // Only the "whole component" entry builds this root: a parent that wants
+    // individual keys uses attach() instead, and then create()/prepare() never
+    // run at all.
     return this.render("@colorizer", theme)!;
   }
 
@@ -218,37 +208,9 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
     switch (typeKey) {
       case "@colorizer":
         const header = this.render("@colorizer>header")!;
-
-        const preview = this.render("@colorizer>preview")!;
-
         const configurator = this.render("@colorizer>configurator", payload)!;
         const result = this.render("@colorizer>output", payload)!;
-        el.append(header, preview.__outer, configurator, result)
-        break;
-
-      case "@colorizer>preview":
-        this.#previewFrame = el as HTMLIFrameElement;
-        const menu = this.render("@colorizer>preview>menu")!;
-        el.__outer.prepend(menu)
-        // Tokens are wiped whenever the iframe reloads (route switch) —
-        // re-push the current theme once the fresh document is ready.
-        // (load fires after main.ts's module scripts ran, so the receiver
-        // listener inside the frame is guaranteed to be installed.)
-        this.#previewFrame.addEventListener("load", () => {
-          this.syncPreview(this.deriveTheme());
-        }, { signal: this.#abort.signal });
-        break;
-
-      case "@colorizer>preview>menu":
-        for (const route of this.config.previewRoutes) {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "item";
-          btn.textContent = route;
-          btn.dataset.route = route;
-          if (route === this.#state.preview) btn.dataset.active = "";
-          el.append(btn);
-        }
+        el.append(header, configurator, result)
         break;
 
       case "@colorizer>header":
@@ -332,7 +294,10 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         const reportContainer = document.createElement("div")
         reportContainer.className = "report";
 
-        for (const report of ColorThemeEngine.evaluate(payload)) {
+        // `payload` is whatever attach() brought in; when the key is built without
+        // one (or through create()), derive it from the builder's own state.
+        const theme = payload ?? this.deriveTheme();
+        for (const report of ColorThemeEngine.evaluate(theme)) {
           reportContainer.append(this.render("@colorizer>output>report", report)!)
         }
 
@@ -498,7 +463,7 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
         val.className = `${payload.ok ? "allowed" : "unallowed"}`;
 
         const desc = this.render("@colorizer>description", payload.label)!;
-
+        desc.className = "hint"
         const val2 = document.createElement("span");
         val2.textContent = `${payload.min}:1`
 
@@ -606,13 +571,14 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
   }
 
   /**
-   * UI → state: selecting a preview route is just a reactive state write.
-   * syncPreview() (inside the sync effect) mirrors the tab, reloads the
-   * iframe with the fresh route hash and pushes the live tokens.
+   * Broadcast the derived tokens on `window` (THEME_TOKENS_EVENT). The
+   * Editor builder listens and forwards them into the preview iframe —
+   * this builder stays decoupled from any preview mechanics.
    */
-  public setPreviewRoute(route: string): void {
-    if (!route || route === this.#state.preview) return;
-    this.#state.preview = route;
+  #broadcastTokens(theme: DerivedTheme): void {
+    window.dispatchEvent(new CustomEvent<iThemeTokensDetail>(THEME_TOKENS_EVENT, {
+      detail: { tokens: theme.tokens, mode: this.#state.mode },
+    }));
   }
 
   private applyPreset(label: string): void {
@@ -635,104 +601,127 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
     return ColorThemeEngine.colorSchema(this.#state.bases, this.#state.mode, this.#state.overrides, this.#state.mixer);
   }
 
-  /**
-   * State → UI: point the iframe at the selected route and push the live
-   * token map into it. The real app inside the frame re-themes itself via
-   * the CSS cascade (receiver: ThemeBridge.installThemeBridge in main.ts).
-   */
-  private syncPreview(theme: DerivedTheme): void {
-    const frame = this.#previewFrame;
-    if (!frame) return;
-
-    const route = this.#state.preview ?? this.config.previewRoutes[0] ?? "home";
-    if (frame.dataset.route !== route) {
-      frame.dataset.route = route;
-      const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
-      // Assigning src reloads the frame with the fresh route hash; the
-      // outer page URL stays untouched (navigation is only simulated).
-      // `?editor=true` opts the embedded app into editor mode: its router
-      // stays silent in localStorage/session-history (HashRouter._isEmbedded).
-      frame.src = `${window.location.origin}${base}#${route}?editor=true`;
-    }
-
-    // Mirror the active tab from state (single writer: this effect).
-    const menu = this.load("@colorizer>preview>menu");
-    if (menu) {
-      for (const tab of menu.querySelectorAll<HTMLButtonElement>(".item")) {
-        if (tab.dataset.route === route) tab.dataset.active = "";
-        else delete tab.dataset.active;
-      }
-      (menu.parentElement as HTMLElement | null)?.setAttribute("data-route", route);
-    }
-
-    // 🖼 Push the live theme into the iframe's real document.
-    frame.contentWindow?.postMessage(
-      { type: THEME_BRIDGE_EVENT, tokens: theme.tokens, mode: this.#state.mode } satisfies iThemeBridgeMessage,
-      window.location.origin,
-    );
-  }
-
-  private sync(root: HTMLElement): void {
-    const theme = this.deriveTheme();
-
-    for (const [key, value] of Object.entries(theme.tokens)) {
-      root.style.setProperty(key, value);
-    }
-
-    this.syncPreview(theme);
-
-    const codeEl = root.querySelector<HTMLElement>("code");
+  /** State → UI for ONE wiring scope (the builder root or a projected panel). */
+  private sync(scope: HTMLElement, theme: DerivedTheme): void {
+    // Tokens are NOT stamped per-panel — they are inherited resources, painted
+    // once on a single host by #paintTokens(). Panels (and everything under
+    // them) read the `--app-*` values through the cascade instead.
+    const codeEl = scope.querySelector<HTMLElement>("code");
     if (codeEl) {
       codeEl.textContent = ColorThemeEngine.toCssText(theme.tokens, this.#state.mode, this.#state.bases);
     }
 
-    ColorThemeKit.syncReport(root, theme);
-    ColorThemeKit.syncThemeStrips(root, theme, this.config.items ?? DEFAULT_THEME_ITEMS);
-    ColorThemeKit.syncMixerSettings(root, this.#state.mixer);
-    ColorThemeKit.syncMixerControls(root, this.#state.overrides);
-    ColorThemeKit.syncBaseColorPickers(root, this.#state.bases);
-    ColorThemeKit.syncPresetOptions(root, this.#state.preset, this.config.presets);
+    ColorThemeKit.syncReport(scope, theme);
+    ColorThemeKit.syncThemeStrips(scope, theme, this.config.items ?? DEFAULT_THEME_ITEMS);
+    ColorThemeKit.syncMixerSettings(scope, this.#state.mixer);
+    ColorThemeKit.syncMixerControls(scope, this.#state.overrides);
+    ColorThemeKit.syncBaseColorPickers(scope, this.#state.bases);
+    ColorThemeKit.syncPresetOptions(scope, this.#state.preset, this.config.presets);
 
     if (!this.config.disableValidation) {
-      ColorThemeKit.syncHarmonyNotice(root, this.#state.overrides);
-      ColorThemeKit.syncBaseColorWarning(root, this.#state.bases, this.#state.mode, this.config.validations ?? DEFAULT_VALIDATIONS, theme);
+      ColorThemeKit.syncHarmonyNotice(scope, this.#state.overrides);
+      ColorThemeKit.syncBaseColorWarning(scope, this.#state.bases, this.#state.mode, this.config.validations ?? DEFAULT_VALIDATIONS, theme);
     }
 
-    ColorThemeKit.syncModeControl(root, this.#state.mode);
+    ColorThemeKit.syncModeControl(scope, this.#state.mode);
   }
 
   /**
-   * Everything state → UI is already wired by template() effects.
-   * initialize() only wires user input → state (bind) + buttons.
+   * 🎨 TOKEN HOST — tokens are painted on exactly ONE element: the caller's
+   * root when this builder is slotted into it (the shared ancestor of every
+   * attached panel, so `@editor` chrome and all panels inherit the cascade),
+   * or this builder's own root when it owns the page standalone. Without this,
+   * each attached scope would carry its own duplicated inline token set.
+   */
+  #paintTokens(theme: DerivedTheme): void {
+    const itself = this.rootElement ?? null;
+    const ownRootKey = Object.keys(this.hierarchy.get())[0] as ColorThemeElementType | undefined;
+    const ownRoot = ownRootKey ? this.load(ownRootKey) : null;
+    const host = itself ?? ownRoot;
+    if (!host) return;
+    for (const [key, value] of Object.entries(theme.tokens)) {
+      host.style.setProperty(key, value);
+    }
+    host.style.colorScheme = this.#state.mode;
+  }
+
+  /**
+   * initialize() is called PER SCOPE — never "for everything at once":
+   *
+   * - create() hands over the root element;
+   * - every attach() hands over the single key it just projected.
+   *
+   * So the builder wires exactly what its caller asked for, and three layers
+   * keep that from duplicating anything:
+   *
+   * 1. input → state: `bindState(scope)` covers only that scope, and
+   *    BuilderProxy.bind refreshes an already-bound control instead of stacking
+   *    a second listener on it.
+   * 2. state → UI: ONE reactive effect per instance. It loops `scopes()` at run
+   *    time (the base's list: root + every attached key), so a key attached
+   *    later is repainted from the same state without a second effect.
+   * 3. bulk actions: attempted on every pass, wired once per node.
+   *
+   * Because all attached keys belong to the same instance, they share `#state`:
+   * the mode toggle drives the configurator strips and the output report through
+   * that one effect — no cross-builder wiring, no duplicate bindings.
    */
   public initialize(root?: HTMLElement): void {
     if (!root) return;
 
     this.bindState(root, this.#state);
-    this.#unwatch.push(this.proxyRuntime.watchEffect(() => this.sync(root)));
-    this.initializeActions(root);
+    this.sync(root, this.deriveTheme());
+    this.#paintTokens(this.deriveTheme());
+
+    if (!this.#unwatch.length) {
+      this.#unwatch.push(this.proxyRuntime.watchEffect(() => {
+        const theme = this.deriveTheme();
+        // Tokens are painted on ONE host (caller's root, else my own root) —
+        // never per attached scope. Panels inherit them via the cascade.
+        this.#paintTokens(theme);
+        this.#broadcastTokens(theme);
+        for (const scope of this.scopes()) this.sync(scope, theme);
+      }));
+    }
+
+    this.initializeActions();
   }
 
-  /** Copy / Reset buttons. */
-  private initializeActions(root: HTMLElement): void {
-    const copyBtn = root.querySelector<HTMLButtonElement>("button.copy")!;
-    const resetBtn = root.querySelector<HTMLButtonElement>("button.reset")!;
-    const saveBtn = root.querySelector<HTMLButtonElement>("button.save")!;
-    const menuButton = root.querySelector<HTMLButtonElement>("nav.menu");
-    const codeEl = this.load("@colorizer>output>codeblock")?.querySelector("code");
+  /**
+   * Copy / Reset / Save + preset select.
+   * Nodes are resolved through the node store (typeKey) and the wiring scopes,
+   * so wiring never depends on which DOM scope holds them; `@colorizer>output`
+   * may also be attached after the other keys, hence the per-node guard.
+   */
+  private initializeActions(): void {
     const opts = { signal: this.#abort.signal };
+    const wire = (node: HTMLElement | null, type: string, onAction: () => void): void => {
+      if (!node || node.dataset.wired) return;
+      node.dataset.wired = "true";
+      node.addEventListener(type, onAction, opts);
+    };
+    const copyBtn = this.load("@colorizer>output>copy") as HTMLButtonElement | null;
+    const resetBtn = this.load("@colorizer>output>reset") as HTMLButtonElement | null;
+    const saveBtn = this.load("@colorizer>output>save") as HTMLButtonElement | null;
+    const codeEl = this.load("@colorizer>output>codeblock")?.querySelector("code");
+    // The mixer re-uses this typeKey for several selects, so the preset control
+    // is found by its hook across every wiring scope.
+    const presetSelect = this.scopes().reduce<HTMLSelectElement | null>(
+      (found, scope) => found ?? scope.querySelector<HTMLSelectElement>("select[data-control='preset']"),
+      null,
+    );
 
-    copyBtn.addEventListener("click", async () => {
+    wire(copyBtn, "click", async () => {
       try {
         await navigator.clipboard.writeText(codeEl?.textContent || "");
-        copyBtn.textContent = "Copied ✓";
+        copyBtn!.textContent = "Copied ✓";
       } catch {
-        copyBtn.textContent = "Copy failed";
+        copyBtn!.textContent = "Copy failed";
       }
-      setTimeout(() => (copyBtn.textContent = "Copy CSS"), 1500);
-    }, opts);
+      setTimeout(() => (copyBtn!.textContent = "Copy CSS"), 1500);
+    });
 
-    resetBtn.addEventListener("click", () => {
+    wire(resetBtn, "click", () => {
       // 🔁 Just mutate the reactive state — every effect re-runs on its own.
       this.#state.bases.primary = this.config.primary;
       this.#state.bases.accent = this.config.accent;
@@ -743,29 +732,21 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
       for (const [key, value] of Object.entries(this.config.items ?? DEFAULT_THEME_ITEMS)) {
         this.#state.overrides[key] = { ...value.default };
       }
-    }, opts);
+    });
 
-    const presetSelect = root.querySelector<HTMLSelectElement>("select[data-control='preset']");
-    presetSelect?.addEventListener("change", () => {
-      this.applyPreset(presetSelect.value);
-    }, opts);
+    wire(presetSelect, "change", () => {
+      this.applyPreset(presetSelect!.value);
+    });
 
-    saveBtn.addEventListener("click", () => {
+    wire(saveBtn, "click", () => {
       const label = window.prompt("Preset name", `preset-${this.config.presets.length + 1}`) ?? `preset-${Date.now()}`;
       const preset = this.createPreset(label.trim() || `preset-${Date.now()}`);
       // 🔔 Writing `state.preset` notifies the sync effect, which rebuilds the
       // select's options (syncPresetOptions) — no manual DOM sync here.
       this.#state.preset = preset.label;
-      saveBtn.textContent = `Saved: ${preset.label}`;
-      setTimeout(() => (saveBtn.textContent = this.config.textContent?.save ?? DEFAULT_TEXT_CONTENT.save), 1500);
-    }, opts);
-
-    menuButton?.addEventListener("click", (e: any) => {
-      const route = (e.target as HTMLElement)?.dataset?.route;
-      if (!route) return;
-      // 🔔 Pure state write — syncPreview() mirrors tabs & reloads the frame.
-      this.setPreviewRoute(route);
-    }, { signal: this.#abort.signal });
+      saveBtn!.textContent = `Saved: ${preset.label}`;
+      setTimeout(() => (saveBtn!.textContent = this.config.textContent?.save ?? DEFAULT_TEXT_CONTENT.save), 1500);
+    });
   }
 
   public destroy(): void {

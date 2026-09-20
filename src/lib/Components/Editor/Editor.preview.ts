@@ -23,11 +23,24 @@
 
 export const THEME_BRIDGE_EVENT = "APPLY_THEME_TOKENS";
 export const RENDER_BUILDER_EVENT = "RENDER_BUILDER";
+/**
+ * Same-document broadcast channel: a theme builder dispatches this CustomEvent
+ * on `window` whenever its derived tokens change; the Editor builder listens
+ * and forwards the payload into the preview iframe as THEME_BRIDGE_EVENT.
+ * Keeps the two builders decoupled (no direct references between them).
+ */
+export const THEME_TOKENS_EVENT = "editor:theme-tokens";
 /** Root element (attribute selector) inside the iframe that builder output mounts into. */
 export const CANVAS_MOUNT_SELECTOR = "[data-canvas]";
 
 export interface iThemeBridgeMessage {
   type: typeof THEME_BRIDGE_EVENT;
+  tokens: Record<string, string>;
+  mode: "light" | "dark";
+}
+
+/** Detail payload of the THEME_TOKENS_EVENT CustomEvent. */
+export interface iThemeTokensDetail {
   tokens: Record<string, string>;
   mode: "light" | "dark";
 }

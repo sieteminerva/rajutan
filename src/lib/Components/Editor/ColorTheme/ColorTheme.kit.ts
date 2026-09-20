@@ -271,13 +271,13 @@ export class ColorThemeKit {
 
       if (current && row) {
         const ratioEl = current.querySelector<HTMLElement>("strong") ?? document.createElement("strong");
-        const descEl = current.querySelector<HTMLElement>("p.description") ?? document.createElement("p");
+        const descEl = current.querySelector<HTMLElement>("p.hint") ?? document.createElement("p");
         const minEl = current.querySelector<HTMLElement>("span") ?? document.createElement("span");
 
         ratioEl.textContent = `${row.ok ? "✓" : "✗"} ${row.ratio.toFixed(2)}:1`;
         ratioEl.className = row.ok ? "allowed" : "unallowed";
         descEl.textContent = row.label;
-        descEl.className = "description";
+        descEl.className = "hint";
         minEl.textContent = `${row.min}:1`;
 
         if (!ratioEl.parentElement) current.append(ratioEl, descEl, minEl);

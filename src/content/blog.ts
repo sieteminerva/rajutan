@@ -3,7 +3,7 @@
 // ================================================================
 
 import type { iNodeContent } from "../lib/interface";
-import { navigate } from "../lib/Components/BaseAdapters/BuildStore";
+import { navigate } from "./BuildStore";
 import blogPayload from "./output.json";
 
 // =====================================================================

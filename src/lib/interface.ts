@@ -102,6 +102,7 @@ export interface iBuilderRegistry {
   table: any[];
   dropdown: iBasicInputNode;
   "color-theme": iBasicNode;
+  "editor": iBasicNode;
   // Untuk komponen baru nanti, cukup daftarkan jenis array atomnya di sini:
   // stats: iStatsProperty[];
 }
@@ -158,7 +159,7 @@ export interface iNodeRecordRelations {
   parent?: string | null; // "builderId:typeKey" milik bapak angkatnya
   children?: string[]     // Array [...builderId:typeKey] milik anak cucunya (RECORD keys — statis, dari selectorToTree)
   elements?: string[]     // 🧭 Inventory langsung: selector string ("tag#id.classes") elemen yang hidup DI DALAM key ini —
-                          //    berhenti di batas key lain (nested record tidak dituruni, tidak duplikat)
+  //    berhenti di batas key lain (nested record tidak dituruni, tidak duplikat)
 }
 
 export interface iCompositeBuilderOutput {

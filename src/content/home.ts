@@ -3,7 +3,7 @@
 // ================================================================
 
 import type { iNodeContent } from "../lib/interface";
-import { navigate } from "../lib/Components/BaseAdapters/BuildStore";
+import { navigate } from "./BuildStore";
 
 // =====================================================================
 // HELPERS LANDING — presentasi & memulai wizard
@@ -225,8 +225,8 @@ export const HomepageContent: iNodeContent =
             "a.item#blog-link": { attrs: { href: "#blog" }, content: "Artikel", onCreated: (el: HTMLElement) => el.addEventListener("click", (_e: Event) => navigate("#blog")) },
           },
           "button.button.primary#start-link": {
-            content: "Mulai",
-            onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("generator")),
+            content: "Live Editor",
+            onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("editor")),
           },
         }
       },

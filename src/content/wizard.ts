@@ -3,8 +3,8 @@
 // ================================================================
 
 import type { iNodeContent } from "../lib/interface";
-import { buildStore, mockBuildResult, navigate } from "../lib/Components/BaseAdapters/BuildStore";
-import type { BuildApiResponse } from "../lib/Components/BaseAdapters/BuildStore";
+import { buildStore, mockBuildResult, navigate } from "./BuildStore";
+import type { BuildApiResponse } from "./BuildStore";
 
 function createPopover(content: { info: string, placeholder: string }) {
   const popover = document.createElement("div");

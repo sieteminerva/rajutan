@@ -3,7 +3,7 @@ import { ComponentRegistry } from './lib/Modules/ComponentRegistry';
 import { DOMRenderer } from './lib/Modules/DOMRenderer';
 import { AnimationsService } from './lib/Modules/Animations/Animations';
 import { HashRouter, type iRouteState } from './lib/Modules/HashRouter';
-import { installThemeBridge, CANVAS_MOUNT_SELECTOR } from './lib/Components/ColorTheme/ColorTheme.preview';
+import { installThemeBridge, CANVAS_MOUNT_SELECTOR } from './lib/Components/Editor/Editor.preview';
 import { EventEmitter } from './lib/Modules/EventEmitter';
 import { HomepageContent } from './content/home';
 import { BlogPageContent } from './content/blog';
@@ -20,6 +20,7 @@ import './style.css';
 
 import formResult from './payload.json';
 import { GeneratorPageContent } from './content/generator';
+import { EditorPageContent } from './content/editor';
 
 
 function toTable(obj: any, keyName: string) {
@@ -57,6 +58,7 @@ function pageContentFor(route: string): iNodeContent {
     case 'result': return ResultPageContent;
     case 'blog': return BlogPageContent;
     case 'generator': return GeneratorPageContent;
+    case 'editor': return EditorPageContent;
     // 🖼 Live-preview canvas: an empty mount root; ColorThemeBuilder pushes
     // builder output here via the bridge (RENDER_BUILDER, see ColorTheme.preview.ts).
     case 'canvas': return { "#app": { attrs: { id: "app", "data-canvas": "" } } };
@@ -78,6 +80,7 @@ function buildersForRoute(route: string): string[] {
     case 'build': return ['form', 'table'];
     case 'blog': return ['article'];
     case 'generator': return ['form', 'color-theme'];
+    case 'editor': return ['form', 'color-theme', 'editor'];
     // Canvas builders are preloaded on demand by the bridge's renderBuilder hook.
     case 'canvas': return [];
     default: return [];
@@ -107,7 +110,7 @@ function bootRouting(): void {
   const router = new HashRouter(
     "home",
     "default",
-    ["home", "build", "result", "blog", "generator", "canvas"],
+    ["home", "build", "result", "blog", "generator", "editor", "canvas"],
     (state: iRouteState) => renderPage(state.route)
   );
 
@@ -163,8 +166,17 @@ async function start(container: HTMLElement) {
 
     .register("color-theme", (data: any) => {
       return {
-        path: "lib/Components/ColorTheme/ColorTheme.ts",
-        stylesheet: "lib/Components/ColorTheme/ColorTheme.css", // alternative style definition also didn't loaded
+        path: "lib/Components/Editor/ColorTheme/ColorTheme.ts",
+        stylesheet: "lib/Components/Editor/ColorTheme/ColorTheme.css", // alternative style definition also didn't loaded
+        config: data?.config,
+        schema: data?.schema !== undefined ? data.schema : (data?.content !== undefined ? data.content : data),
+      };
+    })
+
+    .register("editor", (data: any) => {
+      return {
+        path: "lib/Components/Editor/Editor.ts",
+        stylesheet: "lib/Components/Editor/Editor.css", // alternative style definition also didn't loaded
         config: data?.config,
         schema: data?.schema !== undefined ? data.schema : (data?.content !== undefined ? data.content : data),
       };

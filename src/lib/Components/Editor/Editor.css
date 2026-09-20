@@ -1,0 +1,91 @@
+main.editor {
+  display: grid;
+  /* Membuat 3 kolom: 35px di kiri/kanan, dan sisanya (1fr) di tengah */
+  grid-template-columns: 40px 1fr 40px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "top top top"
+    "left center right";
+  height: 100vh;
+  width: 100vw;
+  .menu {
+    padding: unset;
+    border-width: 1px;
+    border-style: solid;
+    border-color: transparent;
+    background: var(--app-surface-strong, #ffffff);
+    width: 100%;
+    z-index: 3;
+    overflow: hidden;
+    &:is(nav.top) {
+      grid-area: top;
+      display: grid;
+      grid-template-areas: "left center right";
+      grid-template-columns: 40px 1fr 40px;
+      align-content: center;
+      justify-items: center;
+      position: unset;
+      height: 50px;
+      border-bottom-color: var(--app-border-color);
+      & > [data-slot="color-mode"] {
+        grid-area: center;
+        transform: scale(65%);
+        margin-bottom: 0;
+      }
+      & > button.trigger {
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+      }
+    }
+    &:is(aside.left) {
+      grid-area: left;
+      height: 100%;
+      border-right-color: var(--app-border-color);
+    }
+    &:is(aside.right) {
+      grid-area: right;
+      height: 100%;
+      border-left-color: var(--app-border-color);
+    }
+  }
+  iframe:is(.display) {
+    grid-area: center;
+    background: var(--app-surface-strong, #ffffff);
+    border: 1px solid transparent;
+    box-shadow: var(--app-shadow-soft, none);
+    height: 100%;
+    width: 100%;
+  }
+  & > [data-slot="color-configurator"],
+  & > [data-slot="color-report"] {
+    position: fixed;
+    width: min(31rem, 94vw);
+    background: var(--app-surface-strong, #ffffff);
+    height: calc(100vh - 40px);
+    box-shadow: var(--app-shadow-soft, none);
+    min-block-size: 0; /* … and a 100dvh min-height */
+    overflow: auto;
+    z-index: 2;
+    border: unset;
+    transition: transform 300ms cubic-bezier(0.34, 1.23, 0.64, 1);
+    transform: translateX(0);
+  }
+  & > [data-slot="color-configurator"] {
+    inset: 50px 40px 0 40px;
+    border-right: 1px solid var(--app-border-color);
+  }
+
+  & > [data-slot="color-report"] {
+    inset: 50px 40px 0 auto;
+    border-left: 1px solid var(--app-border-color);
+  }
+
+  & > [data-slot="color-configurator"].hidden {
+    transform: translateX(calc(-100% - 40px));
+  }
+
+  & > [data-slot="color-report"].hidden {
+    transform: translateX(calc(100% + 40px));
+  }
+}
