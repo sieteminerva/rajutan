@@ -373,7 +373,7 @@ const ConfirmationSet = {
           "@field": {
             tagName: "div",
             className: "field",
-            attrs: { "animation": "fade-in", "animation-chain": "true", "animeted-once": "true" }
+            attrs: { "animation": "fade-in", "animation-chain": "true", "animetad-once": "true" }
           }
         },
         style: "toggle",
@@ -531,7 +531,7 @@ const TestSet = {
           "@field": {
             tagName: "div",
             className: "field",
-            attrs: { "animation": "fade-in", "animation-chain": "true", "animeted-once": "true" }
+            attrs: { "animation": "fade-in", "animation-chain": "true", "animated-once": "true" }
           }
         },
         style: "toggle",
@@ -553,10 +553,10 @@ const formConfig = {
 };
 const formContent = [
   // TestSet,
+  AddressSet,
   IntroSet,
   DetailSetShop,
   ContactSet,
-  AddressSet,
   ConfirmationSet,
 ]
 

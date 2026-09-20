@@ -13,6 +13,12 @@ export class HashRouter {
   private validRoutes: string[] = [];
   /** Sticky editor flag — latches true once any parsed hash carries ?editor=true. */
   private editorMode = false;
+  /**
+   * Routes that must never render inside the preview iframe. `editor` owns
+   * an iframe that boots the app again — allowing it in preview recurses
+   * (editor inside editor inside editor…).
+   */
+  private previewBlockedRoutes = new Set(["editor"]);
 
   constructor(
     defaultRoute: string,
@@ -76,6 +82,13 @@ export class HashRouter {
     // Evaluasi string input sejak gerbang navigasi terdepan!
     let targetRoute = this._normalizeRoute(routeId);
     let targetFragment = fragmentId?.trim().replace(/^#/, "") || "";
+    // 🚫 Preview guard: never let the iframe navigate to a blocked route
+    // (e.g. `editor` would nest an editor inside the preview). Bounce to
+    // the default route, preserving the sticky ?editor=true flag.
+    if (this.previewBlockedRoutes.has(targetRoute.toLowerCase()) && this._isEmbedded()) {
+      console.warn(`[Router] Route "${targetRoute}" is blocked in preview — redirecting to "${this.defaultRoute}".`);
+      return this.navigate(this.defaultRoute, activeTheme, "");
+    }
     console.log(this.validRoutes)
     // Jika yang mau dituju ternyata bukan rute halaman resmi, melainkan nama seksi polos (#faq-section)
     if (!this.validRoutes.includes(targetRoute.toLowerCase()) && !_isValidRoute) {
@@ -161,6 +174,14 @@ export class HashRouter {
 
     let finalRoute = this._normalizeRoute(targetRoute);
     let finalFragment = this._safeDecode(targetFragment);
+
+    // 🚫 Preview guard (direct load / back-button path): the iframe must
+    // never render a blocked route even if the URL was typed by hand —
+    // bounce to default before any state is committed.
+    if (this.previewBlockedRoutes.has(finalRoute.toLowerCase()) && this._isEmbedded()) {
+      console.warn(`[Router] Route "${finalRoute}" is blocked in preview — redirecting to "${this.defaultRoute}".`);
+      return this.redirect(this.defaultRoute, extractedTheme || persistedTheme, "");
+    }
 
     // Jika hasil parsing membaca nama routePart yang TERBUKTI TIDAK ADA di dalam database rute halaman...
     if (!this.validRoutes.includes(finalRoute.toLowerCase())) {

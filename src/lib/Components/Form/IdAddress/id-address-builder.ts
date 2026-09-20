@@ -37,6 +37,17 @@ export interface IdAddressConfig {
   useAdapter?: 'native' | 'semantic-ui' | string | null; // Menggunakan string literal union untuk kejelasan
   headless?: boolean;
   textContent?: IdAddressTextContentConfig;
+  /**
+   * Progressive disclosure of the level chain. When enabled, every
+   * `[data-level]` select is rendered on init (so the Form Cascade engine
+   * never gates them and the `propinsi→…→kodepos` chain links once), but
+   * only the root level is visible — each child reveals when its parent
+   * gains a value and hides again when the parent is cleared. Visibility is
+   * applied to the `.field` wrapper (collapses layout) and the select is
+   * additionally `disabled` while hidden (excluded from FormData + native
+   * validation). `false` (default) preserves legacy always-visible behavior.
+   */
+  stagedReveal?: boolean;
 }
 
 const DEFAULT_CONFIG: IdAddressConfig = {
@@ -52,6 +63,7 @@ const DEFAULT_CONFIG: IdAddressConfig = {
   container: null,
   useAdapter: null,
   headless: false,
+  stagedReveal: false,
   textContent: {
     loading: "Loading #{level}  ",
     placeholder: "Pilih #{level}",
@@ -528,6 +540,11 @@ export class IdAddressBuilder {
     // Step 6: Wire internal event listeners for cross-adapter communication.
     this._bindInternalEvents();
 
+    // Step 6b: Staged reveal — hide every level except the root so the chain
+    // discloses progressively as parents gain values. All nodes already exist
+    // in the DOM (no Cascade placeholder involved), so adapters stay bound.
+    if (this.config.stagedReveal && !this.config.headless) this._applyStagedInitial();
+
     // Step 7: Trigger the initial data load for the root level (Propinsi).
     this._loadLevel(this.schema[0], undefined, null).catch((e) => {
       this._throwError(this.schema[0], "Error loading root level:", e);
@@ -835,6 +852,13 @@ export class IdAddressBuilder {
       onLevelChange: onLevelChangeFn as () => void | Promise<void>,
     });
 
+    // Step 11b: Staged reveal — THIS level just gained options, so it may
+    // appear. Never reveals past an empty result: `options.length === 0`
+    // returned early above. Children stay hidden until THEIR load completes.
+    if (this.config.stagedReveal && !this.config.headless) {
+      this._setStagedVisible(levelSchema, false);
+    }
+
     // Step 12: If a specific value was requested programmatically, trigger the selection event.
     if (selectedValue != null) {
       this.__emitChange("onLevelChanged", {
@@ -896,6 +920,8 @@ export class IdAddressBuilder {
             } as IdAddressDetail);
             // Step 7: Load the options for this level and programmatically set the selected value.
             await this._loadLevel(schemaItem, parentId, selectedValue);
+            // Step 7b: Staged reveal — reverse-fill discloses every level it sets.
+            if (this.config.stagedReveal && !this.config.headless) this._setStagedVisible(schemaItem, false);
           } catch (error) {
             // Step 8: Log and handle errors specific to this level's update.
             this._throwError(
@@ -998,6 +1024,9 @@ export class IdAddressBuilder {
       // Step 6: Invoke the UI adapter's clear method to reset the DOM element (e.g., empty dropdown).
       nextLevelSchema.adapter.clear?.(nextLevelSchema.el);
 
+      // Step 6b: Staged reveal — a cleared parent re-hides its whole subtree.
+      if (this.config.stagedReveal && !this.config.headless) this._setStagedVisible(nextLevelSchema, true);
+
       // Step 7: Move to the next level in the chain.
       nextLevelSchema = nextLevelSchema.next;
     }
@@ -1010,6 +1039,48 @@ export class IdAddressBuilder {
       throw new Error(`Level '${level}' not found`);
     }
     return this._loadLevel(schema, parentId, selectedValue);
+  }
+
+  /**
+   * Staged reveal — hide the whole chain except the root level. Called once
+   * from init(); afterwards visibility follows data (reveal on load, hide on
+   * clear). All elements stay in the DOM and adapters stay bound — only the
+   * `.field` wrapper collapses and the control disables.
+   */
+  private _applyStagedInitial(): void {
+    this.schema.forEach((schema, index) => {
+      if (index === 0) this._setStagedVisible(schema, false);
+      else this._setStagedVisible(schema, true);
+    });
+  }
+
+  /**
+   * Toggle one level's staged visibility. Hides the `InputBuilder` `.field`
+   * wrapper (not the bare select, so the label collapses with it) and mirrors
+   * the state onto `disabled` so hidden levels drop out of FormData + native
+   * `required` validation automatically. Never touches visibility/display
+   * (animation-service territory) — only `hidden` + `inert` + `disabled`,
+   * and reveal is a no-op when already visible (no toggle, no flash).
+   * NOTE: animation replay on reveal is parked — AnimationsService is
+   * untouched; disclosed levels simply appear without replay for now.
+   */
+  private _setStagedVisible(schema: IdAddressSchemaRef, hidden: boolean): void {
+    const el = schema?.el as HTMLElement | undefined;
+    if (!el || !(el instanceof HTMLElement)) return;
+    const wrapper = (el.closest?.(".field") ?? el) as HTMLElement;
+    const select = el as HTMLSelectElement;
+    if (hidden) {
+      if (wrapper.hidden && select.disabled) return; // already staged-hidden — no-op
+      wrapper.hidden = true;
+      (wrapper as any).inert = true;
+      select.disabled = true;
+    } else {
+      if (!wrapper.hidden && !select.disabled) return; // already revealed — no-op
+      wrapper.hidden = false;
+      (wrapper as any).inert = false;
+      select.disabled = false;
+    }
+
   }
 
   // ============================

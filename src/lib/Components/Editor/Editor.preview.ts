@@ -23,6 +23,7 @@
 
 export const THEME_BRIDGE_EVENT = "APPLY_THEME_TOKENS";
 export const RENDER_BUILDER_EVENT = "RENDER_BUILDER";
+export const BOUNDING_BOX_EVENT = "APPLY_BOUNDING_BOX";
 /**
  * Same-document broadcast channel: a theme builder dispatches this CustomEvent
  * on `window` whenever its derived tokens change; the Editor builder listens
@@ -30,8 +31,39 @@ export const RENDER_BUILDER_EVENT = "RENDER_BUILDER";
  * Keeps the two builders decoupled (no direct references between them).
  */
 export const THEME_TOKENS_EVENT = "editor:theme-tokens";
+/** Class marking a document / root as live preview (editable highlight). */
+export const PREVIEW_MODE_CLASS = "editor-mode";
 /** Root element (attribute selector) inside the iframe that builder output mounts into. */
 export const CANVAS_MOUNT_SELECTOR = "[data-canvas]";
+/**
+ * True when this document is the embedded preview (the iframe Editor.ts
+ * launches with `?editor=true`, or any iframed embed). Centralizes the
+ * `self !== top` check used by bridgeTarget() so class injection and token
+ * targeting can never disagree.
+ */
+export function isPreviewDocument(): boolean {
+  try {
+    if (window.self !== window.top) return true;
+  } catch {
+    // Cross-origin access to window.top threw → embedded.
+    return true;
+  }
+  try {
+    return new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("editor") === "true";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Tag a freshly rendered page root as preview. Call after every
+ * `renderPage()` — the router swaps `#app` via `replaceWith()`, which would
+ * otherwise discard the class added at boot.
+ */
+export function markPreviewRoot(root?: HTMLElement | Element | null): void {
+  if (!root || !isPreviewDocument()) return;
+  if (root instanceof HTMLElement) root.querySelectorAll("[id]").forEach(id => id.classList.add(PREVIEW_MODE_CLASS));
+}
 
 export interface iThemeBridgeMessage {
   type: typeof THEME_BRIDGE_EVENT;
@@ -82,13 +114,19 @@ const appliedTokens = new Map<HTMLElement, Set<string>>();
  *   page structurally impossible, not just unlikely.
  */
 function bridgeTarget(): HTMLElement | null {
+  let target: HTMLElement | null = null;
   try {
-    if (window.self !== window.top) return document.documentElement;
+    if (window.self !== window.top) target = document.documentElement;
   } catch {
     // Cross-origin access to window.top can throw — treat as embedded.
-    return document.documentElement;
+    target = document.documentElement;
   }
-  return document.querySelector<HTMLElement>(CANVAS_MOUNT_SELECTOR);
+
+  if (!target) {
+    target = document.querySelector<HTMLElement>(CANVAS_MOUNT_SELECTOR) ?? document.querySelector<HTMLElement>("#app");
+  }
+
+  return target;
 }
 
 function applyTokens(root: HTMLElement, tokens: Record<string, string>): void {
@@ -121,6 +159,30 @@ export function resetThemeBridge(): void {
 }
 
 export function installThemeBridge(options: iThemeBridgeOptions = {}): void {
+  // Tag the boot `#app` — but ONLY when this document is the embedded
+  // preview (Editor.ts launches it with `?editor=true` in the hash). The
+  // top-level editor page must never gain `editor-mode`; and every
+  // `renderPage()` swaps `#app` via replaceWith(), so main.ts re-tags the
+  // fresh root via markPreviewRoot() after each render.
+  // if (isPreviewDocument()) {
+
+  //   // Belt-and-suspenders: if any later render swaps #app without going
+  //   // through markPreviewRoot(), re-tag it so the class can never be lost.
+  //   new MutationObserver((mutations) => {
+  //     for (const m of mutations) {
+  //       for (const node of m.addedNodes) {
+  //         if (node instanceof HTMLElement && node.id === "app") {
+  //           node.classList.add(PREVIEW_MODE_CLASS);
+  //         }
+  //         if (node instanceof HTMLElement) {
+  //           // node?.querySelectorAll("[id]").forEach(id => id.classList.add(PREVIEW_MODE_CLASS))
+  //           // node.querySelector?.("#app")?.classList.add(PREVIEW_MODE_CLASS);
+  //         }
+  //       }
+  //     }
+  //   }).observe(document.body ?? document.documentElement, { childList: true, subtree: true });
+  // }
+
   window.addEventListener("message", (event) => {
     // Same-origin only: the preview iframe is the app itself.
     if (event.origin !== window.location.origin) return;
@@ -154,6 +216,7 @@ export function installThemeBridge(options: iThemeBridgeOptions = {}): void {
         options.renderBuilder?.(render.builderId, render.schema);
         break;
       }
+
     }
   });
 }

@@ -3,7 +3,7 @@ import { ComponentRegistry } from './lib/Modules/ComponentRegistry';
 import { DOMRenderer } from './lib/Modules/DOMRenderer';
 import { AnimationsService } from './lib/Modules/Animations/Animations';
 import { HashRouter, type iRouteState } from './lib/Modules/HashRouter';
-import { installThemeBridge, CANVAS_MOUNT_SELECTOR } from './lib/Components/Editor/Editor.preview';
+import { installThemeBridge, CANVAS_MOUNT_SELECTOR, markPreviewRoot } from './lib/Components/Editor/Editor.preview';
 import { EventEmitter } from './lib/Modules/EventEmitter';
 import { HomepageContent } from './content/home';
 import { BlogPageContent } from './content/blog';
@@ -53,6 +53,18 @@ export function registerServiceWorker() {
 /** Peta rute → konten halaman. Unknown/`home` selalu jatuh ke HomepageContent. */
 function pageContentFor(route: string): iNodeContent {
   const key = route.trim().toLowerCase().replace(/^#|\/+$/g, '') || 'home';
+  // 🚫 Preview guard (last line of defense): the preview iframe boots the
+  // whole app — resolving `editor` here would nest an editor inside the
+  // preview iframe. Bounce to home (router guards normally catch this first,
+  // but programmatic renderPage calls bypass the router).
+  try {
+    if (key === 'editor' && window.self !== window.top) {
+      console.warn('[Preview] Route "editor" is blocked in preview — serving home.');
+      return HomepageContent;
+    }
+  } catch {
+    return HomepageContent;
+  }
   switch (key) {
     case 'build': return BuildPageContent;
     case 'result': return ResultPageContent;
@@ -102,6 +114,10 @@ export async function renderPage(route: string): Promise<void> {
     if (app) app.replaceWith(tree);
   }
   currentRoot = tree;
+  // The bridge tags #app with `editor-mode` at boot, but renderPage() swaps
+  // the root via replaceWith() — re-tag so the preview class survives every
+  // route render (no-op on the top-level editor page).
+  markPreviewRoot(tree);
   animation.init();
 }
 

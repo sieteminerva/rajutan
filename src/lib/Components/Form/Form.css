@@ -55,6 +55,9 @@ select:focus-visible {
    2. Input Wrapper & Display Layouts
    ========================================================================== */
 .field {
+  &:is([hidden]) {
+    visibility: hidden !important;
+  }
   &:is([data-display="block"]) {
     /* Inherits display: block and width: 100% from base */
     margin-bottom: 1em;

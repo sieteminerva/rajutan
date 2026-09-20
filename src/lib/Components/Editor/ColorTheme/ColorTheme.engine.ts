@@ -59,8 +59,9 @@ export class ColorThemeEngine {
   static readonly MIX_MODES: readonly MixMode[] = ["oklch", "oklch-advanced", "oklab", "srgb", "hsl", "hsl-advanced"];
   static readonly MIX_TARGETS: readonly MixTarget[] = ["auto", "tint", "shade", "alpha", "accent", "primary", "complement"];
   static readonly DEFAULT_MIXER: MixerSettings = { mode: "oklch" };
-  static readonly DEFAULT_BASES: BaseColors = { primary: "#925408", accent: "#b47828" };
+  static readonly DEFAULT_BASES: BaseColors = { primary: "#53afc6", accent: "#d747b0" };
   static readonly RAMP_STOPS = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900"] as const;
+
 
   static readonly colorCtx = (() => {
     const canvas = document.createElement("canvas");

@@ -183,7 +183,7 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
       // specific to color theme
       primary: ColorThemeEngine.DEFAULT_BASES.primary,
       accent: ColorThemeEngine.DEFAULT_BASES.accent,
-      mode: "light",
+      mode: "dark",
       disableValidation: config?.disableValidation ?? false,
       validations: { ...DEFAULT_VALIDATIONS, ...(config?.validations ?? {}) },
       items: { ...DEFAULT_THEME_ITEMS, ...(config?.items ?? {}) },

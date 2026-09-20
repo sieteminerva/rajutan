@@ -274,3 +274,31 @@ section#assets {
     margin-bottom: 2em;
   }
 }
+
+.editor-mode[id] {
+  position: relative;
+  &:hover {
+    outline: 2px dashed var(--app-accent-color) !important;
+    outline-offset: -2px;
+    &::before {
+      visibility: visible;
+    }
+  }
+}
+
+.editor-mode[id]::before {
+  content: attr(id);
+  position: absolute;
+  visibility: hidden;
+  top: 0px;
+  right: 0;
+  background: var(--app-accent-color);
+  color: var(--app-text-color-muted, white);
+  font-family: monospace;
+  font-size: 1rem;
+  padding: 0.25em 1em;
+  border-bottom-left-radius: 0.5em;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 3;
+}

@@ -34,25 +34,36 @@
   --app-image-border-radius: 1.25rem;
 
   /* Theme: Warm Craft Light Mode (Clean, earthy, warm editorial feel) */
-  --app-primary-color: #925408; /* Warm terracotta amber / woven gold */
-  --app-primary-hover: #754103;
-  --app-accent-color: #b47828; /* Rich camel / ochre */
-  --app-accent-strong: #d9822b;
-  --app-accent-subtle: rgba(180, 120, 40, 0.12);
 
-  --app-page-background: linear-gradient(175deg, #fdfbf7 0%, #f6f1e8 45%, #efe7d8 100%);
-  --app-surface-background-color: rgba(255, 255, 255, 0.82);
-  --app-surface-strong: #ffffff;
-  --app-surface-muted: rgba(244, 238, 226, 0.7);
+  --app-primary-color: #53afc6;
+  --app-accent-color: #d747b0;
+  --app-primary-hover: color-mix(in oklch, var(--app-primary-color) 80%, black);
+  --app-accent-strong: color-mix(in oklch, var(--app-accent-color) 85%, black);
+  --app-accent-subtle: color-mix(in oklch, var(--app-accent-color) 12%, transparent);
+  --app-text-color: color-mix(in oklch, var(--app-primary-color) 75%, #2c251e);
+  --app-text-accent-color: color-mix(in oklch, var(--app-primary-color) 30%, #6e5f51);
+  --app-text-heading-color: color-mix(in oklch, var(--app-primary-color) 10%, #1a140e);
 
-  --app-text-color: #2c251e; /* Deep charcoal umber */
-  --app-text-accent-color: #6e5f51; /* Muted earthy taupe */
-  --app-text-heading-color: #1a140e; /* Solid contrast header */
+  --app-page-background: linear-gradient(
+    175deg,
+    color-mix(in oklch, var(--app-primary-color) 3%, #fdfbf7) 0%,
+    color-mix(in oklch, var(--app-primary-color) 6%, #f6f1e8) 45%,
+    color-mix(in oklch, var(--app-primary-color) 9%, #efe7d8) 100%
+  );
+  --app-surface-background-color: color-mix(
+    in oklab,
+    color-mix(in oklch, var(--app-primary-color) 4%, #ffffff) 82%,
+    transparent
+  );
+  --app-surface-strong: color-mix(in oklch, var(--app-primary-color) 3%, #ffffff);
+  --app-surface-muted: color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 8%, #f4eee2) 80%, transparent);
 
-  --app-border-color: rgba(168, 137, 102, 0.28);
-  --app-border-focus: #925408;
-  --app-shadow-soft: 0 12px 35px -8px rgba(92, 60, 20, 0.08);
-  --app-shadow-elevated: 0 20px 48px -10px rgba(92, 60, 20, 0.16);
+  --app-border-color: color-mix(in oklch, var(--app-primary-color) 30%, transparent);
+  --app-border-focus: #53afc6;
+  --app-shadow-soft: 0 12px 35px -8px
+    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #5c3c14) 8%, transparent);
+  --app-shadow-elevated: 0 20px 48px -10px
+    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #5c3c14) 16%, transparent);
 
   /* Form & Component overrides */
   --input-primary-color: var(--app-primary-color);
@@ -67,25 +78,35 @@
 }
 
 :root[data-mode="dark"] {
-  --app-primary-color: #e5a443;
-  --app-primary-hover: #f3be6d;
-  --app-accent-color: #c98a32;
-  --app-accent-strong: #f7ba5b;
-  --app-accent-subtle: rgba(229, 164, 67, 0.14);
+  --app-primary-color: #53afc6;
+  --app-accent-color: #d747b0;
+  --app-primary-hover: color-mix(in oklch, var(--app-primary-color) 80%, white);
+  --app-accent-strong: color-mix(in oklch, var(--app-accent-color) 85%, white);
+  --app-accent-subtle: color-mix(in oklch, var(--app-accent-color) 12%, transparent);
+  --app-text-color: color-mix(in oklch, var(--app-primary-color) 75%, #f3ede2);
+  --app-text-accent-color: color-mix(in oklch, var(--app-primary-color) 24%, #cfc5b8);
+  --app-text-heading-color: color-mix(in oklch, var(--app-primary-color) 4%, #fff9f0);
 
-  --app-page-background: radial-gradient(circle at 50% 0%, #201913 0%, #14100b 60%, #0c0907 100%);
-  --app-surface-background-color: rgba(28, 22, 17, 0.78);
-  --app-surface-strong: #231b14;
-  --app-surface-muted: rgba(38, 30, 23, 0.65);
+  --app-page-background: radial-gradient(
+    circle at 50% 0%,
+    color-mix(in oklch, var(--app-primary-color) 12%, #201913) 0%,
+    color-mix(in oklch, var(--app-primary-color) 9%, #14100b) 60%,
+    color-mix(in oklch, var(--app-primary-color) 6%, #0c0907) 100%
+  );
+  --app-surface-background-color: color-mix(
+    in oklab,
+    color-mix(in oklch, var(--app-primary-color) 8%, #1c1611) 78%,
+    transparent
+  );
+  --app-surface-strong: color-mix(in oklch, var(--app-primary-color) 8%, #1c1611);
+  --app-surface-muted: color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 8%, #f4eee2) 62%, transparent);
 
-  --app-text-color: #f3ede2;
-  --app-text-accent-color: #bfaea0;
-  --app-text-heading-color: #fff9f0;
-
-  --app-border-color: rgba(229, 164, 67, 0.22);
-  --app-border-focus: #e5a443;
-  --app-shadow-soft: 0 16px 40px -10px rgba(0, 0, 0, 0.55);
-  --app-shadow-elevated: 0 24px 50px -8px rgba(0, 0, 0, 0.75);
+  --app-border-color: color-mix(in oklch, var(--app-primary-color) 30%, transparent);
+  --app-border-focus: #53afc6;
+  --app-shadow-soft: 0 12px 35px -8px
+    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #000000) 8%, transparent);
+  --app-shadow-elevated: 0 20px 48px -10px
+    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #000000) 16%, transparent);
 
   --input-primary-color: var(--app-primary-color);
   --input-accent-color: var(--app-accent-color);

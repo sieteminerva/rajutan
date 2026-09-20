@@ -602,6 +602,8 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
     // 🪜 IdAddress dibangun MALAS: pada form multistep, field [data-level] bisa
     // berada di step yang belum lahir (lazy mount) — pemeriksaan DOM saat init
     // belum tentu menemukannya. Cek ulang setiap kali sebuah step lahir.
+    // Dengan stagedReveal, seluruh rantai dirender sejak awal (tanpa condition
+    // per-level) lalu builder menyembunyikannya sendiri secara progresif.
     const ensureIdAddress = (): any => {
       if (IdAddress) return IdAddress;
       if (form.querySelectorAll("[data-level]").length <= 1) return null;
@@ -611,6 +613,7 @@ export class FormBuilder extends Builder<FormElementType, iFormConfig> {
         container: form,
         url: API_URL,
         geocode: false,
+        // stagedReveal: true,
       });
       IdAddress.init();
       return IdAddress;
