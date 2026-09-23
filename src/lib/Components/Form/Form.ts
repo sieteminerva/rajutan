@@ -9,7 +9,7 @@ import { FormValidationHandler } from "./Handlers/Validation";
 import { IdAddressBuilder } from "./IdAddress/id-address-builder";
 import { InputBuilder } from "./Input";
 
-
+import "./InputControls.css";
 export type FormElementType =
   | "@container"
   | "@form"
