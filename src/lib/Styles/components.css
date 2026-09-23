@@ -257,7 +257,7 @@ details {
   &:hover {
     border-color: var(--app-primary-color);
   }
-  &:has(select:has(::open)) &::details-content {
+  &:has(select:has(:open)) &::details-content {
     height: auto;
   }
   &:is([open]) {
