@@ -103,6 +103,7 @@ export interface iBuilderRegistry {
   dropdown: iBasicInputNode;
   "color-theme": iBasicNode;
   "editor": iBasicNode;
+  "form-editor": iBasicNode;
   // Untuk komponen baru nanti, cukup daftarkan jenis array atomnya di sini:
   // stats: iStatsProperty[];
 }

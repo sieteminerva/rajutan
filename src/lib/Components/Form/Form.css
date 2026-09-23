@@ -6,7 +6,7 @@
   --spinner-content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8' fill='none' stroke='rgba(138,138,178,0.3)' stroke-width='4'/%3E%3Ccircle cx='10' cy='10' r='8' fill='none' stroke='rgba(91, 63, 134, 0.65)' stroke-width='3' stroke-linecap='round' stroke-dasharray='45'%3E%3CanimateTransform attributeName='transform' attributeType='XML' type='rotate' from='0 10 10' to='360 10 10' dur='0.6s' repeatCount='indefinite'/%3E%3Canimate attributeName='stroke-dashoffset' values='0;90;180' dur='3s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E");
 }
 
-.native.form {
+.form {
   /* coloring */
   --input-primary-color: var(--app-primary-color, darkgoldenrod);
   --input-accent-color: var(--app-accent-color, rgba(184, 135, 11, 0.384));
@@ -290,7 +290,7 @@ select:focus-visible {
     padding: 0;
     margin: 0;
     scrollbar-width: thin;
-    scrollbar-color: var(--input-primary-color) color-mix(in srgb, grey 10%, var(--input-primary-color) 5%);
+    scrollbar-color: var(--input-accent-color) color-mix(in srgb, grey 10%, var(--input-accent-color) 5%);
     background-color: var(--input-background-color);
     color: var(--input-text-color);
     backdrop-filter: blur(12px);
@@ -748,8 +748,8 @@ select:focus-visible {
 .form .field,
 .field,
 .field:is(.group) {
-  &.toggle-switch {
-    --input-text-color-light: color-mix(in srgb, var(--input-primary-color) 40%, white 50%);
+  &:has(.switch.control) {
+    /* --input-text-color-light: color-mix(in srgb, var(--input-primary-color) 40%, white 50%); */
     display: inline-grid !important;
     align-items: center;
     justify-content: start;
@@ -780,12 +780,12 @@ select:focus-visible {
       user-select: none;
       align-content: center;
     }
-    & > .control,
-    & > .control > input[type="checkbox"] {
+    & > .switch.control,
+    & > .switch.control > input[type="checkbox"] {
       width: 47px;
       height: 26px;
     }
-    & > .control {
+    & > .switch.control {
       position: relative;
       grid-area: control;
       display: inline-block;
@@ -804,7 +804,7 @@ select:focus-visible {
         inset: 0;
         display: block;
         background-color: var(--input-background-color);
-        border: 1px solid var(--input-border-color);
+        border: 1px solid var(--input-text-color-light);
         box-shadow: 0px 0px 3px 1px inset rgba(46, 46, 44, 0.1);
         transition: 0.4s;
 
@@ -915,7 +915,7 @@ select:focus-visible {
       }
 
       /* 2. Tata Letak Wrapper dan Label */
-      &.toggle-switch > label,
+      &:has(.switch.control) > label,
       & label {
         display: inline;
         font-weight: normal;

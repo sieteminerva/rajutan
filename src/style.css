@@ -17,6 +17,7 @@ html * {
 }
 
 body {
+  color-scheme: dark;
   background: var(--app-page-background);
   color: var(--app-text-color);
   margin: 0;
@@ -280,7 +281,6 @@ section#assets {
   cursor: pointer;
   &:hover {
     &::before {
-      /* Mengubah warna outline saat hover */
       outline-color: var(--app-accent-color);
     }
     &::after {
@@ -297,15 +297,15 @@ section#assets {
   top: 0px;
   right: 0;
 }
-/* PERBAIKAN PADA ::BEFORE */
+
 .editor-mode[id]::before {
-  content: ""; /* WAJIB: Tanpa ini, ::before tidak akan muncul */
+  content: "";
   left: 0;
   bottom: 0;
-  outline: 2px dashed transparent; /* Mulai dari transparan agar bisa di-transition jika mau */
+  outline: 2px dashed transparent;
   outline-offset: -2px;
-  pointer-events: none; /* Agar tidak mengganggu klik pada elemen di dalamnya */
-  z-index: 2; /* Di bawah ::after (z-index: 3) tapi di atas konten asli */
+  pointer-events: none;
+  z-index: 2;
 }
 
 .editor-mode[id]::after {

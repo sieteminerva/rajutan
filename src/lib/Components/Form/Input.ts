@@ -43,13 +43,14 @@ export type InputElementType =
   | "@field>file"
   | "@field>info";
 
-export type iActionType = "add" | "remove" | "delete" | "save" | "edit" | "copy" | "search" | "custom";
+export type iActionType = "add" | "move" | "remove" | "delete" | "save" | "edit" | "copy" | "search" | "custom";
 
 export interface iInputActionDefinition {
   type: iActionType;
   selector?: Record<InputControlsElementType, iActionProperty>;
   label?: string;
   icon?: string;
+  title?: string;
   onClick: iInputActionHandler;
 }
 
@@ -96,6 +97,7 @@ export interface iBasicInputNode extends iBuilderConfig<InputElementType> {
   formId?: string | null;
   name?: string;
   title?: string;
+  label?: string;
   placeholder?: string;
   value?: any;
   rows?: number;
@@ -129,7 +131,7 @@ export class InputBuilder extends Builder<InputElementType> {
       "@field>textarea": { tagName: "textarea" },
       "@field>select": { tagName: "select" },
       "@field>select>option": { tagName: "option" },
-      "@field>checkbox": { tagName: "input", type: "checkbox" as InputType, wrapper: ".control" },
+      "@field>checkbox": { tagName: "input", type: "checkbox" as InputType, wrapper: ".switch.control" },
       "@field>radio": { tagName: "input", type: "radio" as InputType },
       "@field>file": { tagName: "input", type: "file" as InputType },
       "@field>info": { tagName: "small", className: "info" }
@@ -170,14 +172,15 @@ export class InputBuilder extends Builder<InputElementType> {
         display: undefined,
         createEventListener: false,
         popover: undefined,
-        actions: undefined
+        actions: undefined,
+        // position: "left"
       }
     };
 
     const inputPayload = { ...defaultPayload, ...inputObj, config: { ...defaultPayload.config, ...inputObj.config } };
-
-    if (!inputPayload.placeholder && inputPayload.title) {
-      inputPayload.placeholder = (inputPayload.type === "select" || inputPayload.type === "textarea") ? `Pilih ${inputPayload.title}` : `Isi ${inputPayload.title}`;
+    const tPlaceholderSrc = inputPayload.label ?? inputPayload.title;
+    if (!inputPayload.placeholder && tPlaceholderSrc) {
+      inputPayload.placeholder = (inputPayload.type === "select" || inputPayload.type === "textarea") ? `Pilih ${tPlaceholderSrc}` : `Isi ${tPlaceholderSrc}`;
     }
     if (Array.isArray(inputObj.config?.options)) {
       inputPayload.config.options = inputObj.config.options.map((option) => typeof option === "string" ? { value: option, label: option } : option);
@@ -194,9 +197,11 @@ export class InputBuilder extends Builder<InputElementType> {
     const cfg = this.#input.config;
 
     const wrapper = this.render("@field", this.#input)!;
+    const ltext = this.#input.label ?? this.#input.title;
 
-    if (this.#input.title && this.#input.config?.useLabel && this.#input.type !== "dropdown") {
-      const label = this.render("@field>label", { text: this.#input.title, position: this.#input.position, id: this.#input.id })!
+    if (ltext && this.#input.config?.useLabel && this.#input.type !== "dropdown") {
+
+      const label = this.render("@field>label", { text: ltext, position: this.#input.position, id: this.#input.id })!
       wrapper?.appendChild(label);
     }
 
@@ -216,7 +221,7 @@ export class InputBuilder extends Builder<InputElementType> {
         break;
 
       case "checkbox":
-        wrapper.classList.add("toggle-switch");
+        // wrapper.classList.add("toggle-switch");
         inputEl = this.render("@field>checkbox", this.#input)!;
         break;
 
@@ -237,10 +242,11 @@ export class InputBuilder extends Builder<InputElementType> {
         break;
     }
 
-    if (this.#input.title && this.#input.config?.useLabel && this.#input.type === "dropdown") {
+    if (ltext && this.#input.config?.useLabel && (this.#input.type === "dropdown" || this.#input.type === "checkbox")) {
+
       const label = this.render("@field>label", {
-        text: this.#input.title,
-        position: this.#input.position,
+        text: ltext,
+        position: this.#input.config.position,
         id: this.#input.id
       })!;
       wrapper.append(label);
@@ -294,6 +300,7 @@ export class InputBuilder extends Builder<InputElementType> {
         break;
 
       case "@field>label":
+        // console.log({ payload })
         el.setAttribute("for", payload.id);
         el.textContent = payload.text;
         if (payload.position) el.setAttribute("data-position", payload.position)
@@ -444,6 +451,7 @@ export class InputBuilder extends Builder<InputElementType> {
 
   private _renderActions(parentElement: HTMLElement, payload: any): HTMLElement {
     const cfg = payload.config;
+    // console.log({ cfg })
     const configuredActions = cfg.actions || [];
     const actions = Array.isArray(configuredActions)
       ? configuredActions

@@ -77,6 +77,9 @@
   --input-popover-background-color: var(--app-surface-strong);
 }
 
+@media (prefers-color-scheme: dark) {
+}
+
 :root[data-mode="dark"] {
   --app-primary-color: #53afc6;
   --app-accent-color: #d747b0;

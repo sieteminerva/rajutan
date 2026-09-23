@@ -2,8 +2,6 @@ import type { iBuilderRegistry, iBuilderConfig, iElementProperty, iActionPropert
 // import { TemplateRegistry } from "../Modules/TemplateRegistry";
 // import { ElementCreatedEventBus } from "../Services/EventBus";
 import { BuilderProxy } from "./BaseAdapters/BuilderProxy";
-import { SlotRegistry } from "./BaseAdapters/SlotRegistry";
-import { HydrationGate } from "./BaseAdapters/HydrationGate";
 import { buildNamespace, setMetadata } from "../Utility/Metadata";
 import { selectorToTree } from "../Utility/SelectorToTree";
 import { applyAttrDictionary, applyAttributeList } from "../Utility/AttributeUtils";
@@ -46,8 +44,8 @@ export const GLOBAL_INSTANCE_COUNTER = new Map<string, number>();
  * @example
  * builder.create(data, config);
  * builder.destroy();
- * builder.attach(node, "slot.path");
- * builder.detach(node);
+ * builder.attach("typeKey", "slotKey", payload);
+ * builder.detach("slotKey");
  *
  * @template TType - A string literal union representing the allowed selector tokens for the child component.
  * @template TConfig - The builder-specific configuration interface compatible with iBuilderConfig.
@@ -59,16 +57,39 @@ export abstract class Builder<TType extends string = string, TConfig extends iBu
   /** 🧊 ANTI-FOUC GATE — extracted to `BaseAdapters/HydrationGate`.
    *  Marker mechanics (`--is-loading` / `data-hydrating` / `data-loaded`)
    *  live there; the builder only holds the gate instance and exposes the
-   *  `isLoaded` flag that ComponentRegistry flips before `create()`. */
-  protected readonly hydration = new HydrationGate();
+   *  `isLoaded` flag that ComponentRegistry flips before `create()`.
+   *  Kept in this fork on purpose: a builder moved onto Builder (the color
+   *  theme now is) must not silently lose the pre-paint hold its Base sibling
+   *  had — the registry release path (`instance.hydration`) stays identical. */
+
 
   /** Compatibility surface: ComponentRegistry does `instance.isLoaded = false`. */
-  public get isLoaded(): boolean {
-    return this.hydration.isLoaded;
-  }
-  public set isLoaded(value: boolean) {
-    this.hydration.isLoaded = value;
-  }
+  public isLoaded: boolean = false;
+
+
+  /** 🧩 THE BUILDER CURRENTLY MATERIALIZING — `create()` pins itself here for
+   *  the whole duration of prepare()/initialize(), which is exactly the window
+   *  in which a parent instantiates its children. Same spirit as
+   *  `#namespaceStack`: the child picks up its caller without anyone having to
+   *  pass instances or register anything centrally. */
+  static #active: Builder<any, any> | null = null;
+
+  /** 🧩 MY CALLER — the builder that instantiated me (captured the moment this
+   *  instance was constructed): the builder whose `config.slots` hosts my
+   *  projections. Root builders created by ComponentRegistry simply have none. */
+  #caller: Builder<any, any> | null = Builder.#active;
+
+  /** 🧩 PROJECTED NODES — my own typeKey → the node I handed to my caller's slot
+   *  through `attach()`, plus the receptacle it displaced (so `detach()` can hand
+   *  that place back). A projected node no longer lives inside my root, so every
+   *  wiring/sync pass reads it alongside the root (see `scopes()`). */
+  #projected = new Map<TType, { slot: string; element: HTMLElement; receptacle: HTMLElement }>();
+
+  /** 🧩 ROOT of the builder that hosts my projections — the shared ancestor
+   *  token vars are painted on; null when I have no caller (standalone). Set
+   *  in `attach()` the first time I project into a caller. */
+  protected rootElement: HTMLElement | null = null;
+
 
   static #namespaceStack: string[] = [];
 
@@ -367,8 +388,26 @@ export abstract class Builder<TType extends string = string, TConfig extends iBu
     return Object.freeze({
       ...defaultOptions,
       ...userConfig,
-      selectors: mergedSelectors
+      selectors: mergedSelectors,
+      // 🧩 SLOT CONTRACT — resolved ONCE here (constructor time, before any
+      // render): from now on every slot lookup is a plain map read, so the
+      // framework knows which slot/typeKey pairs this builder owns without
+      // re-walking config or DOM.
+      slots: {
+        ...((defaultOptions as any).slots || {}),
+        ...((userConfig as any).slots || {}),
+      },
     }) as Required<C>;
+  }
+
+  /**
+   * 🧩 Declared slots of this builder: `typeKey → slotKey` (see resolveConfig).
+   * A declared key is a RECEPTACLE: at the end of create() its element is
+   * stamped with `data-slot="slotKey"` and published to the slot ledger, ready
+   * for another builder's `attach()`.
+   */
+  protected get slots(): Record<string, string> {
+    return ((this.config as unknown as { slots?: Record<string, string> } | null)?.slots) ?? {};
   }
 
   public setConfig(config: Partial<TConfig>) {
@@ -389,14 +428,6 @@ export abstract class Builder<TType extends string = string, TConfig extends iBu
     nodes: new Map<string, iNodeRecordItem>(),
     proxy: new WeakMap<any, any>(),
   };
-
-  /** 🧩 SLOTTING — extracted to `BaseAdapters/SlotRegistry`; holders are
-   *  resolved from this builder's node store (falling back to @container). */
-  protected readonly slotting = new SlotRegistry((slotKey) =>
-    (this.storage.nodes.get(slotKey)?.element as HTMLElement) ||
-    (this.storage.nodes.get("@container" as any)?.element as HTMLElement)
-  );
-
 
   protected proxyRuntime: BuilderProxy;
 
@@ -432,17 +463,21 @@ export abstract class Builder<TType extends string = string, TConfig extends iBu
     const effectiveConfig = config || (content && typeof content === "object" ? (content as any).config : undefined);
     if (effectiveConfig) this.config = this.resolveConfig(this.config, effectiveConfig);
 
-    // Unified identity orchestration: seed, namespace, hierarchy, stack management
+    // Unified identity orchestration: seed, namespace, stack management
     const identity = this.ensureIdentity(content, this.config, { pushNamespace: true, popNamespace: true });
     this.#staticHierarchy = identity.hierarchy;
+    this.storage.nodes.clear();
+    this.activeLiveThemeId = this.config?.themeId || document.body.dataset.theme?.replace(/^theme-/, "") || "default";
 
     // 🟢 PROXY-FIRST: Ubah seluruh payload 'content' menjadi Reactive Proxy sejak awal
     content = this.setProxy(identity.namespace, content);
 
-    try {
-      this.activeLiveThemeId = this.config?.themeId || document.body.dataset.theme?.replace(/^theme-/, "") || "default";
-      this.storage.nodes.clear();
+    // 🧩 CALLER WINDOW — anything instantiated from here on resolves THIS
+    // builder as its caller (and therefore as its slot host).
+    const previousActive = Builder.#active;
+    Builder.#active = this;
 
+    try {
       // Gunakan 'this.data' (Proxy Matang) untuk proses prepare()
       const DOMTree = this.prepare(content, this.config) as HTMLElement | null | undefined;
       if (!DOMTree || !(DOMTree instanceof HTMLElement)) {
@@ -455,11 +490,10 @@ export abstract class Builder<TType extends string = string, TConfig extends iBu
       this.hierarchy.update();
       // console.log("hierarchy", this.hierarchy.get(), identity);
 
-      // 🧊 Anti-FOUC: tandai SATU elemen puncak ini (bukan anak-anaknya)
-      // bila instance sedang menunggu stylesheet lazy — pre-mount, pre-paint.
-      return this.hydration.applyHold(DOMTree);
+      return DOMTree;
     } finally {
-      // (intentionally empty — kept for symmetric teardown hooks)
+      // Unpin — the caller window closes together with create().
+      Builder.#active = previousActive;
     }
   }
 
@@ -521,8 +555,12 @@ export abstract class Builder<TType extends string = string, TConfig extends iBu
       // console.log(el)
     }
 
-    // 🟢 2. PAYLOAD SUDAH PROXY: Langsung gunakan payload tanpa re-proxy
-    // const activePayload = payload;
+    // 🧩 SLOT RECEPTACLE — a key declared in `config.slots` is a slot THIS
+    // builder provides. Stamped right here (the map was resolved once at
+    // construction), so a child hosted by this builder finds it with a single
+    // root-scoped query — no registry, no document sweep.
+    const slotKey = this.slots[typeKey];
+    if (slotKey) el.dataset.slot = slotKey;
 
     // 🟢 3. DAFTARKAN NODE FISIK KE #nodes
     const data = {
@@ -572,32 +610,138 @@ export abstract class Builder<TType extends string = string, TConfig extends iBu
   }
 
   // =====================================================================
-  // 🧩 SLOTTING — attach/detach, API penempatan node ke slot key.
+  // 🧩 SLOTTING — attach/detach
   // =====================================================================
 
   /**
-   * 📎 ATTACH — tempel sebuah node ke sebuah slot key dalam store yang sama.
-   * Slot key adalah kunci kontainer (mis. "@article>list"); node yang dilekatkan
-   * di-slot-kan ke kontainer tersebut dan dicatat di registri slot untuk detach.
+   * 🧩 ATTACH — project ONE of this builder's keys into a slot declared by the
+   * caller's config (`slots`), and wire only that key.
    *
-   * @param slotKey  kunci slot target di store induk.
-   * @param child    elemen hasil render sub-builder.
+   * This is the default way a parent consumes a child:
+   *
+   *   const studio = new ColorThemeBuilder(config)
+   *     .attach("@colorizer>configurator", "color-configurator")
+   *     .attach("@colorizer>output", "color-output");
+   *
+   * No create(), so the rest of the child's tree is never built — only the keys
+   * asked for. The key is rendered through the normal `render()` (so it lands in
+   * the node store, `load(key)` keeps answering, and its own template() pulls in
+   * the child keys that key is made of), then swapped in for the caller's
+   * receptacle. The receptacle is found the cheap way: the caller's root key
+   * anchors one `querySelector('[data-slot="…"]')` inside the caller's own tree.
+   * Nothing is registered anywhere — `attach()` talks to `#caller`, the builder
+   * that instantiated this one.
+   *
+   * Wiring is per-scope: initialize(node, payload) is what runs, so a builder
+   * that wires by scope (see ColorTheme.initialize) binds exactly the attached
+   * key — and attaching several keys to one instance keeps ONE state, ONE sync
+   * effect and one binding per control (see `scopes()`).
+   *
+   * A builder without a caller (registry-built root / standalone page) keeps its
+   * nodes in its own tree — that is the fallback, not an error.
+   *
+   * @param typeKey  key of this builder to project (a key of my selector map).
+   * @param slotKey  slot declared by the caller's config.
+   * @param payload  data this key's template() needs; omit it when the template
+   *                 can derive what it needs from the builder's own state.
    * @returns the current builder for chaining.
    */
-  public attach(slotKey: string, child: HTMLElement | null | undefined): this {
-    this.slotting.attach(slotKey, child);
+  public attach(typeKey: TType, slotKey: string, payload?: any): this {
+    // 🥾 attach() is an entry point of its own — boot without content so the key
+    // below can be rendered even though create() never ran.
+    if (!Object.keys(this.hierarchy.get()).length) {
+      const identity = this.ensureIdentity(undefined, this.config, { pushNamespace: true, popNamespace: true });
+      this.#staticHierarchy = identity.hierarchy;
+      this.storage.nodes.clear();
+      this.activeLiveThemeId = this.config?.themeId || document.body.dataset.theme?.replace(/^theme-/, "") || "default";
+    }
+
+    const node = this.load(typeKey) ?? this.render(typeKey, payload);
+    if (!node) return this;
+
+    const caller = this.#caller;
+    if (!caller) return this;
+
+    const callerSels = Object.keys(caller.hierarchy.get());
+    const callerRootKey = callerSels[0] as TType | undefined;
+    const callerRoot = callerRootKey ? (caller.load(callerRootKey) ?? null) : null;
+    const receptacle = callerRoot?.querySelector<HTMLElement>(`[data-slot="${slotKey}"]`);
+    if (!receptacle) {
+      console.warn(
+        `[Builder:${String(this.builderId)}] attach("${String(typeKey)}") found no receptacle for slot ` +
+        `"${slotKey}" in caller "${String(caller.builderId)}" — declare it in the caller's config.slots.`
+      );
+      return this;
+    }
+
+    // A wrapped key occupies the tree through its wrapper chain, so that chain
+    // is what gets projected (the inner element stays the registered node).
+    const element = ((node as any).__outer as HTMLElement | undefined) ?? node;
+
+    element.dataset.slot = slotKey;
+    this.#projected.set(typeKey, { slot: slotKey, element, receptacle });
+
+    // 🔀 WELD — the receptacle's hooks (its classes/style scope, its attributes)
+    // are carried onto the projected node, which then takes its place. Stamped
+    // `data-slot` above wins, and the receptacle's inline `style` is left behind
+    // (that is the empty-placeholder state, not chrome).
+    element.classList.add(...Array.from(receptacle.classList));
+    for (const { name, value } of Array.from(receptacle.attributes)) {
+      if (name === "style" || element.hasAttribute(name)) continue;
+      element.setAttribute(name, value);
+    }
+    receptacle.replaceWith(element);
+
+    this.rootElement ??= callerRoot;
+
+
+    // 🔌 Wire THIS key only. Re-entering a scope is harmless (bind refreshes an
+    // existing binding instead of stacking listeners), which is exactly why
+    // attaching configurator + output + mode to one instance stays in sync
+    // without duplicating anything.
+    this.initialize(element, payload);
     return this;
   }
 
   /**
-   * 🧷 DETACH — lepaskan node dari sebuah slot (dan dari DOM parent-nya).
-   * @param slotKey  kunci slot yang dilepas.
+   * 🧷 DETACH — hand the caller its receptacle back and return the projected
+   * node to its owner (still registered, ready to re-attach).
+   *
+   * @param slotKey  slot to release.
    * @returns current builder.
    */
   public detach(slotKey: string): this {
-    this.slotting.detach(slotKey);
+    for (const [typeKey, entry] of this.#projected) {
+      if (entry.slot !== slotKey) continue;
+      if (entry.element.parentNode) entry.element.replaceWith(entry.receptacle);
+      this.#projected.delete(typeKey);
+    }
     return this;
   }
+
+  /**
+   * 🔌 WIRING SCOPES — every DOM location this instance paints: the builder
+   * root first, then each node projected into my caller's slot.
+   *
+   * This is what makes initialize()/sync slot-aware: a builder is exactly as
+   * multi-rooted as its projections, so initialize() runs once for the root and
+   * loops `scopes()`, while the reactive sync loop repaints every scope — that
+   * is how a projected panel stays wired and in sync with the owner's state.
+   */
+  protected scopes(): HTMLElement[] {
+    const scopes: HTMLElement[] = [];
+    const ownRootKey = Object.keys(this.hierarchy.get())[0] as TType | undefined;
+    const root = ownRootKey ? this.load(ownRootKey) : null;
+    if (root) scopes.push(root);
+
+    for (const { element } of this.#projected.values()) {
+      // A parked projection still lives under the root → already covered by it.
+      if (element === root || root?.contains(element)) continue;
+      scopes.push(element);
+    }
+    return scopes;
+  }
+
 
   /**
    * @description
@@ -637,8 +781,7 @@ export abstract class Builder<TType extends string = string, TConfig extends iBu
         data: null // Bebas dari tracking rawDataNode kotor
       });
     }
-    // TODO get hierarchy find the root element and use it as pointer which to dest
-    // roy this.hierarchy.get()
+
     // ====================================================
     // 🔮 THE ANCESTRAL POINTER EXTRACTOR (EVAKUASI DARI MAP POOL)
     // Jemput elemen root hidup dari dalam saku standard identifier @container!
@@ -658,7 +801,11 @@ export abstract class Builder<TType extends string = string, TConfig extends iBu
     }
 
     this.storage.nodes.clear();
-    this.slotting.clear();
+
+    // 🧩 Give my caller its receptacles back: projections do not outlive me.
+    for (const slotKey of new Set(Array.from(this.#projected.values(), (entry) => entry.slot))) {
+      this.detach(slotKey);
+    }
 
     this.config = null as any;
     this.instanceNamespace = null;

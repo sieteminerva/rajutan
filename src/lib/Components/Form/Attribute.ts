@@ -3,8 +3,9 @@ import { InputBuilder, type InputType, type iBasicInputNode } from "./Input";
 export interface iAttributeProperty {
   name: string;
   type: InputType;
+  label?: string;
   value: string | number | boolean;
-  config?: { style?: string; options?: any }
+  config?: { style?: string; options?: any, position?: "left" | "right" }
 }
 
 export type InputAttributeType =
@@ -50,7 +51,7 @@ const baseInputConfig = {
 export class InputAttributeBuilder {
 
   // Type-specific overrides (minimal defaults per type)
-  static inputsAsObj: Record<InputType, Partial<Record<InputAttributeType, string | number | boolean>>> = {
+  static inputs: Record<InputType, Partial<Record<InputAttributeType, string | number | boolean>>> = {
     text: { placeholder: "Enter text", maxlength: 255 },
     textarea: { placeholder: "Enter your message", rows: 3, cols: 30 },
     number: { placeholder: "Enter a number", value: 50, min: 0, max: 100, step: 1 },
@@ -81,11 +82,11 @@ export class InputAttributeBuilder {
   };
 
   // Generic attribute definitions
-  static attrPropsAsObj: Partial<Record<InputAttributeType, iAttributeProperty>> = {
+  static attributes: Partial<Record<InputAttributeType, iAttributeProperty>> = {
     value: { name: "value", type: "text", value: "" },
     placeholder: { name: "placeholder", type: "text", value: "" },
-    required: { name: "required", type: "checkbox", config: { style: "toggle" }, value: false },
-    disabled: { name: "disabled", type: "checkbox", config: { style: "toggle" }, value: false },
+    required: { name: "required", type: "checkbox", config: { style: "toggle", position: "left" }, value: false },
+    disabled: { name: "disabled", type: "checkbox", config: { style: "toggle", position: "left" }, value: false },
     min: { name: "min", type: "number", value: "" },
     max: { name: "max", type: "number", value: "" },
     minlength: { name: "minlength", type: "number", value: "" },
@@ -94,26 +95,27 @@ export class InputAttributeBuilder {
     rows: { name: "rows", type: "number", value: 3 },
     cols: { name: "cols", type: "number", value: 30 },
     accept: { name: "accept", type: "text", value: "" },
-    multiple: { name: "multiple", type: "checkbox", config: { style: "toggle" }, value: false },
-    checked: { name: "checked", type: "checkbox", config: { style: "toggle" }, value: false },
+    multiple: { name: "multiple", type: "checkbox", config: { style: "toggle", position: "left" }, value: false },
+    checked: { name: "checked", type: "checkbox", config: { style: "toggle", position: "left" }, value: false },
     orient: { name: "orient", type: "text", value: "horizontal" },
     pattern: { name: "pattern", type: "text", value: "" },
     // Custom
-    ["data-max-upload"]: { name: "data-max-upload", type: "number", value: 10 },
-    ["data-max-file-size"]: { name: "data-max-file-size", type: "number", value: 5 },
-    ["data-group-unallowed"]: {
-      name: "data-group-unallowed",
-      type: "checkbox",
-      config: { style: "toggle" },
-      value: false,
-    },
-    ["data-thumbnail"]: { name: "data-thumbnail", type: "checkbox", config: { style: "toggle" }, value: false },
+    ["data-max-upload"]: { name: "data-max-upload", label: "max upload", type: "number", value: 10 },
+    ["data-max-file-size"]: { name: "data-max-file-size", label: "max file size", type: "number", value: 5 },
     ["data-view"]: {
       name: "data-view",
       type: "select",
       value: "thumbnails",
       config: { options: ["thumbnails", "list"] },
     },
+    ["data-group-unallowed"]: {
+      name: "data-group-unallowed",
+      label: "group unallowed",
+      type: "checkbox",
+      config: { style: "toggle", position: "left" },
+      value: false,
+    },
+    ["data-thumbnail"]: { name: "data-thumbnail", label: "display thumbnail", type: "checkbox", config: { style: "toggle", position: "left" }, value: false },
   };
   // resolve correct attr type for min/max
   static resolveMinMaxType(inputType: InputType, key: InputAttributeType) {
@@ -135,20 +137,22 @@ export class InputAttributeBuilder {
     // merge base + type defaults + user overrides
     const merged: Record<string, any> = {
       ...baseInputConfig,
-      ...this.inputsAsObj[inputType],
+      ...this.inputs[inputType],
       ...header,
       type: inputType,
     };
 
+
+
     const schema: Record<string, any> = {
       ...merged,
-      template: new InputBuilder().create(merged), // main input
+      template: "", // main input
     };
 
     // now generate attribute editors
-    for (const attrKey in this.attrPropsAsObj) {
+    for (const attrKey in this.attributes) {
       const key = attrKey as InputAttributeType;
-      const schemaDef = this.attrPropsAsObj[key];
+      const schemaDef = this.attributes[key];
       if (!schemaDef) continue;
 
       // skip attributes irrelevant to this type
@@ -188,6 +192,7 @@ export class InputAttributeBuilder {
       let attrConfig: iBasicInputNode = {
         type: attrType,
         title: schemaDef.name,
+        label: schemaDef.label,
         id: elementId,
         value,
         ...(schemaDef.config ? { config: schemaDef.config } : {}),
@@ -198,11 +203,13 @@ export class InputAttributeBuilder {
       schema[key] = {
         input: attrType,
         value,
-        template: new InputBuilder().create(attrConfig),
         ...(schemaDef.config ? { config: schemaDef.config } : {}),
+        template: new InputBuilder().create(attrConfig),
       };
     }
+
     // console.log(`[${inputType} > schema]`, schema);
+
     return schema;
   }
 
@@ -227,10 +234,11 @@ export class InputAttributeBuilder {
         "disabled",
         "multiple",
         "accept",
+        //custom
         "data-max-upload",
         "data-max-file-size",
         "thumbnail",
-        "view",
+        "data-view",
       ],
       color: ["label", "name", "value", "required", "disabled"],
       range: ["label", "name", "value", "required", "disabled", "min", "max", "step"],
@@ -255,7 +263,7 @@ export class InputAttributeBuilder {
     return status;
   }
 
-  static generateInputAttributes(headers: Array<iBasicInputNode>) {
+  static create(headers: Array<iBasicInputNode>) {
     return headers.map((header: iBasicInputNode) => {
       // we expect each header at least has a `type`
       const type = header.type || "text";

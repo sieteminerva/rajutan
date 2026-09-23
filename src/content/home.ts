@@ -223,6 +223,7 @@ export const HomepageContent: iNodeContent =
             "a.item#features-link": { attrs: { href: "#features" }, content: "Fitur", onCreated: (el: HTMLElement) => el.addEventListener("click", navScroll("#features")) },
             "a.item#faq-link": { attrs: { href: "#faq" }, content: "Tanya Jawab", onCreated: (el: HTMLElement) => el.addEventListener("click", navScroll("#faq")) },
             "a.item#blog-link": { attrs: { href: "#blog" }, content: "Artikel", onCreated: (el: HTMLElement) => el.addEventListener("click", (_e: Event) => navigate("#blog")) },
+            "a.item#form-link": { attrs: { href: "#form" }, content: "Form Editor", onCreated: (el: HTMLElement) => el.addEventListener("click", (_e: Event) => navigate("#form")) },
           },
           "button.button.primary#start-link": {
             content: "Live Editor",

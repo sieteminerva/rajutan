@@ -1,0 +1,185 @@
+.form:is(.canvas) {
+  color-scheme: dark;
+  /* width: 80%; */
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: center;
+  align-items: center;
+  min-width: 70%;
+
+  /* padding: 2rem 1rem 1rem 1rem; */
+  border-radius: var(--app-border-radius, 0.5em);
+  border: 1px solid var(--app-primary-color);
+
+  & fieldset {
+    width: 100%;
+    border: none;
+    justify-items: center;
+  }
+
+  & fieldset:is(.details) {
+    border-bottom: 1px solid var(--app-primary-color);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin: 0 0 1em 0;
+  }
+
+  & fieldset:is(.structures) {
+    margin: 0;
+
+    /* 🎯 Live landing slot — created on dragstart and moved by `dragover`, so the
+       list shows exactly where the held block will be inserted. It reserves the
+       space itself, which is why the block under the pointer is never restyled. */
+    & .dropzone {
+      width: 100%;
+      min-height: 3.5em;
+      border: 2px dashed var(--app-accent-color);
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--app-accent-color) 12%, transparent);
+    }
+    & .dropzone::before {
+      content: "Drop Zone";
+      width: 100%;
+      height: 100%;
+      position: relative;
+      top: 25%;
+    }
+  }
+
+  & fieldset:is(.buttons.set) {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: 1px solid var(--app-primary-color);
+
+    button {
+      border-radius: 4px;
+    }
+  }
+
+  & .field:is(.actions) {
+    margin-bottom: 0;
+    &:has(> .controls[position="left"], > .controls[position="right"]),
+    &:has(> .controls[data-position="left"], > .controls[data-position="right"]) {
+      & > select,
+      & > input {
+        text-transform: capitalize;
+        border-radius: 0;
+      }
+    }
+  }
+  .block {
+    align-items: center;
+    width: 100%;
+    border: none;
+    transition: all 100ms ease;
+    cursor: pointer;
+    border-radius: 4px;
+    /* 🖐️ Held/armed block — set by the move handle, cleared on drop/dragend. The
+       landing slot is the `.dropzone` placeholder, so the block itself only
+       fades out instead of getting a box drawn around it. */
+    &.is-dragging {
+      opacity: 0.45;
+    }
+
+    & summary {
+      padding: 0;
+      width: 100%;
+      &::after {
+        content: "";
+      }
+      & .field:is(.actions) {
+        --input-border-radius: 4px;
+      }
+    }
+
+    &[open] {
+      & summary:has(.controls[position="left"], .controls[position="right"]) {
+        & button:first-child {
+          border-bottom-left-radius: 0 !important;
+        }
+        & button:last-child {
+          border-bottom-right-radius: 0 !important;
+        }
+      }
+    }
+
+    & > form:is(.base-property) {
+      --input-label-color: var(--input-text-color);
+      min-height: 50px;
+      padding: 1em;
+      & .field:is(.group[data-display="inline"]) {
+        grid-template-columns: repeat(min(2), 1fr);
+        /* grid-template-columns: repeat(3, 1fr); */
+        /* grid-auto-flow: column; */
+        padding-inline: 1em;
+        justify-content: end;
+        align-content: stretch;
+        column-gap: 1em;
+      }
+      & .field:is(.group[data-display="inline"]):has(.field) > .field {
+        margin-bottom: 0;
+        &:has(.switch.control) {
+          justify-content: space-between;
+          padding-top: 0.25em;
+          width: stretch;
+        }
+      }
+      & .field:has(.switch.control) {
+        & label {
+          color: var(--input-label-color);
+        }
+        --input-text-color-light: color-mix(in srgb, var(--input-primary-color) 40%, white 50%);
+        & .slider::before {
+          --input-primary-color: var(--app-accent-color);
+          /* border-color: var(--input-text-color-light); */
+        }
+        & input[type="checkbox"]:hover ~ .slider {
+          border-color: var(--app-primary-color);
+        }
+      }
+    }
+
+    & button {
+      &:is(.move) {
+        &:not(:active) {
+          cursor: move;
+        }
+        &:is(:active) {
+          cursor: grabbing;
+          transform: scale(99.5%);
+        }
+      }
+    }
+
+    /* 🖼️ OUTPUT MODE — the summary is the built input + its edit button; the
+       property form stays in the DOM (its id backs the submit button's `form`
+       reference) but must never be reachable from the collapsed block. */
+    &[data-mode="output"] {
+      & > summary {
+        display: flex;
+        align-items: stretch;
+
+        & > .field {
+          flex: 1;
+          margin-bottom: 0;
+
+          & > :is(input, select, textarea) {
+            width: 100%;
+          }
+        }
+
+        & > button:is(.edit) {
+          display: flex;
+          align-items: center;
+          border-radius: 0 var(--input-border-radius, 4px) var(--input-border-radius, 4px) 0;
+        }
+      }
+
+      & > form:is(.base-property) {
+        display: none;
+      }
+    }
+  }
+}

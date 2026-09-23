@@ -2,6 +2,8 @@ import type { iActionType, iBasicInputNode, iInputActionContext, iInputActionDef
 import type { iBuilderConfig, iElementProperty } from "../../interface";
 import { Builder } from "../Base";
 
+import "./InputControls.css";
+
 export type InputControlsElementType =
   | "@controls"       // Kontainer pembungkus input + tombol aksi (.ui.action.input)
   | "@controls>add"
@@ -10,22 +12,24 @@ export type InputControlsElementType =
   | "@controls>edit"
   | "@controls>copy"
   | "@controls>search"
+  | "@controls>move"
   | "@controls>custom" // Tombol aksi kustom sesuai kebutuhan bisnis
 
-export interface iInputControlsConfig {
+export interface iInputControlsConfig extends iBuilderConfig<InputControlsElementType> {
 
   // Posisi tombol aksi menempel di sisi mana
   position?: "left" | "right";
   // Daftar aksi tombol yang ingin dimunculkan disamping input
   actions: iInputActionDefinition[];
   input: iBasicInputNode;
+  disableDefault: boolean;
 }
 
 
-export class InputControlsBuilder extends Builder<InputControlsElementType> {
+export class InputControlsBuilder extends Builder<InputControlsElementType, iInputControlsConfig> {
   readonly builderId = "input-controls";
   readonly name = "input-controls";
-  readonly stylesheet: string = "./inputControls.css";
+  readonly stylesheet: string = "./InputControls.css";
   #editableState = new WeakMap<HTMLElement, { readonly: boolean; disabled: boolean }>();
   #duplicateIndices = new WeakMap<HTMLElement, Set<number>>();
   #duplicateRecords = new WeakMap<HTMLElement, { owner: HTMLElement; index: number }>();
@@ -40,14 +44,19 @@ export class InputControlsBuilder extends Builder<InputControlsElementType> {
       "@controls>edit": { tagName: "button", className: "edit", icon: "icon edit" },
       "@controls>copy": { tagName: "button", className: "copy", icon: "icon copy file" },
       "@controls>search": { tagName: "button", className: "search", icon: "icon search" },
+      "@controls>move": { tagName: "button", className: "move", icon: "icon three dots horizontal" },
       "@controls>custom": { tagName: "button", className: "custom" },
     };
 
-    const defaultConfig: Partial<iBuilderConfig<InputControlsElementType>> = {
+    const defaultConfig: Required<iInputControlsConfig> = {
       themeId: "default",
       namespace: null,
       selectors: defaultSelectors,
       emit: null,
+      disableDefault: false,
+      position: "right",
+      actions: [],
+      input: {}
     };
 
     this.config = this.resolveConfig(defaultConfig as any, config);
@@ -89,14 +98,16 @@ export class InputControlsBuilder extends Builder<InputControlsElementType> {
       default:
         const button = el as HTMLButtonElement;
         const { action } = payload;
-        button.title = "Click to " + action.label
+        // console.log({ action })
+        button.title = "Click to " + (action.title || action.label || action.type)
         if (action?.label) {
           button.textContent = action.label
         }
 
-        if (props?.icon) {
+        if (props?.icon || (action.type === "custom" && action?.icon !== undefined)) {
           const icon = document.createElement("i");
-          icon.className = props.icon;
+          const iClassName = props?.icon || `${action.icon} icon`
+          icon.className = iClassName;
           button.appendChild(icon);
         }
         button.__payload = payload;
@@ -145,30 +156,35 @@ export class InputControlsBuilder extends Builder<InputControlsElementType> {
         value: this._getValue(element),
         event,
       };
-
-      switch (action.type) {
-        case "copy":
-          await this.copy(context.value);
-          context.result = context.value;
-          break;
-        case "edit":
-          context.result = this.edit(element);
-          this.toggleEdit(button, controls, "save", actions);
-          break;
-        case "save":
-          context.result = this.update(element);
-          this.toggleEdit(button, controls, "edit", actions);
-          break;
-        case "add":
-          context.result = this.duplicate(parentElement, actions);
-          break;
-        case "search":
-          context.result = this.search(element, context);
-          break;
-        case "delete":
-        case "remove":
-          context.result = this.delete(parentElement);
-          break;
+      if (!this.config.disableDefault) {
+        switch (action.type) {
+          case "move":
+            await this.copy(context.value);
+            context.result = context.value;
+            break;
+          case "copy":
+            await this.copy(context.value);
+            context.result = context.value;
+            break;
+          case "edit":
+            context.result = this.edit(element);
+            this.toggleEdit(button, controls, "save", actions);
+            break;
+          case "save":
+            context.result = this.update(element);
+            this.toggleEdit(button, controls, "edit", actions);
+            break;
+          case "add":
+            context.result = this.duplicate(parentElement, actions);
+            break;
+          case "search":
+            context.result = this.search(element, context);
+            break;
+          case "delete":
+          case "remove":
+            context.result = this.delete(parentElement);
+            break;
+        }
       }
 
       this.emit(action.type as iActionType, context);

@@ -1,10 +1,15 @@
 import type { iActionProperty, iBuilderConfig, iBuilderRegistry } from "../../interface";
-import { BuilderR2 } from "./BaseR2";
+import { Builder } from "../Base";
 // 🧩 The theme builder is instantiated BY THIS builder (no ComponentRegistry
 // entry needed), so its module — and its stylesheet — ride along with the
 // editor chunk instead of being lazily loaded by path.
 import { ColorThemeBuilder } from "./ColorTheme/ColorTheme";
 import "./ColorTheme/ColorTheme.css";
+// 🧩 Same deal as the theme builder: the form editor is instantiated BY THIS
+// builder (no ComponentRegistry entry needed), so its module — and its
+// stylesheet — ride along with the editor chunk too.
+import { FormEditorBuilder } from "../Form/FormEditor/FormEditor";
+import "../Form/FormEditor/FormEditor.css";
 
 import {
   THEME_BRIDGE_EVENT,
@@ -21,6 +26,7 @@ export type EditorElementType =
   | "@editor>menu-right"
   | "@editor>color-configurator"
   | "@editor>color-report"
+  | "@editor>form-editor"
   | "@editor>menu-top>mode"
   | "@editor>trigger"
   ;
@@ -31,7 +37,7 @@ export interface iEditorConfig extends iBuilderConfig<EditorElementType> {
   route?: string;
 }
 
-export class EditorBuilder extends BuilderR2<EditorElementType, iEditorConfig> {
+export class EditorBuilder extends Builder<EditorElementType, iEditorConfig> {
   builderId = "editor" as keyof iBuilderRegistry;
   name = "editor" as keyof iBuilderRegistry;
   stylesheet: string = "./Editor.css";
@@ -44,6 +50,8 @@ export class EditorBuilder extends BuilderR2<EditorElementType, iEditorConfig> {
   #unwatch: Array<() => void> = [];
   /** 🧩 The theme builder this editor instantiates and owns (see prepare()). */
   #colorizer?: ColorThemeBuilder;
+  /** 🧩 The form builder this editor instantiates and owns (see prepare()). */
+  #formBuilder?: FormEditorBuilder;
 
   constructor(config: Partial<iEditorConfig>) {
     super();
@@ -58,7 +66,8 @@ export class EditorBuilder extends BuilderR2<EditorElementType, iEditorConfig> {
       // elements for slot
       "@editor>menu-top>mode": { tagName: "template", attrs: { style: "display: none" } },
       "@editor>color-configurator": { tagName: "template", attrs: { style: "display: none" } },
-      "@editor>color-report": { tagName: "template", attrs: { style: "display: none" } }
+      "@editor>color-report": { tagName: "template", attrs: { style: "display: none" } },
+      "@editor>form-editor": { tagName: "template", attrs: { style: "display: none" } }
     };
 
     const defaultConfig: Required<iEditorConfig> = {
@@ -70,6 +79,9 @@ export class EditorBuilder extends BuilderR2<EditorElementType, iEditorConfig> {
         "@editor>color-configurator": "color-configurator",
         "@editor>color-report": "color-report",
         "@editor>menu-top>mode": "color-mode",
+        // 🖐️ The left-menu `form-builder` trigger toggles the projected form
+        // editor — slotKey must match that trigger's class name.
+        "@editor>form-editor": "form-builder",
       },
       route: "home",
     }
@@ -92,6 +104,15 @@ export class EditorBuilder extends BuilderR2<EditorElementType, iEditorConfig> {
       .attach("@colorizer>output", "color-report")
       .attach("@colorizer>mode", "color-mode");
 
+    // 🧩 …and the very same deal for the form editor: instantiated here (so
+    // this builder is its caller), its WHOLE `@form-editor>canvas` root (the
+    // `section`-wrapped `form.canvas`) projected into the `form-builder` slot.
+    // attach() welds the receptacle's `hidden` class + `data-slot` onto the
+    // mounted root, then runs the child's initialize() scoped to it — no
+    // registry entry, no separate mount.
+    this.#formBuilder = new FormEditorBuilder({});
+    this.#formBuilder.attach("@form-editor>canvas", "form-builder");
+
     return root;
   }
 
@@ -104,10 +125,13 @@ export class EditorBuilder extends BuilderR2<EditorElementType, iEditorConfig> {
         const menuRight = this.render("@editor>menu-right")!;
         const colorConfigurator = this.render("@editor>color-configurator")!;
         colorConfigurator.className = "hidden";
+        const formEditor = this.render("@editor>form-editor")!;
+        formEditor.className = "hidden";
+
         const colorReport = this.render("@editor>color-report")!;
         colorReport.className = "hidden";
 
-        el.append(menuTop, preview, menuLeft, colorConfigurator, menuRight, colorReport)
+        el.append(menuTop, colorConfigurator, formEditor, preview, menuLeft, menuRight, colorReport)
         break;
 
       case "@editor>preview":
@@ -126,17 +150,21 @@ export class EditorBuilder extends BuilderR2<EditorElementType, iEditorConfig> {
         break;
 
       case "@editor>menu-top":
-        const colorConfiguratorTrigger = this.render("@editor>trigger", { className: "configurator", icon: "editor mixer" })!;
-        const colorReportTrigger = this.render("@editor>trigger", { className: "report", icon: "editor report" })!;
+
         const modeSwitcher = this.render("@editor>menu-top>mode")!;
-        el.append(colorConfiguratorTrigger, colorReportTrigger, modeSwitcher);
+
         // Reserved for editor chrome (workspace actions, view toggles…).
 
-
+        el.append(modeSwitcher);
         break;
 
       case "@editor>menu-left":
-
+        const colorConfiguratorTrigger = this.render("@editor>trigger", { className: "color-configurator", icon: "editor mixer" })!;
+        const colorReportTrigger = this.render("@editor>trigger", { className: "color-report", icon: "editor report" })!;
+        const treeStructureTrigger = this.render("@editor>trigger", { className: "tree-structure", icon: "tree structure" })!;
+        const formBuilderTrigger = this.render("@editor>trigger", { className: "form-builder", icon: "editor form" })!;
+        const componentBuilderTrigger = this.render("@editor>trigger", { className: "component-builder", icon: "editor component" })!;
+        el.append(colorConfiguratorTrigger, colorReportTrigger, treeStructureTrigger, formBuilderTrigger, componentBuilderTrigger);
         break;
 
       case "@editor>menu-right":
@@ -146,6 +174,7 @@ export class EditorBuilder extends BuilderR2<EditorElementType, iEditorConfig> {
       case "@editor>trigger":
         if (payload.className) {
           el.classList.add(payload.className);
+          el.title = `Click to open the ${payload.className.split("-").join(" ")}`
         }
         if (payload.icon) {
           const i = document.createElement("i");
@@ -176,12 +205,16 @@ export class EditorBuilder extends BuilderR2<EditorElementType, iEditorConfig> {
       this.#pushTokens();
     }) as EventListener, { signal: this.#abort.signal });
 
+    const triggerMap = ["color-configurator", "color-report", "form-builder"]
+
     for (const btn of triggers) {
-      if (btn.classList.contains("configurator")) {
-        btn.addEventListener("click", () => {
-          root.querySelector("[data-slot='color-configurator']")?.classList.toggle("hidden");
-        })
-      }
+      triggerMap.forEach((n: string) => {
+        if (btn.classList.contains(n)) {
+          btn.addEventListener("click", () => {
+            root.querySelector(`[data-slot='${n}']`)?.classList.toggle("hidden");
+          })
+        }
+      })
 
       if (btn.classList.contains("report")) {
         btn.addEventListener("click", () => {
@@ -208,5 +241,7 @@ export class EditorBuilder extends BuilderR2<EditorElementType, iEditorConfig> {
     // 🧩 I created the theme builder, so I tear it down (it hands this builder's
     // slot receptacle back on its way out).
     this.#colorizer?.destroy();
+    // 🖐️ Same ownership for the form editor.
+    this.#formBuilder?.destroy();
   }
 }

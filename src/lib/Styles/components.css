@@ -257,7 +257,10 @@ details {
   &:hover {
     border-color: var(--app-primary-color);
   }
-  &[open] {
+  &:has(select:has(::open)) &::details-content {
+    height: auto;
+  }
+  &:is([open]) {
     width: inherit;
     &::details-content {
       height: auto;

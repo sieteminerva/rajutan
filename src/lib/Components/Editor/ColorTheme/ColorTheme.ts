@@ -1,5 +1,5 @@
 import type { iActionProperty, iBuilderConfig, iBuilderRegistry } from "../../../interface";
-import { BuilderR2, } from "../BaseR2";
+import { Builder } from "../../Base";
 import {
   ColorThemeKit,
   DEFAULT_THEME_ITEMS,
@@ -27,6 +27,7 @@ export type ColorThemeElementType =
   | "@colorizer>title"
   | "@colorizer>description"
   | "@colorizer>mode"
+  | "@colorizer>preset"
 
   | "@colorizer>configurator"
   | "@colorizer>configurator>picker"
@@ -121,7 +122,7 @@ type iColorizerState = {
 
 
 
-export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorThemeConfig> {
+export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThemeConfig> {
   readonly builderId: keyof iBuilderRegistry = "color-theme";
   readonly name: keyof iBuilderRegistry = "color-theme";
   readonly stylesheet: string = "./ColorTheme.css";
@@ -136,7 +137,7 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
       bases: { primary: this.config.primary, accent: this.config.accent },
       mode: this.config.mode,
       mixer: { ...ColorThemeEngine.DEFAULT_MIXER },
-      preset: "",
+      preset: "gum",
       overrides: Object.fromEntries(
         Object.entries(this.config.items ?? DEFAULT_THEME_ITEMS).map(([key, value]) => [key, { ...value.default }])
       ),
@@ -156,7 +157,8 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
       "@colorizer>header": { tagName: "section", className: "header" },
       "@colorizer>title": { tagName: "h4", className: "title" },
       "@colorizer>description": { tagName: "p", className: "description" },
-      "@colorizer>mode": { tagName: "div", className: "control", wrapper: ".field.toggle-switch" },
+      "@colorizer>mode": { tagName: "div", className: "switch control", wrapper: ".field" },
+      "@colorizer>preset": { tagName: "button", className: "controls save", attrs: { "data-position": "right" }, wrapper: ".field.actions" },
 
       "@colorizer>configurator": { tagName: "aside", className: "configurator" },
       "@colorizer>configurator>picker": { tagName: "input", attrs: { type: "color" }, className: "picker", wrapper: ".field" },
@@ -171,7 +173,7 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
       "@colorizer>output>codeblock": { tagName: "pre", className: "codeblock" },
       "@colorizer>output>copy": { tagName: "button", className: "copy" },
       "@colorizer>output>reset": { tagName: "button", className: "reset" },
-      "@colorizer>output>save": { tagName: "button", className: "save" }
+
     }
 
     const defaultConfig: Required<iColorThemeConfig> = {
@@ -220,10 +222,8 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
         el.append(title, description, mode.__outer)
         break;
 
-      case "@colorizer>configurator":
-        const titleCfg = this.render("@colorizer>title", this.config.textContent?.configurator ?? DEFAULT_TEXT_CONTENT.configurator)!;
-
-        const preset = this.render("@colorizer>configurator>mixer>selector", {
+      case "@colorizer>preset":
+        const sPreset = this.render("@colorizer>configurator>mixer>selector", {
           // ⚠️ No data-bind/name here: preset selection is a COMMAND (applies
           // derived state in applyPreset), not a plain value binding. Binding
           // it would add a second change listener that double-writes
@@ -238,6 +238,20 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
           placeholder: "Select Presets",
           options: this.config.presets
         })!;
+
+        const floppyIcon = document.createElement("i");
+        floppyIcon.className = "floppy disk icon"
+        el.title = "Click to Save the Preset"
+        el.appendChild(floppyIcon);
+        el.__outer.prepend(sPreset.__inner);
+        break;
+
+      case "@colorizer>configurator":
+        const titleCfg = this.render("@colorizer>title", this.config.textContent?.configurator ?? DEFAULT_TEXT_CONTENT.configurator)!;
+        const column = document.createElement("div");
+        column.className = "column color-picker";
+
+        const preset = this.render("@colorizer>preset")!;
 
         const pickerContainer = document.createElement("div");
         pickerContainer.className = "field group";
@@ -269,13 +283,15 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
           theme: payload,
         })!;
 
+        column.append(preset?.__outer, pickerContainer, ramps.__outer, palette.__outer)
+
         const mixerContainer = document.createElement("div");
         const lcm = document.createElement("h5");
         lcm.className = "title";
         lcm.textContent = this.config.textContent?.mixerTitle ?? DEFAULT_TEXT_CONTENT.mixerTitle;
 
         mixerContainer.prepend(lcm);
-        mixerContainer.className = "color-mixer";
+        mixerContainer.className = "column color-mixer";
 
         const sharedMixer = this.render("@colorizer>configurator>mixer", { label: "shared" })!;
         sharedMixer.dataset.mixer = "shared";
@@ -286,7 +302,7 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
           mixerContainer.appendChild(item);
         }
 
-        el.append(titleCfg, preset?.__outer, pickerContainer, ramps.__outer, palette.__outer, mixerContainer);
+        el.append(titleCfg, column, mixerContainer);
         break;
 
       case "@colorizer>output":
@@ -308,8 +324,7 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
         actions.className = "actions";
         const copy = this.render("@colorizer>output>copy")!;
         const reset = this.render("@colorizer>output>reset")!;
-        const save = this.render("@colorizer>output>save")!;
-        actions.append(copy, reset, save)
+        actions.append(copy, reset)
 
         el.append(titleReport, reportContainer, titleGen, codeblock, actions);
         break;
@@ -517,11 +532,11 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
 
       case "@colorizer>configurator>mixer>selector":
         const select = el as HTMLSelectElement;
-        select.name = payload.name ?? "select";
-        select.dataset.bind = payload.bind ?? "";
-        select.dataset.control = payload.control ?? "select";
-        select.ariaLabel = payload.ariaLabel ?? "mixer selector";
-        select.title = payload.title ?? "mixer selector";
+        if (payload.name) select.name = payload.name ?? "select";
+        if (payload.bind) select.dataset.bind = payload.bind ?? "";
+        if (payload.control) select.dataset.control = payload.control ?? "select";
+        if (payload.ariaLabel) select.ariaLabel = payload.ariaLabel ?? "mixer selector";
+        if (payload.title) select.title = payload.title ?? "mixer selector";
 
         if (payload.placeholder) {
           const placeholderEl = document.createElement("option");
@@ -593,7 +608,7 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
 
     const items = this.config.items ?? DEFAULT_THEME_ITEMS;
     for (const [key, value] of Object.entries(items)) {
-      this.#state.overrides[key] = { ...(preset.overrides[key] ?? value.default) };
+      this.#state.overrides[key] = { ...((preset.overrides[key]) ?? value.default) };
     }
   }
 
@@ -702,7 +717,7 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
     };
     const copyBtn = this.load("@colorizer>output>copy") as HTMLButtonElement | null;
     const resetBtn = this.load("@colorizer>output>reset") as HTMLButtonElement | null;
-    const saveBtn = this.load("@colorizer>output>save") as HTMLButtonElement | null;
+    const saveBtn = this.load("@colorizer>preset") as HTMLButtonElement | null;
     const codeEl = this.load("@colorizer>output>codeblock")?.querySelector("code");
     // The mixer re-uses this typeKey for several selects, so the preset control
     // is found by its hook across every wiring scope.
@@ -744,8 +759,9 @@ export class ColorThemeBuilder extends BuilderR2<ColorThemeElementType, iColorTh
       // 🔔 Writing `state.preset` notifies the sync effect, which rebuilds the
       // select's options (syncPresetOptions) — no manual DOM sync here.
       this.#state.preset = preset.label;
-      saveBtn!.textContent = `Saved: ${preset.label}`;
-      setTimeout(() => (saveBtn!.textContent = this.config.textContent?.save ?? DEFAULT_TEXT_CONTENT.save), 1500);
+      console.log(JSON.stringify(this.config.presets[this.config.presets.length - 1], null, 2));
+      (saveBtn?.firstElementChild as HTMLElement).className = `checkmark circle icon`;
+      setTimeout(() => ((saveBtn?.firstElementChild as HTMLElement).className = "floppy disk icon"), 1500);
     });
   }
 

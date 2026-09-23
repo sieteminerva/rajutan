@@ -57,7 +57,7 @@ export class ArticleBuilder extends Builder<ArticleElementType, iArticleConfig> 
 
   // State internal modul
   private currentRawServerResponse: any = null;
-  private slots: iArticleSlotSpec[] = [];
+  private slotSpecs: iArticleSlotSpec[] = [];
   /** Simpan list view saat detail aktif, agar bisa dikembalikan via tombol back. */
   private listElement: HTMLElement | null = null;
 
@@ -107,7 +107,7 @@ export class ArticleBuilder extends Builder<ArticleElementType, iArticleConfig> 
     };
 
     this.config = this.resolveConfig(defaultConfig, config);
-    this.slots = this.config.slots?.length ? this.config.slots : [
+    this.slotSpecs = this.config.slots?.length ? this.config.slots : [
       { slot: "controls" },
       { slot: "list", view: "card" },
       { slot: "aside", count: this.config.items ?? 5 },
@@ -124,7 +124,7 @@ export class ArticleBuilder extends Builder<ArticleElementType, iArticleConfig> 
 
     const container = this.render("@container", this.currentRawServerResponse) as HTMLElement;
 
-    const slotFor = (role: string): boolean => this.slots.length === 0 || this.slots.some((s) => s.slot === role);
+    const slotFor = (role: string): boolean => this.slotSpecs.length === 0 || this.slotSpecs.some((s) => s.slot === role);
 
     // ── 1. CONTROLS (back + pagination HATEOAS) ───────────────────────────
     if (slotFor("controls")) {

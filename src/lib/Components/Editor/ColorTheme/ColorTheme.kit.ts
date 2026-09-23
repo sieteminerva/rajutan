@@ -114,7 +114,7 @@ export class ColorThemeKit {
     const modeInput = root.querySelector<HTMLInputElement>("input[name='mode']");
     if (modeInput) modeInput.checked = mode === "dark";
 
-    const modeLabel = root.querySelector<HTMLLabelElement>(".toggle-switch label");
+    const modeLabel = root.querySelector<HTMLLabelElement>(".field:has(.switch.control) label");
     if (modeLabel) modeLabel.textContent = mode;
   }
 

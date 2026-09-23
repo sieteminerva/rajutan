@@ -21,6 +21,7 @@ import './style.css';
 import formResult from './payload.json';
 import { GeneratorPageContent } from './content/generator';
 import { EditorPageContent } from './content/editor';
+import { FormPageContent } from './content/form';
 
 
 function toTable(obj: any, keyName: string) {
@@ -71,6 +72,7 @@ function pageContentFor(route: string): iNodeContent {
     case 'blog': return BlogPageContent;
     case 'generator': return GeneratorPageContent;
     case 'editor': return EditorPageContent;
+    case 'form': return FormPageContent;
     // 🖼 Live-preview canvas: an empty mount root; ColorThemeBuilder pushes
     // builder output here via the bridge (RENDER_BUILDER, see ColorTheme.preview.ts).
     case 'canvas': return { "#app": { attrs: { id: "app", "data-canvas": "" } } };
@@ -93,6 +95,7 @@ function buildersForRoute(route: string): string[] {
     case 'blog': return ['article'];
     case 'generator': return ['form', 'color-theme'];
     case 'editor': return ['form', 'color-theme', 'editor'];
+    case 'form': return ['form', 'form-editor'];
     // Canvas builders are preloaded on demand by the bridge's renderBuilder hook.
     case 'canvas': return [];
     default: return [];
@@ -126,7 +129,7 @@ function bootRouting(): void {
   const router = new HashRouter(
     "home",
     "default",
-    ["home", "build", "result", "blog", "generator", "editor", "canvas"],
+    ["home", "build", "result", "blog", "generator", "editor", "form", "canvas"],
     (state: iRouteState) => renderPage(state.route)
   );
 
@@ -193,6 +196,14 @@ async function start(container: HTMLElement) {
       return {
         path: "lib/Components/Editor/Editor.ts",
         stylesheet: "lib/Components/Editor/Editor.css", // alternative style definition also didn't loaded
+        config: data?.config,
+        schema: data?.schema !== undefined ? data.schema : (data?.content !== undefined ? data.content : data),
+      };
+    })
+    .register("form-editor", (data: any) => {
+      return {
+        path: "lib/Components/Form/FormEditor/FormEditor.ts",
+        stylesheet: "lib/Components/Form/FormEditor/FormEditor.css", // alternative style definition also didn't loaded
         config: data?.config,
         schema: data?.schema !== undefined ? data.schema : (data?.content !== undefined ? data.content : data),
       };
