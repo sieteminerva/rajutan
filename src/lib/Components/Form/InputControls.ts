@@ -3,6 +3,7 @@ import type { iBuilderConfig, iElementProperty } from "../../interface";
 import { Builder } from "../Base";
 
 
+import "./InputControls.css";
 
 export type InputControlsElementType =
   | "@controls"       // Kontainer pembungkus input + tombol aksi (.ui.action.input)
