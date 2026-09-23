@@ -257,9 +257,7 @@ details {
   &:hover {
     border-color: var(--app-primary-color);
   }
-  &:has(select:open) ::details-content {
-    height: auto;
-  }
+
   &:is([open]) {
     width: inherit;
     &::details-content {
