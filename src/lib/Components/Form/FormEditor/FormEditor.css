@@ -89,6 +89,7 @@
       &::after {
         content: "";
       }
+
       & .field:is(.actions) {
         --input-border-radius: 4px;
       }

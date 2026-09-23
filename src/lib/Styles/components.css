@@ -254,6 +254,7 @@ details {
       height 300ms ease,
       content-visibility 300ms allow-discrete;
   }
+
   &:hover {
     border-color: var(--app-primary-color);
   }

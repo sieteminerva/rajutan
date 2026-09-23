@@ -39,7 +39,6 @@ export class FormEditorBuilder extends Builder<FormEditorElementType, iFormEdito
 
   /** 🖐️ Drag & drop service — arming, ghost, dropzone and the delegated container channel live there, not here. */
   #dnd = new DragNDropService();
-
   /** 🧩 Blocks whose own listeners are wired — edit `<details>` and output preview alike. */
   #wired = new WeakSet<HTMLElement>();
   /** 🧩 Control roots wired so far (summary OR preview) — a mode switch mounts a brand new one. */
