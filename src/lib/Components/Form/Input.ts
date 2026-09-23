@@ -3,7 +3,7 @@ import { Builder } from "../Base";
 import { applyAttributeList } from "../../Utility/AttributeUtils";
 import { DropdownBuilder, type iDropdownConfig, type iDropdownContent } from "./Dropdown";
 import { InputControlsBuilder, type InputControlsElementType } from "./InputControls";
-
+import "./InputControls.css";
 export type InputType =
   | "text"
   | "textarea"
