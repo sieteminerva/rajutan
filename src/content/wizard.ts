@@ -553,10 +553,10 @@ const formConfig = {
 };
 const formContent = [
   // TestSet,
-  AddressSet,
   IntroSet,
   DetailSetShop,
   ContactSet,
+  AddressSet,
   ConfirmationSet,
 ]
 
