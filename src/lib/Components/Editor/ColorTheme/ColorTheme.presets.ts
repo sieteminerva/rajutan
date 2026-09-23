@@ -48,7 +48,7 @@ export const ColorThemePresets: iColorThemePreset[] = [
   },
   {
     "label": "gum",
-    "primary": "#53afc6",
+    "primary": "#3e9ab1",
     "accent": "#d747b0",
     "mode": "light",
     "mixer": {
@@ -66,14 +66,14 @@ export const ColorThemePresets: iColorThemePreset[] = [
         "target": "auto"
       },
       "text": {
-        "amount": 75,
+        "amount": 39,
         "shift": 0,
         "target": "auto"
       },
       "subtle": {
-        "amount": 12,
-        "shift": 0,
-        "target": "auto"
+        "amount": 58,
+        "shift": -79,
+        "target": "complement"
       },
       "border": {
         "amount": 30,

@@ -613,7 +613,23 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
   }
 
   private deriveTheme(): DerivedTheme {
-    return ColorThemeEngine.colorSchema(this.#state.bases, this.#state.mode, this.#state.overrides, this.#state.mixer);
+    // 🔀 BOTH branches are derived and zipped into ONE token map, so paint and
+    // broadcast are mode-independent: every value is a `light-dark()` pair (or
+    // a plain value where the modes agree). The mode toggle therefore has
+    // nothing new to inject — it only flips `color-scheme` (#paintTokens line
+    // below / the preview bridge), while a base/mix/override change still
+    // re-derives and repaints because the VALUES themselves moved.
+    // `preview`/`probes` stay on the CURRENT mode: canvas (WCAG, swatches)
+    // can't resolve light-dark() and needs literals.
+    const { bases, mode, overrides, mixer } = this.#state;
+    const current = ColorThemeEngine.colorSchema(bases, mode, overrides, mixer);
+    const other = ColorThemeEngine.colorSchema(bases, mode === "dark" ? "light" : "dark", overrides, mixer);
+    // 🔀 Colors zip (flip via color-scheme, no re-inject); gradients/shadows
+    // land as the current mode's plain value + both branches in `variants`.
+    const light = mode === "light" ? current.tokens : other.tokens;
+    const dark = mode === "dark" ? current.tokens : other.tokens;
+    const split = ColorThemeEngine.splitTokens(light, dark, mode);
+    return { ...current, tokens: split.tokens, variants: split.variants };
   }
 
   /** State → UI for ONE wiring scope (the builder root or a projected panel). */
@@ -623,7 +639,11 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
     // them) read the `--app-*` values through the cascade instead.
     const codeEl = scope.querySelector<HTMLElement>("code");
     if (codeEl) {
-      codeEl.textContent = ColorThemeEngine.toCssText(theme.tokens, this.#state.mode, this.#state.bases);
+      // 📎 The export is mode-agnostic now: derive BOTH branches from the same
+      // state and let the engine zip them into one light-dark() `:root` block.
+      const light = ColorThemeEngine.colorSchema(this.#state.bases, "light", this.#state.overrides, this.#state.mixer);
+      const dark = ColorThemeEngine.colorSchema(this.#state.bases, "dark", this.#state.overrides, this.#state.mixer);
+      codeEl.textContent = ColorThemeEngine.toCssText(light.tokens, dark.tokens, this.#state.bases);
     }
 
     ColorThemeKit.syncReport(scope, theme);
@@ -647,6 +667,13 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
    * attached panel, so `@editor` chrome and all panels inherit the cascade),
    * or this builder's own root when it owns the page standalone. Without this,
    * each attached scope would carry its own duplicated inline token set.
+   *
+   * `color-scheme` rides on `<html>`, never on the host: `light-dark()` reads
+   * it through the cascade, and only the root element's value decides the used
+   * scheme for the whole page subtree (a descendant host's value would flip
+   * nothing outside its own fragment). Non-color variants (gradients/shadows —
+   * illegal in `light-dark()`) are painted in the ACTIVE mode's branch, so the
+   * reactive effect (which re-runs on `#state.mode`) flips them per toggle.
    */
   #paintTokens(theme: DerivedTheme): void {
     const itself = this.rootElement ?? null;
@@ -657,7 +684,12 @@ export class ColorThemeBuilder extends Builder<ColorThemeElementType, iColorThem
     for (const [key, value] of Object.entries(theme.tokens)) {
       host.style.setProperty(key, value);
     }
-    host.style.colorScheme = this.#state.mode;
+    const activeVariants = this.#state.mode === "dark" ? theme.variants.dark : theme.variants.light;
+    for (const [key, value] of Object.entries(activeVariants)) {
+      host.style.setProperty(key, value);
+    }
+    document.documentElement.style.colorScheme = this.#state.mode;
+    document.documentElement.dataset.mode = this.#state.mode;
   }
 
   /**

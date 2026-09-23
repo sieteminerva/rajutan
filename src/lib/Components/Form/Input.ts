@@ -23,7 +23,8 @@ export type InputType =
   | "password"
   | "url"
   | "tel"
-  | "hidden";
+  | "hidden"
+  | "group";
 
 export interface iBasicSelectOption {
   value?: string;

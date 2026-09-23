@@ -16,8 +16,13 @@ html * {
   scrollbar-color: var(--app-accent-color) color-mix(in srgb, grey 10%, var(--app-primary-color) 5%);
 }
 
+/* ─── Dark by default (no data-mode required) ───────────────────────
+   (superseded) — the theme now lives in variables.css as ONE copy:
+   light-dark() pairs + color-scheme pins. Unpinned follows the OS;
+   [data-mode="light"|"dark"] pins force a branch either way. */
+
 body {
-  color-scheme: dark;
+  /* color-scheme: dark; */
   background: var(--app-page-background);
   color: var(--app-text-color);
   margin: 0;
@@ -127,10 +132,10 @@ section#home {
     font-weight: 700;
     letter-spacing: -0.01em;
     border-radius: 9999px;
-    color: var(--app-surface-muted);
+    color: light-dark(var(--app-surface-muted), #1a140e);
     background: var(--app-primary-color);
     border: 1px solid var(--app-primary-color);
-    box-shadow: 0 4px 20px -2px rgba(146, 84, 8, 0.35);
+    box-shadow: light-dark(0 4px 20px -2px rgba(146, 84, 8, 0.35), 0 4px 25px -2px rgba(229, 164, 67, 0.4));
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -138,7 +143,7 @@ section#home {
       background: var(--app-primary-hover);
       border-color: var(--app-primary-hover);
       transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 10px 30px -4px rgba(146, 84, 8, 0.45);
+      box-shadow: light-dark(0 10px 30px -4px rgba(146, 84, 8, 0.45), 0 4px 25px -2px rgba(229, 164, 67, 0.4));
     }
     &:active {
       transform: translateY(0) scale(0.99);
@@ -146,17 +151,7 @@ section#home {
   }
 }
 
-:root[data-mode="dark"] section#home button#start {
-  color: #1a140e;
-  box-shadow: 0 4px 25px -2px rgba(229, 164, 67, 0.4);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-mode="light"]) section#home button#start {
-    color: #1a140e;
-    box-shadow: 0 4px 25px -2px rgba(229, 164, 67, 0.4);
-  }
-}
+/* (removed — #start's light-dark() pair lives inside its own rule above) */
 
 section #wizard {
   width: 100%;

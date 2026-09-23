@@ -31,6 +31,7 @@ export type InputAttributeType =
   // Custom for google sheets range
   | "range"
   // Custom for file uploader
+  | "options"
   | "data-max-upload"
   | "data-max-file-size"
   | "data-group-unallowed"
@@ -57,6 +58,7 @@ export class InputAttributeBuilder {
     number: { placeholder: "Enter a number", value: 50, min: 0, max: 100, step: 1 },
     select: { placeholder: "Select an option", range: "sheet_range", form: "form_id", multiple: false },
     dropdown: { placeholder: "Select an option", range: "sheet_range", form: "form_id", multiple: false },
+    group: {},
     checkbox: { value: "default_value", checked: false },
     radio: { value: "default_value", range: "sheet_range" },
     range: { value: 50, min: 0, max: 100, step: 1, orient: "horizontal" },
@@ -99,6 +101,7 @@ export class InputAttributeBuilder {
     checked: { name: "checked", type: "checkbox", config: { style: "toggle", position: "left" }, value: false },
     orient: { name: "orient", type: "text", value: "horizontal" },
     pattern: { name: "pattern", type: "text", value: "" },
+    options: { name: "options", type: "group", value: "a", label: "a" },
     // Custom
     ["data-max-upload"]: { name: "data-max-upload", label: "max upload", type: "number", value: 10 },
     ["data-max-file-size"]: { name: "data-max-file-size", label: "max file size", type: "number", value: 5 },
@@ -216,6 +219,7 @@ export class InputAttributeBuilder {
   static scanUnallowedAttrs(type: InputType, config: Record<string, any>, customAllowed: string[] = []) {
     let status = false;
     const allowedAttrs: Record<InputType, InputAttributeType[]> = {
+      group: ["label", "value"],
       text: ["label", "name", "value", "required", "disabled", "placeholder", "maxlength"],
       textarea: ["label", "name", "value", "required", "disabled", "placeholder", "rows", "cols"],
       select: ["label", "name", "value", "required", "disabled", "multiple", "form", "placeholder"],

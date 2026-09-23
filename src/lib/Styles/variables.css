@@ -33,94 +33,97 @@
   --app-component-border-radius: 1rem;
   --app-image-border-radius: 1.25rem;
 
-  /* Theme: Warm Craft Light Mode (Clean, earthy, warm editorial feel) */
+  /* Theme — ONE copy: every mode-varying value is a light-dark(light, dark)
+     pair. Unpinned, `color-scheme: light dark` (bottom of :root) follows the
+     OS; the pin rules after :root force a branch — no token duplication. */
 
   --app-primary-color: #53afc6;
   --app-accent-color: #d747b0;
-  --app-primary-hover: color-mix(in oklch, var(--app-primary-color) 80%, black);
-  --app-accent-strong: color-mix(in oklch, var(--app-accent-color) 85%, black);
+  --app-primary-hover: light-dark(
+    color-mix(in oklch, var(--app-primary-color) 80%, black),
+    color-mix(in oklch, var(--app-primary-color) 80%, white)
+  );
+  --app-accent-strong: light-dark(
+    color-mix(in oklch, var(--app-accent-color) 85%, black),
+    color-mix(in oklch, var(--app-accent-color) 85%, white)
+  );
   --app-accent-subtle: color-mix(in oklch, var(--app-accent-color) 12%, transparent);
-  --app-text-color: color-mix(in oklch, var(--app-primary-color) 75%, #2c251e);
-  --app-text-accent-color: color-mix(in oklch, var(--app-primary-color) 30%, #6e5f51);
-  --app-text-heading-color: color-mix(in oklch, var(--app-primary-color) 10%, #1a140e);
+  --app-text-color: light-dark(
+    color-mix(in oklch, var(--app-primary-color) 75%, #2c251e),
+    color-mix(in oklch, var(--app-primary-color) 75%, #f3ede2)
+  );
+  --app-text-accent-color: light-dark(
+    color-mix(in oklch, var(--app-primary-color) 30%, #6e5f51),
+    color-mix(in oklch, var(--app-primary-color) 24%, #cfc5b8)
+  );
+  --app-text-heading-color: light-dark(
+    color-mix(in oklch, var(--app-primary-color) 10%, #1a140e),
+    color-mix(in oklch, var(--app-primary-color) 4%, #fff9f0)
+  );
 
-  --app-page-background: linear-gradient(
-    175deg,
-    color-mix(in oklch, var(--app-primary-color) 3%, #fdfbf7) 0%,
-    color-mix(in oklch, var(--app-primary-color) 6%, #f6f1e8) 45%,
-    color-mix(in oklch, var(--app-primary-color) 9%, #efe7d8) 100%
+  --app-page-background: light-dark(
+    linear-gradient(
+      175deg,
+      color-mix(in oklch, var(--app-primary-color) 3%, #fdfbf7) 0%,
+      color-mix(in oklch, var(--app-primary-color) 6%, #f6f1e8) 45%,
+      color-mix(in oklch, var(--app-primary-color) 9%, #efe7d8) 100%
+    ),
+    radial-gradient(
+      circle at 50% 0%,
+      color-mix(in oklch, var(--app-primary-color) 12%, #201913) 0%,
+      color-mix(in oklch, var(--app-primary-color) 9%, #14100b) 60%,
+      color-mix(in oklch, var(--app-primary-color) 6%, #0c0907) 100%
+    )
   );
-  --app-surface-background-color: color-mix(
-    in oklab,
-    color-mix(in oklch, var(--app-primary-color) 4%, #ffffff) 82%,
-    transparent
+  --app-surface-background-color: light-dark(
+    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 4%, #ffffff) 82%, transparent),
+    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 8%, #1c1611) 78%, transparent)
   );
-  --app-surface-strong: color-mix(in oklch, var(--app-primary-color) 3%, #ffffff);
-  --app-surface-muted: color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 8%, #f4eee2) 80%, transparent);
+  --app-surface-strong: light-dark(
+    color-mix(in oklch, var(--app-primary-color) 3%, #ffffff),
+    color-mix(in oklch, var(--app-primary-color) 8%, #1c1611)
+  );
+  --app-surface-muted: light-dark(
+    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 8%, #f4eee2) 80%, transparent),
+    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 8%, #f4eee2) 62%, transparent)
+  );
 
   --app-border-color: color-mix(in oklch, var(--app-primary-color) 30%, transparent);
   --app-border-focus: #53afc6;
-  --app-shadow-soft: 0 12px 35px -8px
-    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #5c3c14) 8%, transparent);
-  --app-shadow-elevated: 0 20px 48px -10px
-    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #5c3c14) 16%, transparent);
+  --app-shadow-soft: light-dark(
+    0 12px 35px -8px color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #5c3c14) 8%, transparent),
+    0 12px 35px -8px color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #000000) 8%, transparent)
+  );
+  --app-shadow-elevated: light-dark(
+    0 20px 48px -10px color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #5c3c14) 16%, transparent),
+    0 20px 48px -10px color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #000000) 16%, transparent)
+  );
 
-  /* Form & Component overrides */
+  /* Form & Component overrides — plain aliases; resolution flows through var() */
   --input-primary-color: var(--app-primary-color);
   --input-accent-color: var(--app-accent-color);
   --input-border-color: var(--app-border-color);
   --input-text-color: var(--app-text-color);
   --input-label-color: var(--app-text-accent-color);
-  --input-placeholder-color: rgba(110, 95, 81, 0.55);
-  --input-background-color: transparent;
-  --input-picker-background: var(--app-surface-strong);
-  --input-popover-background-color: var(--app-surface-strong);
-}
-
-@media (prefers-color-scheme: dark) {
-}
-
-:root[data-mode="dark"] {
-  --app-primary-color: #53afc6;
-  --app-accent-color: #d747b0;
-  --app-primary-hover: color-mix(in oklch, var(--app-primary-color) 80%, white);
-  --app-accent-strong: color-mix(in oklch, var(--app-accent-color) 85%, white);
-  --app-accent-subtle: color-mix(in oklch, var(--app-accent-color) 12%, transparent);
-  --app-text-color: color-mix(in oklch, var(--app-primary-color) 75%, #f3ede2);
-  --app-text-accent-color: color-mix(in oklch, var(--app-primary-color) 24%, #cfc5b8);
-  --app-text-heading-color: color-mix(in oklch, var(--app-primary-color) 4%, #fff9f0);
-
-  --app-page-background: radial-gradient(
-    circle at 50% 0%,
-    color-mix(in oklch, var(--app-primary-color) 12%, #201913) 0%,
-    color-mix(in oklch, var(--app-primary-color) 9%, #14100b) 60%,
-    color-mix(in oklch, var(--app-primary-color) 6%, #0c0907) 100%
-  );
-  --app-surface-background-color: color-mix(
-    in oklab,
-    color-mix(in oklch, var(--app-primary-color) 8%, #1c1611) 78%,
-    transparent
-  );
-  --app-surface-strong: color-mix(in oklch, var(--app-primary-color) 8%, #1c1611);
-  --app-surface-muted: color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 8%, #f4eee2) 62%, transparent);
-
-  --app-border-color: color-mix(in oklch, var(--app-primary-color) 30%, transparent);
-  --app-border-focus: #53afc6;
-  --app-shadow-soft: 0 12px 35px -8px
-    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #000000) 8%, transparent);
-  --app-shadow-elevated: 0 20px 48px -10px
-    color-mix(in oklab, color-mix(in oklch, var(--app-primary-color) 60%, #000000) 16%, transparent);
-
-  --input-primary-color: var(--app-primary-color);
-  --input-accent-color: var(--app-accent-color);
-  --input-border-color: var(--app-border-color);
-  --input-text-color: var(--app-text-color);
-  --input-label-color: var(--app-text-accent-color);
-  --input-placeholder-color: rgba(191, 174, 160, 0.5);
+  --input-placeholder-color: light-dark(rgba(110, 95, 81, 0.55), rgba(191, 174, 160, 0.5));
   --input-background-color: transparent;
   --input-picker-background: var(--app-surface-strong);
   --input-popover-background-color: var(--app-surface-strong);
 
   --table-primary-color: var(--app-primary-color);
   --table-accent-color: var(--app-accent-color);
+  color-scheme: light dark;
 }
+
+/* ─── Pins — the light-dark() pairs above resolve against the USED
+   color-scheme: unpinned (`color-scheme: light dark`) follows the OS; these
+   force a branch for native widgets AND the tokens, with zero duplication. */
+:root[data-mode="light"] {
+  color-scheme: light;
+}
+
+:root[data-mode="dark"] {
+  color-scheme: dark;
+}
+
+/* (removed — superseded: one light-dark() copy in :root + the pins above) */
