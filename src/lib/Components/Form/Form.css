@@ -861,6 +861,163 @@ select:focus-visible {
   }
 }
 
+/* ============
+
+Actions Controls
+
+============== */
+
+.form .field,
+.field {
+  --input-margin-bottom: 1em;
+  &:is(.actions) {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: stretch;
+    margin-bottom: var(--input-margin-bottom);
+
+    & label {
+      flex: 0 0 100%;
+      margin-bottom: 0.35em;
+    }
+
+    &:has(.controls) {
+      & input,
+      & select {
+        flex: 1;
+        outline: none;
+        border-width: 1px;
+        border-style: solid;
+        border-color: var(--input-border-color);
+      }
+      & input:hover,
+      & select:hover {
+        outline: none;
+        border-right-color: transparent;
+      }
+    }
+    &:has(.controls:is(button)) {
+      & input,
+      & select {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-right-color: transparent;
+        &:hover {
+          & ~ button {
+            border: 1px solid var(--input-primary-color);
+          }
+          border-right-color: transparent;
+        }
+      }
+
+      &:has(button:hover) input,
+      &:has(button:hover) select {
+        border: 1px solid var(--input-primary-color);
+        border-right-color: transparent;
+      }
+
+      & .controls:is(button) {
+        padding: 6px 1em;
+        border-top-right-radius: var(--input-border-radius, 4px);
+        border-bottom-right-radius: var(--input-border-radius, 4px);
+      }
+    }
+
+    &:has(.controls[position="right"]),
+    &:has(.controls[data-position="right"]) {
+      & > select,
+      & > input {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+    }
+
+    &:has(.controls[position="left"]),
+    &:has(.controls[data-position="left"]) {
+      & > select,
+      & > input {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+    }
+
+    &:has(> .controls[position="left"], > .controls[position="right"]),
+    &:has(> .controls[data-position="left"], > .controls[data-position="right"]) {
+      & > select,
+      & > input {
+        border-radius: 0 !important;
+      }
+    }
+  }
+}
+
+/* 3. Styling Grup Tombol (Controls) */
+.form .field:is(.actions),
+.field:is(.actions) {
+  & .controls,
+  & > button.controls {
+    display: inline-flex;
+    align-items: stretch;
+    float: none;
+    position: static;
+
+    &[position="right"],
+    &[data-position="right"] {
+      & button:last-child {
+        border-top-right-radius: var(--input-border-radius, 4px);
+        border-bottom-right-radius: var(--input-border-radius, 4px);
+      }
+
+      & button:not(:last-child) {
+        border-right: none;
+      }
+    }
+
+    &[position="left"],
+    &[data-position="left"] {
+      & button:first-child {
+        border-top-left-radius: var(--input-border-radius, 4px);
+        border-bottom-left-radius: var(--input-border-radius, 4px);
+      }
+
+      & button:not(:first-child) {
+        border-left: none;
+      }
+    }
+
+    &:is(button),
+    & button {
+      padding: 6px 1em;
+      font-size: var(--input-font-size, 0.75rem);
+      font-weight: 400;
+      cursor: pointer;
+      transition:
+        background-color 200ms,
+        transform 100ms;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35em;
+      border-radius: 0; /* Reset default radius */
+
+      color: color-mix(in srgb, var(--input-text-color) 20%, white 70%);
+      border: 1px solid var(--input-accent-color);
+      background-color: color-mix(in srgb, var(--input-accent-color) 90%, var(--input-primary-color) 5%);
+
+      &:hover {
+        color: color-mix(in srgb, var(--input-accent-color) 15%, rgb(245, 244, 244));
+        background-color: color-mix(in srgb, var(--input-accent-color) 90%, rgb(245, 244, 244, 0.8));
+        border: 1px solid var(--input-primary-color) !important;
+      }
+
+      &:active {
+        transform: scale(98.5%);
+      }
+    }
+  }
+}
+
 /* ============ 
    INLINE STYLE
    ============ */
