@@ -79,13 +79,17 @@ export class FormEditorBuilder extends Builder<FormEditorElementType, iFormEdito
 
 
   public prepare(_content: any, _config?: Required<iFormEditorConfig> | undefined): HTMLElement | Record<string, any | HTMLElement> {
-    const editor = this.render("@form-editor>canvas")?.__outer!;
+    const editor = this.render("@form-editor")!;
 
     return editor;
   }
 
   protected template(typeKey: FormEditorElementType, el: HTMLElement, payload?: any, props?: iActionProperty): void {
     switch (typeKey) {
+      case "@form-editor":
+        const canvas = this.render("@form-editor>canvas")!
+        el.append(canvas);
+        break;
       case "@form-editor>canvas":
         const details = this.render("@form-editor>details")!;
         const structure = this.render("@form-editor>structure")!;
