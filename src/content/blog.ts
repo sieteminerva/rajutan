@@ -3,7 +3,7 @@
 // ================================================================
 
 import type { iNodeContent } from "@aio-ui/core";
-import { navigate } from "./BuildStore";
+import { topMenu } from "./nav";
 import blogPayload from "./output.json";
 
 // =====================================================================
@@ -19,14 +19,10 @@ export const BlogPageContent: iNodeContent =
 {
   "#app": {
     content: {
-      "nav": {
-        content: {
-          ".brand": { attrs: { href: "#home" }, content: "Rajutan", onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("home")) }
-        },
-        ".navigations": {
-          "a.item#blog-home": { attrs: { href: "#home" }, content: "Beranda", onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("home")) }
-        },
-      },
+      ...topMenu([
+        { label: "Beranda", href: "#home" },
+        { label: "Form Editor", href: "#form" },
+      ]),
       "main#blog": {
         onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
           el.mount(builderFn("article", ARTICLE_RESPONSE));

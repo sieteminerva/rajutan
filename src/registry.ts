@@ -15,9 +15,11 @@ import { FORM_ADAPTER_MANIFEST } from "@aio-ui/form";
 /** Component modules, keyed by the specifier a manifest names. */
 export const componentAssets = {
   modules: {
+    "@aio-ui/accordion": () => import("@aio-ui/accordion"),
     "@aio-ui/article": () => import("@aio-ui/article"),
     "@aio-ui/form": () => import("@aio-ui/form"),
     "@aio-ui/input": () => import("@aio-ui/input"),
+    "@aio-ui/menu": () => import("@aio-ui/menu"),
     "@aio-ui/message": () => import("@aio-ui/message"),
     "@aio-ui/id-address": () => import("@aio-ui/id-address"),
     "@aio-ui/table": () => import("@aio-ui/table"),
@@ -38,7 +40,9 @@ export const componentAssets = {
     "src/Components/form-editor/FormEditor.ts": () => import("./Components/form-editor/FormEditor.ts"),
   } as Record<string, () => Promise<unknown>>,
   styles: {
+    "@aio-ui/accordion/Accordion.css": () => import("@aio-ui/accordion/Accordion.css?inline"),
     "@aio-ui/article/Article.css": () => import("@aio-ui/article/Article.css?inline"),
+    "@aio-ui/menu/Menu.css": () => import("@aio-ui/menu/Menu.css?inline"),
     "@aio-ui/form/Form.css": () => import("@aio-ui/form/Form.css?inline"),
     "@aio-ui/input/input.css": () => import("@aio-ui/input/input.css?inline"),
     "@aio-ui/input/dropdown.css": () => import("@aio-ui/input/dropdown.css?inline"),
@@ -83,9 +87,14 @@ function formModules(): iComponentModuleRef[] {
 /** Registers every builder this app can render. */
 export function registerAll(registry: ComponentRegistry): ComponentRegistry {
   return registry
+    .register(
+      "accordion",
+      manifest("@aio-ui/accordion", "@aio-ui/accordion/Accordion.css", "AccordionBuilder"),
+    )
     .register("article", manifest("@aio-ui/article", "@aio-ui/article/Article.css", "ArticleBuilder"))
     .register("form", manifest("@aio-ui/form", "@aio-ui/form/Form.css", "FormBuilder", formModules()))
     .register("table", manifest("@aio-ui/table", "@aio-ui/table/Table.css", "TableBuilder"))
+    .register("menu", manifest("@aio-ui/menu", "@aio-ui/menu/Menu.css", "MenuBuilder"))
     .register(
       "editor",
       manifest("src/Components/editor/Editor.ts", "src/Components/editor/Editor.css", "EditorBuilder"),

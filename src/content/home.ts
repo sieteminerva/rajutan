@@ -4,19 +4,11 @@
 
 import type { iNodeContent } from "@aio-ui/core";
 import { navigate } from "./BuildStore";
+import { topMenu } from "./nav";
 
 // =====================================================================
 // HELPERS LANDING — presentasi & memulai wizard
 // =====================================================================
-
-/** Gulir mulus ke sebuah anchor. */
-function navScroll(selector: string): (e: Event) => void {
-  return (e) => {
-    e.preventDefault();
-    document.querySelector(selector)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    if (location.hash !== selector) history.replaceState(null, "", selector);
-  };
-}
 
 /** Memulai pembangunan: jika form sudah ada → gulir ke sana; jika belum → picu tombol hero. */
 function requestStart(): void {
@@ -141,28 +133,31 @@ const FaqSection = {
       content: {
         "h2.title": { content: "Pertanyaan yang Sering Muncul" },
         ".faq-list": {
-          content: `
-            <details open>
-              <summary>Apakah saya perlu bisa coding?</summary>
-              <p>Tidak sama sekali. Seluruh struktur dihasilkan dari bahasa manusia yang Anda tulis di wizard — kode lahir otomatis di belakang layar.</p>
-            </details>
-            <details>
-              <summary>Berapa biaya server dan pemeliharaannya?</summary>
-              <p>Rp0. Website di-hosting di GitHub Pages atau Cloudflare (gratis) dan basis data berada di Google Drive Anda sendiri. Tidak ada biaya operasional bulanan.</p>
-            </details>
-            <details>
-              <summary>Kepemilikan website ada di tangan siapa?</summary>
-              <p>100% Anda. Repositori di-duplikasi ke akun GitHub Anda dan spreadsheet dibuat di Drive Anda, lalu hak akses kami dicabut lewat sistem Self-Detach.</p>
-            </details>
-            <details>
-              <summary>Bisakah saya mengubah konten setelah website jadi?</summary>
-              <p>Ya. Spreadsheet di Drive Anda adalah panel kontrolnya — ubah data di Google Sheets dan website ikut berubah. Ingin website baru? Cukup isi wizard ulang.</p>
-            </details>
-            <details>
-              <summary>Bagaimana dengan pembayaran QRIS?</summary>
-              <p>Website langsung terintegrasi kode QRIS dinamis untuk pembayaran instan khas pasar lokal, plus notifikasi WhatsApp otomatis saat ada pesanan masuk.</p>
-            </details>
-          `
+          builder: "accordion",
+          isRoot: true,
+          config: { appearance: "default", animation: true },
+          content: [
+            {
+              title: "Apakah saya perlu bisa coding?",
+              description: "Tidak sama sekali. Seluruh struktur dihasilkan dari bahasa manusia yang Anda tulis di wizard — kode lahir otomatis di belakang layar.",
+            },
+            {
+              title: "Berapa biaya server dan pemeliharaannya?",
+              description: "Rp0. Website di-hosting di GitHub Pages atau Cloudflare (gratis) dan basis data berada di Google Drive Anda sendiri. Tidak ada biaya operasional bulanan.",
+            },
+            {
+              title: "Kepemilikan website ada di tangan siapa?",
+              description: "100% Anda. Repositori di-duplikasi ke akun GitHub Anda dan spreadsheet dibuat di Drive Anda, lalu hak akses kami dicabut lewat sistem Self-Detach.",
+            },
+            {
+              title: "Bisakah saya mengubah konten setelah website jadi?",
+              description: "Ya. Spreadsheet di Drive Anda adalah panel kontrolnya — ubah data di Google Sheets dan website ikut berubah. Ingin website baru? Cukup isi wizard ulang.",
+            },
+            {
+              title: "Bagaimana dengan pembayaran QRIS?",
+              description: "Website langsung terintegrasi kode QRIS dinamis untuk pembayaran instan khas pasar lokal, plus notifikasi WhatsApp otomatis saat ada pesanan masuk.",
+            },
+          ],
         },
       }
     }
@@ -210,27 +205,17 @@ export const HomepageContent: iNodeContent =
 {
   "#app": {
     content: {
-      "nav": {
-        content: {
-          ".brand": {
-            attrs: { href: "#home" },
-            content: "Rajutan",
-            onCreated: (el: HTMLElement) => el.addEventListener("click", navScroll("#home")),
-          },
-          ".navigations": {
-            "a.item#home-link": { attrs: { href: "#home" }, content: "Beranda", onCreated: (el: HTMLElement) => el.addEventListener("click", navScroll("#home")) },
-            "a.item#how-link": { attrs: { href: "#how" }, content: "Cara Kerja", onCreated: (el: HTMLElement) => el.addEventListener("click", navScroll("#how")) },
-            "a.item#features-link": { attrs: { href: "#features" }, content: "Fitur", onCreated: (el: HTMLElement) => el.addEventListener("click", navScroll("#features")) },
-            "a.item#faq-link": { attrs: { href: "#faq" }, content: "Tanya Jawab", onCreated: (el: HTMLElement) => el.addEventListener("click", navScroll("#faq")) },
-            "a.item#blog-link": { attrs: { href: "#blog" }, content: "Artikel", onCreated: (el: HTMLElement) => el.addEventListener("click", (_e: Event) => navigate("#blog")) },
-            "a.item#form-link": { attrs: { href: "#form" }, content: "Form Editor", onCreated: (el: HTMLElement) => el.addEventListener("click", (_e: Event) => navigate("#form")) },
-          },
-          "button.button.primary#start-link": {
-            content: "Live Editor",
-            onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("editor")),
-          },
-        }
-      },
+      ...topMenu(
+        [
+          { label: "Beranda", href: "#home" },
+          { label: "Cara Kerja", href: "#how" },
+          { label: "Fitur", href: "#features" },
+          { label: "Tanya Jawab", href: "#faq" },
+          { label: "Artikel", href: "#blog" },
+          { label: "Form Editor", href: "#form" },
+        ],
+        [{ label: "Live Editor", href: "#editor", className: "button" }],
+      ),
       "main": {
         content: {
           "section#home": {

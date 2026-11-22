@@ -3,6 +3,7 @@
 // ================================================================
 
 import type { iNodeContent } from "@aio-ui/core";
+import { topMenu } from "./nav";
 import { buildStore, mockBuildResult, navigate } from "./BuildStore";
 import type { BuildApiResponse } from "./BuildStore";
 
@@ -606,15 +607,10 @@ export const BuildPageContent: iNodeContent =
 {
   "#app": {
     content: {
-      "nav": {
-        attrs: { "class": "top" },
-        content: {
-          ".brand": { attrs: { href: "#home" }, content: "Rajutan", onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("home")) },
-          ".navigations": {
-            "a.item#build-home": { attrs: { href: "#home" }, content: "Beranda", onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("home")) },
-          },
-        }
-      },
+      ...topMenu([
+        { label: "Beranda", href: "#home" },
+        { label: "Artikel", href: "#blog" },
+      ]),
       "main": {
         content: {
           "section#build": {

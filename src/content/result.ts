@@ -3,7 +3,8 @@
 // ================================================================
 
 import type { iNodeContent } from "@aio-ui/core";
-import { buildStore, navigate } from "./BuildStore";
+import { topMenu } from "./nav";
+import { buildStore } from "./BuildStore";
 import type { SiteBuildResult } from "./BuildStore";
 
 function buildResultLinks(data: SiteBuildResult | null, container: HTMLElement): HTMLElement {
@@ -89,15 +90,10 @@ export const ResultPageContent: iNodeContent =
 {
   "#app": {
     content: {
-      "nav": {
-        content: {
-          ".brand": { attrs: { href: "#home" }, content: "Rajutan", onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("home")) },
-          ".navigations": {
-            "a.item#result-home": { attrs: { href: "#home" }, content: "Beranda", onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("home")) },
-            "a.item#result-build": { attrs: { href: "#build" }, content: "Buat Lagi", onCreated: (el: HTMLElement) => el.addEventListener("click", () => navigate("build")) },
-          },
-        }
-      },
+      ...topMenu([
+        { label: "Beranda", href: "#home" },
+        { label: "Buat Lagi", href: "#build" },
+      ]),
       "main#result": {
         content: {
           "header": {

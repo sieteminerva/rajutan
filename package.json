@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aio-ui/accordion": "*",
     "@aio-ui/animations": "*",
     "@aio-ui/article": "*",
     "@aio-ui/base": "*",
@@ -18,6 +19,7 @@
     "@aio-ui/id-address": "*",
     "@aio-ui/input": "*",
     "@aio-ui/message": "*",
+    "@aio-ui/menu": "*",
     "@aio-ui/router": "*",
     "@aio-ui/styles": "*",
     "@aio-ui/table": "*",
