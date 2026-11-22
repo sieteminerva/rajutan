@@ -8,22 +8,45 @@
  * `onNavigate` returns `false` on purpose — the default swallows every link that carries
  * an `href`, and this app is a hash router that must see the click itself.
  */
-import type { iNodeContent } from "@aio-ui/core";
+import type { iBasicNode } from "@aio-ui/core";
 
 /** One link in the bar. */
 export interface NavLink {
   label: string;
   href: string;
-  /** `button` promotes the entry to the CTA group. */
+  /** Extra classes on the anchor; `button` promotes the entry to the CTA group. */
   className?: string;
+  /** In-page anchor (`#how`): rendered only where that section exists — the home route. */
+  section?: boolean;
 }
 
 /** Routes the hash router owns. */
 const ROUTES = new Set(["home", "build", "result", "blog", "generator", "editor", "form", "canvas"]);
 
 /**
+ * The bar, declared once. Every page renders this list — a page never keeps its own copy,
+ * so a new route is added here and nowhere else.
+ */
+const BAR: NavLink[] = [
+  { label: "Beranda", href: "#home" },
+  { label: "Cara Kerja", href: "#how", section: true },
+  { label: "Fitur", href: "#features", section: true },
+  { label: "Tanya Jawab", href: "#faq", section: true },
+  { label: "Artikel", href: "#blog" },
+  { label: "Form Editor", href: "#form" },
+];
+
+/** Route-only entries the shared bar cannot know: they exist because that page ends there. */
+const EXTRAS: Record<string, NavLink[]> = {
+  result: [{ label: "Buat Lagi", href: "#build" }],
+};
+
+/** CTA group, always last. */
+const ACTIONS: NavLink[] = [{ label: "Live Editor", href: "#editor", className: "button" }];
+
+/**
  * Lets the router own route links, and turns an in-page anchor (`#how`) into a smooth
- * scroll on the current page. The old hand-written bar did the same with listeners.
+ * scroll on the current page.
  */
 function onNavigate(href?: string): boolean {
   if (!href) return true;
@@ -38,14 +61,32 @@ function onNavigate(href?: string): boolean {
   return true;
 }
 
+/** Marks the entry whose route is live. The anchor owns the pill (`a.is-active` in Menu.css). */
+function entry(link: NavLink, route: string): NavLink {
+  const active = link.href.replace(/^#/, "").toLowerCase() === route;
+  const className = [link.className, active ? "is-active" : ""].filter(Boolean).join(" ");
+
+  // Rebuilt instead of spread: `section` is a build-time marker, not menu payload.
+  return className
+    ? { label: link.label, href: link.href, className }
+    : { label: link.label, href: link.href };
+}
+
 /**
- * Builds a menu node for the top position.
+ * The top bar for one route.
  *
- * @param links - Navigation entries, in order.
- * @param actions - CTA entries (`className: "button"`), appended after the links.
- * @returns A content node whose `builder` is `menu`.
+ * `attachMenu()` calls this on every render, which is why it returns a fresh node instead of
+ * mutating `source.menu` — the source object is shared by every render pass.
+ *
+ * @param route - Normalised route the app is about to render.
+ * @returns A menu node whose `builder` is `menu`, with the live route marked `is-active`.
  */
-export function topMenu(links: NavLink[], actions: NavLink[] = []): iNodeContent {
+export function menuFor(route: string): iBasicNode {
+  const navigations = [
+    ...BAR.filter((link) => !link.section || route === "home"),
+    ...(EXTRAS[route] ?? []),
+  ].map((link) => entry(link, route));
+
   return {
     "div#top-menu": {
       builder: "menu",
@@ -55,8 +96,8 @@ export function topMenu(links: NavLink[], actions: NavLink[] = []): iNodeContent
       config: { position: "top", onNavigate },
       content: {
         brand: { label: "Rajutan", href: "#home" },
-        navigations: links,
-        actions,
+        navigations,
+        actions: ACTIONS,
       },
     },
   };

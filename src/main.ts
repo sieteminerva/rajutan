@@ -2,8 +2,9 @@
  * Rajutan — the client app (wizard, editor, result).
  *
  * Everything mandatory is declared once, here: the module slots, the registry with its
- * components, and the route → content map. Rendering, routing, preloading and teardown
- * belong to `AioApp`; this file no longer wires them by hand.
+ * components, the route table (content + preload plan), and the one menu bar. Rendering,
+ * routing, preloading, menu activation and teardown belong to `AioApp`; this file does not
+ * wire them by hand.
  *
  * Builders live in two places:
  * - packages (`article`, `form`, `table`) — loaded lazily through the registry;
@@ -20,7 +21,7 @@ import {
   AppStorage,
   ComponentRegistry,
   DOMRenderer,
-  type iComponentRoute,
+  type iBasicNode,
   type iPageContent,
   type iPageContext,
   type iPageController,
@@ -48,6 +49,7 @@ import {
   isPreviewDocument,
   markPreviewRoot,
 } from "./Components/editor/preview";
+import { menuFor } from "./content/nav";
 import { componentAssets, registerAll } from "./registry";
 import { HomepageContent } from "./content/home";
 import { BlogPageContent } from "./content/blog";
@@ -62,33 +64,39 @@ const CanvasPageContent: iPageContent = {
   "section#canvas": { attrs: { id: "canvas", "data-canvas": "" }, content: "" },
 };
 
-/** Route → content. Keys are normalised by the app (trim, no `#`, lower case). */
-const pages: Record<string, iPageContent> = {
-  home: HomepageContent,
-  build: BuildPageContent,
-  result: ResultPageContent,
-  blog: BlogPageContent,
-  generator: GeneratorPageContent,
-  editor: EditorPageContent,
-  form: FormPageContent,
-  canvas: CanvasPageContent,
-};
+/**
+ * One table for the whole route contract: content and preload plan.
+ *
+ * `requires` is the same field `iPageDefinition` carries, so a generated app and this one
+ * describe a route the same way. Where the key came from matters: `requires` is for a
+ * builder called inside `onCreated` (invisible to the node collector, so nothing else
+ * would preload it); a node's own `builder` is collected from the page tree.
+ */
+interface iRoute {
+  route: string;
+  content: iPageContent;
+  requires: string[];
+}
 
 /**
- * What each route mounts, declared once.
+ * Routes in menubar order. Keys are normalised by the app (trim, no `#`, lower case).
  *
- * A node's `builder` names the component that node *is*; a builder called inside
- * `onCreated` is invisible to the node collector, so the plan is the only thing that
- * preloads it. A route that resolves to a missing entry fails on a cold load.
+ * A route that resolves to a missing entry fails on a cold load.
  */
-const componentRoutes: iComponentRoute[] = [
-  { route: "build", components: ["form", "table"] },
-  { route: "blog", components: ["article"] },
-  { route: "generator", components: ["form", "color-theme"] },
-  { route: "editor", components: ["form", "color-theme", "editor"] },
-  { route: "form", components: ["form", "form-editor"] },
-  { route: "canvas", components: [] },
+const routes: iRoute[] = [
+  { route: "home", content: HomepageContent, requires: [] },
+  { route: "build", content: BuildPageContent, requires: ["form", "table"] },
+  { route: "result", content: ResultPageContent, requires: [] },
+  { route: "blog", content: BlogPageContent, requires: ["article"] },
+  { route: "generator", content: GeneratorPageContent, requires: ["form", "color-theme"] },
+  { route: "editor", content: EditorPageContent, requires: ["form", "color-theme", "editor"] },
+  { route: "form", content: FormPageContent, requires: ["form", "form-editor"] },
+  { route: "canvas", content: CanvasPageContent, requires: [] },
 ];
+
+const pages: Record<string, iPageContent> = Object.fromEntries(
+  routes.map(({ route, content }) => [route, content]),
+);
 
 /**
  * Per-route behaviour, applied to every page:
@@ -99,8 +107,22 @@ const componentRoutes: iComponentRoute[] = [
  *   on every navigation.
  */
 class RajutanPage implements iPageController {
+  readonly #route: string;
+
+  constructor(_config: unknown, context: iPageContext) {
+    this.#route = context.route;
+  }
+
   onPrepare(context: iPageContext): iPageContent | void {
     if (context.route === "editor" && isPreviewDocument()) return HomepageContent;
+  }
+
+  /**
+   * The bar is built here, per render, not authored into each page tree: one list in
+   * `nav.ts`, one active entry, and no page can drift from the others.
+   */
+  attachMenu(): iBasicNode {
+    return menuFor(this.#route);
   }
 
   onReady(context: iPageReadyContext): void {
@@ -129,9 +151,10 @@ async function start(host: HTMLElement): Promise<void> {
     container: host,
     defaultRoute: "home",
     debug: true,
-    source: { pages },
+    // The menu slot is filled once; `attachMenu()` rebuilds it per route.
+    source: { pages, menu: menuFor("home") },
   })
-    .registerModule(registry, componentRoutes)
+    .registerModule(registry)
     .registerModule(HashRouter)
     .registerModule(DOMRenderer)
     .registerModule(AppStorage, { driver: globalThis.localStorage })
@@ -139,7 +162,11 @@ async function start(host: HTMLElement): Promise<void> {
     .registerModule(ThemeRenderer, { themes: [new DefaultTheme(), new CyberpunkTheme()] })
     .registerModule(emitter);
 
-  for (const route of Object.keys(pages)) app.registerPage(route, RajutanPage);
+  // One declarative pass: the definition owns the route + preload plan, the class owns
+  // the behaviour. Registering both keeps the preload plan out of `registerModule`.
+  for (const { route, requires } of routes) {
+    app.registerPage({ route, requires }).registerPage(route, RajutanPage);
+  }
 
   await app.render();
 

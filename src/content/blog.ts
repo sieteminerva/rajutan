@@ -3,7 +3,6 @@
 // ================================================================
 
 import type { iNodeContent } from "@aio-ui/core";
-import { topMenu } from "./nav";
 import blogPayload from "./output.json";
 
 // =====================================================================
@@ -17,12 +16,8 @@ const ARTICLE_RESPONSE = blogPayload as any;
 
 export const BlogPageContent: iNodeContent =
 {
-  "#app": {
+  ".page": {
     content: {
-      ...topMenu([
-        { label: "Beranda", href: "#home" },
-        { label: "Form Editor", href: "#form" },
-      ]),
       "main#blog": {
         onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
           el.mount(builderFn("article", ARTICLE_RESPONSE));

@@ -4,7 +4,6 @@
 
 import type { iNodeContent } from "@aio-ui/core";
 import { navigate } from "./BuildStore";
-import { topMenu } from "./nav";
 
 // =====================================================================
 // HELPERS LANDING — presentasi & memulai wizard
@@ -203,19 +202,8 @@ const FooterSection = {
 
 export const HomepageContent: iNodeContent =
 {
-  "#app": {
+  ".page": {
     content: {
-      ...topMenu(
-        [
-          { label: "Beranda", href: "#home" },
-          { label: "Cara Kerja", href: "#how" },
-          { label: "Fitur", href: "#features" },
-          { label: "Tanya Jawab", href: "#faq" },
-          { label: "Artikel", href: "#blog" },
-          { label: "Form Editor", href: "#form" },
-        ],
-        [{ label: "Live Editor", href: "#editor", className: "button" }],
-      ),
       "main": {
         content: {
           "section#home": {

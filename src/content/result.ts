@@ -3,7 +3,6 @@
 // ================================================================
 
 import type { iNodeContent } from "@aio-ui/core";
-import { topMenu } from "./nav";
 import { buildStore } from "./BuildStore";
 import type { SiteBuildResult } from "./BuildStore";
 
@@ -88,12 +87,8 @@ function buildResultLinks(data: SiteBuildResult | null, container: HTMLElement):
 
 export const ResultPageContent: iNodeContent =
 {
-  "#app": {
+  ".page": {
     content: {
-      ...topMenu([
-        { label: "Beranda", href: "#home" },
-        { label: "Buat Lagi", href: "#build" },
-      ]),
       "main#result": {
         content: {
           "header": {
