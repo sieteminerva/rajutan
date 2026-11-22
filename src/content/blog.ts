@@ -2,7 +2,7 @@
 // BLOG — rute halaman artikel dengan mock data dari server (output.json)
 // ================================================================
 
-import type { iNodeContent } from "../lib/interface";
+import type { iNodeContent } from "@aio-ui/core";
 import { navigate } from "./BuildStore";
 import blogPayload from "./output.json";
 

@@ -1,4 +1,4 @@
-import type { iNodeContent } from "../lib/interface";
+import type { iNodeContent } from "@aio-ui/core";
 
 export const GeneratorPageContent: iNodeContent = {
   "#app": {

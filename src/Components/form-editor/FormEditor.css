@@ -1,0 +1,208 @@
+.form:is(.canvas) {
+  height: 100%;
+  border-radius: var(--app-border-radius, 0.5em);
+  border: 1px solid var(--app-primary-color);
+  overflow-y: scroll;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+
+  & > .form.settings,
+  & > .buttons.set {
+    flex: none;
+  }
+
+  & > .form.configurator {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  & .buttons.set {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: 1px solid var(--app-primary-color);
+    justify-content: center;
+    padding-top: 1em;
+
+    button {
+      border-radius: 4px;
+    }
+  }
+}
+.form:is(.configurator, .settings, .output) {
+  /* width: 80%; */
+  display: flex;
+  /* justify-content: center; */
+  flex-direction: column;
+  /* flex-wrap: wrap; */
+  /* align-content: center; */
+  /* align-items: center; */
+  min-width: 70%;
+  width: 100%;
+
+  /* padding: 2rem 1rem 1rem 1rem; */
+
+  &:is(.settings) {
+    border-radius: 0;
+    border: unset;
+    padding: 1em;
+    justify-content: end;
+  }
+
+  &:is(.configurator) {
+    border-radius: 0;
+    border: unset;
+    height: auto;
+    &:has(details[open]) {
+      border-bottom: 1px solid var(--app-border-color);
+    }
+    & .dropdown,
+    & select {
+      border-left-color: transparent !important;
+    }
+  }
+
+  &:is(.output) {
+    width: 100%;
+    margin: 0;
+    flex-grow: 1; /* free space → fills the remainder of the canvas */
+    flex-shrink: 0; /* never squeezed — canvas scrolls when details pushes past */
+    /* min-height: 100px; */
+    overflow-y: auto;
+
+    & .field.is-dragging {
+      opacity: 0.45;
+    }
+
+    & .dropzone {
+      width: 100%;
+      min-height: 3.5em;
+      border: 2px dashed var(--app-accent-color);
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--app-accent-color) 12%, transparent);
+    }
+    & .dropzone::before {
+      content: "Drop Zone";
+      width: 100%;
+      height: 100%;
+      position: relative;
+      top: 25%;
+    }
+
+    & button {
+      &:is(.insert) {
+        margin-right: 1em;
+      }
+      &:is(.move) {
+        &:not(:active) {
+          cursor: move;
+        }
+        &:is(:active) {
+          cursor: grabbing;
+          transform: scale(99.5%);
+        }
+      }
+    }
+  }
+
+  & fieldset {
+    width: 100%;
+    border: none;
+    justify-items: center;
+  }
+
+  & fieldset:is(.details) {
+    border-bottom: 1px solid var(--app-primary-color);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin: 0 0 1em 0;
+  }
+
+  & .field:is(.actions) {
+    margin-bottom: 0;
+    &:has(> .controls[position="left"], > .controls[position="right"]),
+    &:has(> .controls[data-position="left"], > .controls[data-position="right"]) {
+      & > select,
+      & > input {
+        text-transform: capitalize;
+        border-radius: 0;
+      }
+    }
+  }
+
+  /* `.accordion` is FormEditor's details; `details.block` keeps FormEditor_x
+     (shared stylesheet) styling — both mean "the block being edited". */
+  & details:is(.block, .accordion) {
+    align-items: center;
+    border: none;
+    transition: all 100ms ease;
+    cursor: pointer;
+    border-radius: 0;
+    max-width: unset;
+    width: 100%;
+
+    & summary {
+      padding: 0;
+      width: 100%;
+      &::after {
+        content: "";
+      }
+
+      & .field:is(.actions) {
+        --input-border-radius: 0;
+      }
+    }
+
+    &[open] {
+      & summary:has(.controls[position="left"], .controls[position="right"]) {
+        & button:first-child {
+          border-bottom-left-radius: 0 !important;
+        }
+        & button:last-child {
+          border-bottom-right-radius: 0 !important;
+        }
+      }
+    }
+
+    & > .field {
+      width: 100%;
+      padding-left: 1em;
+      padding-right: 1em;
+      &:is(.actions) {
+        --input-border-radius: 0;
+        --input-border-color: transparent;
+      }
+    }
+    --input-label-color: var(--input-text-color);
+    & .field:is(.group[data-display="inline"]) {
+      grid-template-columns: repeat(min(2), 1fr);
+      /* grid-template-columns: repeat(3, 1fr); */
+      /* grid-auto-flow: column; */
+      padding-inline: 1em;
+      justify-content: end;
+      align-content: stretch;
+      column-gap: 1em;
+    }
+    & .field:is(.group[data-display="inline"]):has(.field) > .field {
+      margin-bottom: 0;
+      &:has(.switch.control) {
+        justify-content: space-between;
+        padding-top: 0.25em;
+        width: stretch;
+      }
+    }
+    & .field:has(.switch.control) {
+      & label {
+        color: var(--input-label-color);
+      }
+      --input-text-color-light: color-mix(in srgb, var(--input-primary-color) 40%, white 50%);
+      & .slider::before {
+        --input-primary-color: var(--app-accent-color);
+        /* border-color: var(--input-text-color-light); */
+      }
+      & input[type="checkbox"]:hover ~ .slider {
+        border-color: var(--app-primary-color);
+      }
+    }
+  }
+}

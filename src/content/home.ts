@@ -2,7 +2,7 @@
 // HOME — halaman presentasi (rute #/home)
 // ================================================================
 
-import type { iNodeContent } from "../lib/interface";
+import type { iNodeContent } from "@aio-ui/core";
 import { navigate } from "./BuildStore";
 
 // =====================================================================

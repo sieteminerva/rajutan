@@ -2,7 +2,7 @@
 // WIZARD — halaman build wizard (rute #/build)
 // ================================================================
 
-import type { iNodeContent } from "../lib/interface";
+import type { iNodeContent } from "@aio-ui/core";
 import { buildStore, mockBuildResult, navigate } from "./BuildStore";
 import type { BuildApiResponse } from "./BuildStore";
 
@@ -25,7 +25,7 @@ function createPopover(content: { info: string, placeholder: string }) {
 
 const selectors = { "@field>label": { tagName: "label", attrs: { "animation": "typewriter", "animation-chain": "true", "animated-once": "true" } } }
 
-const IntroSet = {
+export const IntroSet = {
   id: "intro-set",
   group: [
     {
@@ -130,7 +130,7 @@ function createDownloadLink(filename: string = "address.csv") {
 
 }
 
-const DetailSetShop = {
+export const DetailSetShop = {
   id: "ecommerce-detail-set",
   // condition: { field: "web-type", filled: true },
   group: [
@@ -155,7 +155,7 @@ const DetailSetShop = {
     createDownloadLink()
   ]
 }
-const ContactSet = {
+export const ContactSet = {
   id: "contact-set",
   group: [
     {
@@ -215,7 +215,7 @@ const ContactSet = {
     },
   ]
 }
-const AddressSet = {
+export const AddressSet = {
   id: "address-set",
   // condition: { field: "contact-company", filled: true },
   group: [
@@ -324,7 +324,7 @@ const AddressSet = {
     },
   ]
 }
-const ConfirmationSet = {
+export const ConfirmationSet = {
   id: "confirmation-set",
   group: [
 
@@ -549,7 +549,7 @@ const formConfig = {
   selectors: {
     "@form>group": { tagName: "fieldset", className: "inline-style" },
   },
-  // submitButton: false,
+  submitButton: false,
 };
 const formContent = [
   // TestSet,
@@ -561,8 +561,9 @@ const formContent = [
 ]
 
 const wizard = {
+  builder: "form",
+  content: formContent,
   config: formConfig,
-  schema: formContent
 }
 
 function mountWizard(container: HTMLElement, builderFn: any): void {

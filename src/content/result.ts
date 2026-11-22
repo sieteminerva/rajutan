@@ -2,7 +2,7 @@
 // RESULT — ringkasan situs yang sudah jadi (rute #/result)
 // ================================================================
 
-import type { iNodeContent } from "../lib/interface";
+import type { iNodeContent } from "@aio-ui/core";
 import { buildStore, navigate } from "./BuildStore";
 import type { SiteBuildResult } from "./BuildStore";
 
