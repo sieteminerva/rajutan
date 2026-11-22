@@ -202,21 +202,19 @@ const FooterSection = {
 
 export const HomepageContent: iNodeContent =
 {
-  ".page": {
+  "main.page": {
     content: {
-      "main": {
+      "section#home": {
         content: {
-          "section#home": {
+          ".row$1": {
             content: {
-              ".row$1": {
-                content: {
-                  "h3.title": {
-                    attrs: { "animation": "fade-in", "animation-chain": "true", "animated-once": "true" },
-                    content: "Rakit Website Modern dengan Bahasa Manusia"
-                  },
-                  ".description.natural": {
-                    attrs: { "animation": "typewriter", "data-tw-rewrite": "true", "animation-chain": "true" },
-                    content: `
+              "h3.title": {
+                attrs: { "animation": "fade-in", "animation-chain": "true", "animated-once": "true" },
+                content: "Rakit Website Modern dengan Bahasa Manusia"
+              },
+              ".description.natural": {
+                attrs: { "animation": "typewriter", "data-tw-rewrite": "true", "animation-chain": "true" },
+                content: `
                       <span>
                         Anda berada di tempat yang tepat jika saat ini mulai menyadari pentingnya website bagi eksistensi diri, merek dagang, maupun identitas usaha Anda. 
                         Kehadiran website kini telah menjadi kebutuhan dasar dalam menghadapi persaingan bisnis di era digital. 
@@ -237,36 +235,34 @@ export const HomepageContent: iNodeContent =
                         Jika anda adalah orang tersebut, mungkin keluhan serta keresahan itulah yang terbisik sampai ke telinga kami.
                         yang mendorong hati kecil kami untuk merajut tautan ini.
                       </span>`
-                  },
-
-                  "h4.asking.question": {
-                    attrs: { "animation": "fade-in", "animation-chain": "true", "animated-once": "true" },
-                    content: "Siap memulai pembangunan website impian anda?"
-                  },
-                  "button#start.button.small": {
-                    attrs: {
-                      "animation": "text-scramble",
-                      "animation-chain": "true",
-                      "animated-once": "true"
-                    },
-                    content: "Mari Mulai",
-                    onCreated: (el: HTMLElement) => {
-                      el.addEventListener("click", () => requestStart());
-                    }
-                  }
-                },
               },
-              // (blok rujukan .row$2 dengan tabel lama dihapus — dipindah ke section terpisah)
-            }
+
+              "h4.asking.question": {
+                attrs: { "animation": "fade-in", "animation-chain": "true", "animated-once": "true" },
+                content: "Siap memulai pembangunan website impian anda?"
+              },
+              "button#start.button.small": {
+                attrs: {
+                  "animation": "text-scramble",
+                  "animation-chain": "true",
+                  "animated-once": "true"
+                },
+                content: "Mari Mulai",
+                onCreated: (el: HTMLElement) => {
+                  el.addEventListener("click", () => requestStart());
+                }
+              }
+            },
           },
-          "section#trust": TrustSection,
-          "section#how": HowSection,
-          "section#features": FeaturesSection,
-          "section#faq": FaqSection,
-          "section#cta": CtaSection,
-        },
+          // (blok rujukan .row$2 dengan tabel lama dihapus — dipindah ke section terpisah)
+        }
       },
-      "footer": FooterSection,
-    }
-  }
+      "section#trust": TrustSection,
+      "section#how": HowSection,
+      "section#features": FeaturesSection,
+      "section#faq": FaqSection,
+      "section#cta": CtaSection,
+    },
+  },
+  "footer": FooterSection,
 }

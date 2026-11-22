@@ -40,6 +40,10 @@ main {
   width: 100%;
 }
 
+.page {
+  margin-top: 72px;
+}
+
 section {
   display: flex;
   min-height: calc(100vh - 72px);
