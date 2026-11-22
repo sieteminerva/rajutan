@@ -16,14 +16,10 @@ const ARTICLE_RESPONSE = blogPayload as any;
 
 export const BlogPageContent: iNodeContent =
 {
-  ".page": {
-    content: {
-      "main#blog": {
-        onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
-          el.mount(builderFn("article", ARTICLE_RESPONSE));
-        }
-      }
-    },
+  "main#blog.page": {
+    onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
+      el.mount(builderFn("article", ARTICLE_RESPONSE));
+    }
   },
 
 }

@@ -87,25 +87,21 @@ function buildResultLinks(data: SiteBuildResult | null, container: HTMLElement):
 
 export const ResultPageContent: iNodeContent =
 {
-  ".page": {
+  "main#result.page": {
     content: {
-      "main#result": {
+      "header": {
         content: {
-          "header": {
-            content: {
-              "h3.title": {
-                content: "Situs Anda Berhasil Dirajut 🎉"
-              },
-              "p.description": {
-                content: (buildStore.response?.data?.message) || "Selamat! Semua aset penting kini berpindah ke akun Anda."
-              }
-            },
+          "h3.title": {
+            content: "Situs Anda Berhasil Dirajut 🎉"
           },
-          "section#assets": {
-            onCreated: (el: HTMLElement) => {
-              buildResultLinks(buildStore.response?.data ?? null, el)
-            }
+          "p.description": {
+            content: (buildStore.response?.data?.message) || "Selamat! Semua aset penting kini berpindah ke akun Anda."
           }
+        },
+      },
+      "section#assets": {
+        onCreated: (el: HTMLElement) => {
+          buildResultLinks(buildStore.response?.data ?? null, el)
         }
       }
     }

@@ -604,24 +604,20 @@ function mountWizard(container: HTMLElement, builderFn: any): void {
 }
 export const BuildPageContent: iNodeContent =
 {
-  ".page": {
+  "main.page": {
     content: {
-      "main": {
+      "section#build": {
         content: {
-          "section#build": {
-            content: {
-              "h3.title": {
-                attrs: { "animation": "fade-in", "animated-once": "true" },
-                content: "Rakit Website Anda"
-              },
-              "p.description": {
-                content: "Jawab beberapa pertanyaan lalu kami merajutnya menjadi website yang hidup — data, kode, dan hak miliknya langsung jadi milik Anda."
-              },
-              "#wizard": {
-                onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
-                  mountWizard(el, builderFn);
-                }
-              }
+          "h3.title": {
+            attrs: { "animation": "fade-in", "animated-once": "true" },
+            content: "Rakit Website Anda"
+          },
+          "p.description": {
+            content: "Jawab beberapa pertanyaan lalu kami merajutnya menjadi website yang hidup — data, kode, dan hak miliknya langsung jadi milik Anda."
+          },
+          "#wizard": {
+            onCreated: (el: HTMLElement, _renderFn: any, builderFn: any) => {
+              mountWizard(el, builderFn);
             }
           }
         }

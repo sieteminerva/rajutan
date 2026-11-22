@@ -2,7 +2,7 @@ import type { iNodeContent } from "@aio-ui/core";
 import { HomepageContent } from "./home";
 
 export const EditorPageContent: iNodeContent = {
-  ".page": {
+  "main.page": {
     onCreated: (root: HTMLElement, _renderFn: any, builderFn: any) => {
       // 🧩 The editor instantiates its own theme builder (see Editor.prepare()),
       // so the page only ever asks for the editor — nothing to register.
